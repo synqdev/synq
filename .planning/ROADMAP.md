@@ -43,8 +43,21 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
   11. All booking/availability logic covered by unit and integration tests
   12. Concurrent booking attempts handled correctly
 
+**Plans:** 12 plans in 5 waves
+
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 01-01-PLAN.md — Database schema and seed data (Wave 1)
+- [ ] 01-02-PLAN.md — Project structure and i18n setup (Wave 1)
+- [ ] 01-03-PLAN.md — Component library foundation (Wave 1)
+- [ ] 01-04-PLAN.md — Availability service with TDD (Wave 2)
+- [ ] 01-05-PLAN.md — Booking service with TDD (Wave 2)
+- [ ] 01-06-PLAN.md — Calendar timeline component (Wave 3)
+- [ ] 01-07-PLAN.md — User registration and booking flow (Wave 3)
+- [ ] 01-08-PLAN.md — Email integration with Resend (Wave 3)
+- [ ] 01-09-PLAN.md — Admin authentication and dashboard (Wave 4)
+- [ ] 01-10-PLAN.md — Admin CRUD operations (Wave 4)
+- [ ] 01-11-PLAN.md — Security hardening (RLS, rate limiting) (Wave 5)
+- [ ] 01-12-PLAN.md — SWR polling and test finalization (Wave 5)
 
 ### Phase 2: Parity
 **Goal**: CRM and reporting features that achieve parity with current spreadsheet-based workflow
@@ -90,6 +103,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. MVP | 0/? | Not started | - |
+| 1. MVP | 0/12 | Planned | - |
 | 2. Parity | 0/? | Not started | - |
 | 3. Differentiation | 0/? | Not started | - |

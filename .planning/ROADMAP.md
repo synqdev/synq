@@ -1,0 +1,95 @@
+# Roadmap: SYNQ
+
+## Overview
+
+SYNQ delivers a wellness booking system with double-bottleneck scheduling logic for Japanese markets. Phase 1 is the MVP with complete booking flow, Phase 2 adds CRM and reporting for parity with current systems, and Phase 3 delivers the differentiation features from the product mindmap.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 1: MVP** - Foundation, user booking, admin management, tests, email (complete booking system)
+- [ ] **Phase 2: Parity** - CRM, customer management, employee KPIs, sales reporting
+- [ ] **Phase 3: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
+
+## Phase Details
+
+### Phase 1: MVP
+**Goal**: Complete booking system with user registration, calendar booking with double-bottleneck logic, admin management, and email confirmations
+**Depends on**: Nothing (first phase)
+**Requirements**:
+- Infrastructure: INFR-01, INFR-02, INFR-03, INFR-04, INFR-05, INFR-06, INFR-07
+- Architecture: ARCH-01, ARCH-02, ARCH-03, ARCH-04
+- Security: SECR-01, SECR-02, SECR-03, SECR-04, SECR-05, SECR-06
+- Components: COMP-01, COMP-02, COMP-03
+- User: UREG-01, UREG-02, UREG-03
+- Booking: BOOK-01, BOOK-02, BOOK-03, BOOK-04, BOOK-05, BOOK-06, BOOK-07
+- Admin: ADMN-01, ADMN-02, ADMN-03, ADMN-04, ADMN-05, ADMN-06, ADMN-07, ADMN-08
+- Testing: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06
+
+**Success Criteria** (what must be TRUE):
+  1. Database schema exists with all models and proper indexes
+  2. RLS policies enabled, input validation with Zod, admin routes protected
+  3. User can register (email/name/phone) and proceed to booking
+  4. User can view single-day timeline calendar with all workers
+  5. Available slots respect double-bottleneck logic (worker free AND bed available)
+  6. User can book an available slot and see confirmation
+  7. User receives email confirmation with booking details
+  8. Admin can log in and view calendar with booking details
+  9. Admin can block time, cancel/edit bookings
+  10. Admin can CRUD workers, services, and resources
+  11. All booking/availability logic covered by unit and integration tests
+  12. Concurrent booking attempts handled correctly
+
+Plans:
+- [ ] TBD (to be planned)
+
+### Phase 2: Parity
+**Goal**: CRM and reporting features that achieve parity with current spreadsheet-based workflow
+**Depends on**: Phase 1
+**Requirements**: CRM-01, CRM-02, CRM-03, CRM-04, CRM-05, CRM-06, KPI-01, KPI-02, KPI-03, KPI-04, KPI-05, KPI-06, INFR-08
+
+**Success Criteria** (what must be TRUE):
+  1. Admin can view customer list with search/filter
+  2. Admin can view individual customer profile with booking history
+  3. Admin can add/edit notes on customer records
+  4. Admin can upload and view customer intake forms (PDF/image)
+  5. Customer visit count and last visit date tracked automatically
+  6. Admin can view total revenue (daily, weekly, monthly)
+  7. Admin can view revenue and booking counts by worker
+  8. Admin can view worker rankings
+  9. Admin can view repeat customer rate
+  10. Admin can export reports as CSV
+
+Plans:
+- [ ] TBD (to be planned)
+
+### Phase 3: Differentiation
+**Goal**: Deliver full mindmap vision with loyalty program, dynamic pricing, and customer app features
+**Depends on**: Phase 2
+**Requirements**: (from mindmap - to be detailed when Phase 2 completes)
+
+**Success Criteria** (what must be TRUE):
+  1. Customer can purchase and use multi-session tickets (回数券)
+  2. Customer loyalty tiers work (Bronze → Silver → Gold → Platinum → Diamond)
+  3. Higher tiers get booking priority and discounts
+  4. Dynamic pricing adjusts based on time/demand
+  5. Customer app shows remaining sessions, next appointment, booking history
+  6. QR code check-in automatically deducts session from ticket
+  7. Accounting software integration exports data (CSV/API)
+
+Plans:
+- [ ] TBD (to be planned)
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 → 2 → 3
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. MVP | 0/? | Not started | - |
+| 2. Parity | 0/? | Not started | - |
+| 3. Differentiation | 0/? | Not started | - |

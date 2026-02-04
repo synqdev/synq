@@ -65,6 +65,24 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SECR-05**: Rate limiting on booking endpoint (prevent abuse)
 - [ ] **SECR-06**: Parameterized queries only (Prisma handles this, but verify)
 
+### CRM & Customer Management
+
+- [ ] **CRM-01**: Admin can view customer list with search/filter
+- [ ] **CRM-02**: Admin can view individual customer profile (contact info, notes)
+- [ ] **CRM-03**: Admin can view customer booking history
+- [ ] **CRM-04**: Admin can add/edit notes on customer records
+- [ ] **CRM-05**: Customer intake form upload and storage (PDF/image)
+- [ ] **CRM-06**: Track customer visit count and last visit date
+
+### Employee KPIs & Reporting
+
+- [ ] **KPI-01**: View total revenue (daily, weekly, monthly)
+- [ ] **KPI-02**: View revenue by worker
+- [ ] **KPI-03**: View booking count by worker
+- [ ] **KPI-04**: View worker rankings (by revenue, by bookings)
+- [ ] **KPI-05**: View repeat customer rate
+- [ ] **KPI-06**: Export reports as CSV
+
 ### Infrastructure
 
 - [ ] **INFR-01**: Database schema (Worker, Service, Resource, Customer, Booking, WorkerSchedule)
@@ -74,6 +92,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **INFR-05**: Email service integration (Resend)
 - [ ] **INFR-06**: Jest test setup
 - [ ] **INFR-07**: SWR polling for calendar updates (5-10s interval)
+- [ ] **INFR-08**: File storage for intake forms (Supabase Storage)
 
 ## v2 Requirements
 
@@ -127,53 +146,66 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UREG-01 | Phase 1 | Pending |
 | UREG-02 | Phase 1 | Pending |
 | UREG-03 | Phase 1 | Pending |
-| BOOK-01 | Phase 2 | Pending |
-| BOOK-02 | Phase 2 | Pending |
-| BOOK-03 | Phase 2 | Pending |
-| BOOK-04 | Phase 2 | Pending |
-| BOOK-05 | Phase 2 | Pending |
-| BOOK-06 | Phase 2 | Pending |
-| BOOK-07 | Phase 3 | Pending |
-| ADMN-01 | Phase 3 | Pending |
-| ADMN-02 | Phase 3 | Pending |
-| ADMN-03 | Phase 3 | Pending |
-| ADMN-04 | Phase 3 | Pending |
-| ADMN-05 | Phase 3 | Pending |
-| ADMN-06 | Phase 3 | Pending |
-| ADMN-07 | Phase 3 | Pending |
-| ADMN-08 | Phase 3 | Pending |
+| BOOK-01 | Phase 1 | Pending |
+| BOOK-02 | Phase 1 | Pending |
+| BOOK-03 | Phase 1 | Pending |
+| BOOK-04 | Phase 1 | Pending |
+| BOOK-05 | Phase 1 | Pending |
+| BOOK-06 | Phase 1 | Pending |
+| BOOK-07 | Phase 1 | Pending |
+| ADMN-01 | Phase 1 | Pending |
+| ADMN-02 | Phase 1 | Pending |
+| ADMN-03 | Phase 1 | Pending |
+| ADMN-04 | Phase 1 | Pending |
+| ADMN-05 | Phase 1 | Pending |
+| ADMN-06 | Phase 1 | Pending |
+| ADMN-07 | Phase 1 | Pending |
+| ADMN-08 | Phase 1 | Pending |
 | COMP-01 | Phase 1 | Pending |
-| COMP-02 | Phase 2 | Pending |
-| COMP-03 | Phase 2 | Pending |
-| TEST-01 | Phase 2 | Pending |
-| TEST-02 | Phase 2 | Pending |
-| TEST-03 | Phase 2 | Pending |
-| TEST-04 | Phase 2 | Pending |
-| TEST-05 | Phase 2 | Pending |
-| TEST-06 | Phase 2 | Pending |
-| INFR-01 | Phase 1 | Pending |
-| INFR-02 | Phase 1 | Pending |
-| INFR-03 | Phase 1 | Pending |
-| INFR-04 | Phase 2 | Pending |
-| INFR-05 | Phase 3 | Pending |
-| INFR-06 | Phase 1 | Pending |
-| INFR-07 | Phase 2 | Pending |
+| COMP-02 | Phase 1 | Pending |
+| COMP-03 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Pending |
+| TEST-05 | Phase 1 | Pending |
+| TEST-06 | Phase 1 | Pending |
 | ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 2 | Pending |
-| ARCH-03 | Phase 2 | Pending |
+| ARCH-02 | Phase 1 | Pending |
+| ARCH-03 | Phase 1 | Pending |
 | ARCH-04 | Phase 1 | Pending |
 | SECR-01 | Phase 1 | Pending |
 | SECR-02 | Phase 1 | Pending |
-| SECR-03 | Phase 3 | Pending |
+| SECR-03 | Phase 1 | Pending |
 | SECR-04 | Phase 1 | Pending |
-| SECR-05 | Phase 2 | Pending |
+| SECR-05 | Phase 1 | Pending |
 | SECR-06 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | Pending |
+| INFR-05 | Phase 1 | Pending |
+| INFR-06 | Phase 1 | Pending |
+| INFR-07 | Phase 1 | Pending |
+| INFR-08 | Phase 2 | Pending |
+| CRM-01 | Phase 2 | Pending |
+| CRM-02 | Phase 2 | Pending |
+| CRM-03 | Phase 2 | Pending |
+| CRM-04 | Phase 2 | Pending |
+| CRM-05 | Phase 2 | Pending |
+| CRM-06 | Phase 2 | Pending |
+| KPI-01 | Phase 2 | Pending |
+| KPI-02 | Phase 2 | Pending |
+| KPI-03 | Phase 2 | Pending |
+| KPI-04 | Phase 2 | Pending |
+| KPI-05 | Phase 2 | Pending |
+| KPI-06 | Phase 2 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
+- v1 requirements: 48 total
+- Mapped to phases: 48
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after initial definition*
+*Last updated: 2026-02-04 after roadmap creation*

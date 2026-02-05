@@ -5,12 +5,14 @@
  *
  * Server-side handlers for booking operations.
  * Integrates with booking service for transactional booking creation.
+ * Includes rate limiting to prevent abuse.
  */
 
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { prisma } from '@/lib/db/client'
 import { createBooking, type BookingResult } from '@/lib/services/booking.service'
+import { checkBookingRateLimit } from '@/lib/rate-limit'
 
 /**
  * Input for creating a booking via direct call.
@@ -77,6 +79,15 @@ export async function submitBookingForm(
   prevState: BookingFormState,
   formData: FormData
 ): Promise<BookingFormState> {
+  // Rate limit booking submissions by IP
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1'
+  const rateLimit = await checkBookingRateLimit(ip)
+
+  if (!rateLimit.success) {
+    return { error: 'Too many booking attempts. Please wait a moment and try again.' }
+  }
+
   // Get customer ID from cookie
   const cookieStore = await cookies()
   const customerId = cookieStore.get('customerId')?.value

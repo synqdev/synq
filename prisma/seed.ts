@@ -5,6 +5,19 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
+  // System entities (for admin time blocking)
+  const systemBlocker = await prisma.customer.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000000' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000000',
+      name: 'System Block',
+      email: 'system@internal',
+      phone: '000-0000-0000',
+    },
+  })
+  console.log(`Created system blocker: ${systemBlocker.name}`)
+
   // Create Workers
   const workers = await Promise.all([
     prisma.worker.upsert({
@@ -40,21 +53,59 @@ async function main() {
   ])
   console.log(`Created ${workers.length} workers`)
 
-  // Create Service
-  const service = await prisma.service.upsert({
-    where: { id: 'service-shiatsu' },
+  // Create block service (for admin time blocking)
+  const blockService = await prisma.service.upsert({
+    where: { id: 'block-service' },
     update: {},
     create: {
+      id: 'block-service',
+      name: 'Unavailable',
+      nameEn: 'Unavailable',
+      description: 'Blocked time slot',
+      duration: 30,
+      price: 0,
+      isActive: false, // Hidden from public
+    },
+  })
+  console.log(`Created block service: ${blockService.name}`)
+
+  // Create Standard Shiatsu service
+  const standardShiatsu = await prisma.service.upsert({
+    where: { id: 'service-shiatsu' },
+    update: {
+      name: 'スタンダード指圧',
+      nameEn: 'Standard Shiatsu',
+      description: '全身の指圧マッサージ（60分）',
+      duration: 60,
+      price: 6000,
+    },
+    create: {
       id: 'service-shiatsu',
-      name: '指圧',
-      nameEn: 'Shiatsu',
-      description: '全身の指圧マッサージ',
+      name: 'スタンダード指圧',
+      nameEn: 'Standard Shiatsu',
+      description: '全身の指圧マッサージ（60分）',
       duration: 60,
       price: 6000,
       isActive: true,
     },
   })
-  console.log(`Created service: ${service.name}`)
+  console.log(`Created service: ${standardShiatsu.name}`)
+
+  // Create Premium Oil service
+  const premiumOil = await prisma.service.upsert({
+    where: { id: 'service-premium-oil' },
+    update: {},
+    create: {
+      id: 'service-premium-oil',
+      name: 'プレミアムオイル',
+      nameEn: 'Premium Oil',
+      description: '全身オイルマッサージ（90分）',
+      duration: 90,
+      price: 10000,
+      isActive: true,
+    },
+  })
+  console.log(`Created service: ${premiumOil.name}`)
 
   // Create Resources (beds)
   const resources = await Promise.all([

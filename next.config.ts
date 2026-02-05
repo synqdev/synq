@@ -13,10 +13,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
-  // Enable Next.js instrumentation for Sentry
-  experimental: {
-    instrumentationHook: true,
-  },
+  // instrumentationHook is enabled by default in Next.js 15.5+
 }
 
 // Sentry configuration options

@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 8 of 12 (complete)
+Plan: 9 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-07-PLAN.md (User Registration and Booking Flow)
+Last activity: 2026-02-05 - Completed 01-09-PLAN.md (Admin Authentication and Dashboard)
 
-Progress: [████████░░] 67%
+Progress: [█████████░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 6 min
-- Total execution time: 0.82 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 8 | 50 min | 6 min |
+| 01-mvp | 9 | 60 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 18m, 4m, 2m, 4m, 8m
-- Trend: stable (user registration flow complete)
+- Last 5 plans: 4m, 2m, 4m, 8m, 10m
+- Trend: stable (admin dashboard complete)
 
 *Updated after each plan completion*
 
@@ -69,6 +69,9 @@ Recent decisions affecting current work:
 - Cookie-based customer ID for lazy auth, 7-day httpOnly (01-07)
 - SWR with 10-second polling for real-time availability (01-07)
 - useActionState pattern for server action form handling (01-07)
+- JWT tokens via jose library for Edge-compatible admin auth (01-09)
+- Middleware checks cookie presence only; full JWT verification in pages (01-09)
+- Route group (admin) with nested admin/ folder for correct /admin/* URLs (01-09)
 
 ### Pending Todos
 
@@ -80,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T09:38:10Z
-Stopped at: Completed 01-07-PLAN.md (User Registration and Booking Flow)
-Resume file: .planning/phases/01-mvp/01-09-PLAN.md
+Last session: 2026-02-05T18:39:50Z
+Stopped at: Completed 01-09-PLAN.md (Admin Authentication and Dashboard)
+Resume file: .planning/phases/01-mvp/01-10-PLAN.md

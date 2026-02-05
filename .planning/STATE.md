@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 11 of 12 (complete)
-Status: In progress
-Last activity: 2026-02-05 - Completed 01-11-PLAN.md (Security Hardening)
+Plan: 12 of 12 (complete)
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 01-12-PLAN.md (SWR Polling and Test Finalization)
 
-Progress: [███████████░] 92%
+Progress: [████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 6 min
 - Total execution time: 1.2 hours
 
@@ -27,11 +27,11 @@ Progress: [███████████░] 92%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 11 | 68 min | 6 min |
+| 01-mvp | 12 | 69 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 8m, 10m, 4m, 4m
-- Trend: stable (security hardening complete)
+- Last 5 plans: 8m, 10m, 4m, 4m, 1m
+- Trend: stable (Phase 1 MVP complete)
 
 *Updated after each plan completion*
 
@@ -80,6 +80,11 @@ Recent decisions affecting current work:
 - Sentry disabled in development unless DSN explicitly set (01-11)
 - Booking service errors tagged with service/operation for Sentry filtering (01-11)
 - Admin has full database access via app.role='admin' session variable (01-11)
+- Unified polling hook for both user and admin modes instead of separate hooks (01-12)
+- 10-second polling with pause when tab hidden for efficiency (01-12)
+- Activity-based adaptive polling via useAdaptivePolling hook (01-12)
+- 100% coverage requirement only on critical business logic (01-12)
+- v8 coverage provider for faster test execution (01-12)
 
 ### Pending Todos
 
@@ -91,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T23:05:52Z
-Stopped at: Completed 01-11-PLAN.md (Security Hardening)
-Resume file: .planning/phases/01-mvp/01-12-PLAN.md
+Last session: 2026-02-05T23:09:42Z
+Stopped at: Completed 01-12-PLAN.md (SWR Polling and Test Finalization) - Phase 1 MVP complete
+Resume file: None (Phase 1 complete - ready for Phase 2 planning)

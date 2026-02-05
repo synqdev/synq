@@ -1,20 +1,23 @@
 import { getAdminSession } from '@/lib/auth/admin'
 import { adminLogout } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
+import { AdminNav } from './admin-nav'
 
 interface AdminLayoutProps {
   children: React.ReactNode
+  params: Promise<{ locale: string }>
 }
 
 /**
- * Admin layout with header and logout functionality.
+ * Admin layout with header, navigation, and logout functionality.
  *
- * Shows logout button only when authenticated.
+ * Shows navigation and logout button only when authenticated.
  * Auth check for protected pages happens in individual pages (not here)
  * to allow login page to render without auth.
  */
-export default async function AdminLayout({ children }: AdminLayoutProps) {
+export default async function AdminLayout({ children, params }: AdminLayoutProps) {
   const isAuthenticated = await getAdminSession()
+  const { locale } = await params
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -34,6 +37,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
             </form>
           )}
         </div>
+        {isAuthenticated && <AdminNav locale={locale} />}
       </header>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {children}

@@ -96,3 +96,30 @@ All secrets are stored in environment variables. See `.env.example` for required
 ## HTTPS
 
 In production, all traffic should be served over HTTPS. The admin session cookie is marked `secure: true` in production environments.
+
+## Error Tracking and Observability
+
+Sentry is configured for production error tracking and performance monitoring.
+
+### Features
+
+- **Error Capture**: All unhandled errors automatically captured
+- **Performance Monitoring**: Transaction traces for API routes and server actions
+- **Session Replay**: Visual reproduction of user sessions with errors (privacy-first with text masking)
+- **Tagged Errors**: Booking service errors tagged for easy filtering
+
+### Configuration
+
+```
+NEXT_PUBLIC_SENTRY_DSN=<your sentry dsn>
+SENTRY_AUTH_TOKEN=<your auth token for source maps>
+```
+
+Sentry is disabled if `NEXT_PUBLIC_SENTRY_DSN` is not set, making it optional for development.
+
+### Sample Rates
+
+| Environment | Traces | Session Replay | Error Replay |
+|-------------|--------|----------------|--------------|
+| Development | 100% | 10% | 100% |
+| Production | 10% | 10% | 100% |

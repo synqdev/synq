@@ -1,66 +1,20 @@
 import createIntlMiddleware from 'next-intl/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { routing } from './src/i18n/routing'
-import { checkBookingRateLimit, checkApiRateLimit } from '@/lib/rate-limit'
 
 const intlMiddleware = createIntlMiddleware(routing)
 
 /**
- * Middleware for i18n routing, admin route protection, and rate limiting.
+ * Middleware for i18n routing and admin route protection.
+ *
+ * Note: Rate limiting is handled in individual API routes (not middleware)
+ * because Next.js Edge Runtime middleware cannot use Node.js-specific packages
+ * like @upstash/redis.
  *
  * - Admin routes (except login) require a valid session cookie
- * - Booking endpoint has stricter rate limiting (10 req/min)
- * - General API endpoints have standard rate limiting (100 req/min)
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const method = request.method
-
-  // ==========================================================================
-  // RATE LIMITING FOR API ROUTES
-  // ==========================================================================
-
-  // Rate limit booking POST requests (stricter: 10 req/min)
-  if (pathname.startsWith('/api/booking') && method === 'POST') {
-    const ip = request.ip ?? request.headers.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1'
-    const result = await checkBookingRateLimit(ip)
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: 'Too many booking requests. Please try again later.' },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': result.limit.toString(),
-            'X-RateLimit-Remaining': result.remaining.toString(),
-            'X-RateLimit-Reset': result.reset.toString(),
-            'Retry-After': '60',
-          },
-        }
-      )
-    }
-  }
-
-  // Rate limit general API requests (standard: 100 req/min)
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/booking')) {
-    const ip = request.ip ?? request.headers.get('x-forwarded-for')?.split(',')[0] ?? '127.0.0.1'
-    const result = await checkApiRateLimit(ip)
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': result.limit.toString(),
-            'X-RateLimit-Remaining': result.remaining.toString(),
-            'X-RateLimit-Reset': result.reset.toString(),
-            'Retry-After': '60',
-          },
-        }
-      )
-    }
-  }
 
   // ==========================================================================
   // ADMIN ROUTE PROTECTION

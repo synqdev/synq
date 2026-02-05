@@ -13,6 +13,7 @@ import { cookies, headers } from 'next/headers'
 import { prisma } from '@/lib/db/client'
 import { createBooking, type BookingResult } from '@/lib/services/booking.service'
 import { checkBookingRateLimit } from '@/lib/rate-limit'
+import { sendBookingConfirmation } from '@/lib/email/send'
 
 /**
  * Input for creating a booking via direct call.
@@ -137,6 +138,35 @@ export async function submitBookingForm(
 
     if (!result.success) {
       return { error: result.error }
+    }
+
+    // Fetch booking details with related data for email
+    const booking = await prisma.booking.findUnique({
+      where: { id: result.booking.id },
+      include: {
+        customer: true,
+        worker: true,
+        service: true,
+      },
+    })
+
+    if (booking) {
+      // Format date for email (YYYY年MM月DD日 for ja, Month DD, YYYY for en)
+      const bookingDate = new Date(date)
+      const formattedDate = locale === 'ja'
+        ? `${bookingDate.getFullYear()}年${bookingDate.getMonth() + 1}月${bookingDate.getDate()}日`
+        : bookingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+
+      // Send confirmation email (non-blocking - failures logged but don't prevent redirect)
+      await sendBookingConfirmation({
+        to: booking.customer.email,
+        customerName: booking.customer.name,
+        serviceName: booking.service.name,
+        workerName: booking.worker.name,
+        date: formattedDate,
+        time,
+        locale: locale as 'ja' | 'en',
+      })
     }
 
     // Redirect to confirmation page with booking ID

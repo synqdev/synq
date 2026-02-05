@@ -19,7 +19,9 @@
     "confirm": "確定",
     "confirmed": "予約確定",
     "cancelled": "キャンセル済み",
-    "pending": "確認中"
+    "pending": "確認中",
+    "emailSent": "確認メールを送信しました",
+    "emailFailed": "確認メールの送信に失敗しました"
   },
   "admin": {
     "title": "管理画面",

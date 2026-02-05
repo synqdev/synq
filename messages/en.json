@@ -19,7 +19,9 @@
     "confirm": "Confirm",
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
-    "pending": "Pending"
+    "pending": "Pending",
+    "emailSent": "Confirmation email sent",
+    "emailFailed": "Failed to send confirmation email"
   },
   "admin": {
     "title": "Admin",

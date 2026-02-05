@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 12 of 12 (complete)
+Plan: 13 of 13 (complete)
 Status: Phase complete
-Last activity: 2026-02-05 - Completed 01-12-PLAN.md (SWR Polling and Test Finalization)
+Last activity: 2026-02-05 - Completed 01-13-PLAN.md (Service-aware Booking Flow)
 
 Progress: [████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 6 min
-- Total execution time: 1.2 hours
+- Total execution time: 1.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 12 | 69 min | 6 min |
+| 01-mvp | 13 | 73 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 8m, 10m, 4m, 4m, 1m
-- Trend: stable (Phase 1 MVP complete)
+- Last 5 plans: 10m, 4m, 4m, 1m, 4m
+- Trend: stable (Phase 1 MVP complete with gap closure)
 
 *Updated after each plan completion*
 
@@ -85,6 +85,9 @@ Recent decisions affecting current work:
 - Activity-based adaptive polling via useAdaptivePolling hook (01-12)
 - 100% coverage requirement only on critical business logic (01-12)
 - v8 coverage provider for faster test execution (01-12)
+- Service selection must precede availability checking (duration affects slots) (01-13)
+- Admin time blocking uses bookings with system entities rather than schedule entries (01-13)
+- Block service is inactive (isActive: false) to hide from public API (01-13)
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T23:09:42Z
-Stopped at: Completed 01-12-PLAN.md (SWR Polling and Test Finalization) - Phase 1 MVP complete
+Last session: 2026-02-05T23:38:40Z
+Stopped at: Completed 01-13-PLAN.md (Service-aware Booking Flow) - Phase 1 MVP complete with gap closure
 Resume file: None (Phase 1 complete - ready for Phase 2 planning)

@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 3 of 12 (complete)
+Plan: 4 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-03-PLAN.md (UI Component Library)
+Last activity: 2026-02-05 — Completed 01-04-PLAN.md (Availability Logic TDD)
 
-Progress: [███░░░░░░░] 25%
+Progress: [████░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.23 hours
+- Total plans completed: 4
+- Average duration: 7 min
+- Total execution time: 0.53 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 3 | 14 min | 5 min |
+| 01-mvp | 4 | 32 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 4m, 6m
-- Trend: stable
+- Last 5 plans: 4m, 4m, 6m, 18m
+- Trend: stable (TDD plans take longer)
 
 *Updated after each plan completion*
 
@@ -56,6 +56,9 @@ Recent decisions affecting current work:
 - React.forwardRef for all UI components (01-03)
 - Compound pattern for Card component (01-03)
 - Variant/size lookup objects for component styling (01-03)
+- Adjacent time ranges not overlapping - allows back-to-back bookings (01-04)
+- Pure functions separated from database layer for testability (01-04)
+- Jest with next/jest for TypeScript + path alias support (01-04)
 
 ### Pending Todos
 
@@ -67,6 +70,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T04:31:49Z
-Stopped at: Completed 01-03-PLAN.md (UI Component Library)
-Resume file: .planning/phases/01-mvp/01-04-PLAN.md
+Last session: 2026-02-05T05:55:36Z
+Stopped at: Completed 01-04-PLAN.md (Availability Logic TDD)
+Resume file: .planning/phases/01-mvp/01-05-PLAN.md

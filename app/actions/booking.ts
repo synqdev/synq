@@ -4,15 +4,16 @@
  * Booking Server Actions
  *
  * Server-side handlers for booking operations.
- * Integrates with booking service and email notifications.
+ * Integrates with booking service for transactional booking creation.
  */
 
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { prisma } from '@/lib/db/client'
 import { createBooking, type BookingResult } from '@/lib/services/booking.service'
-import { sendBookingConfirmation } from '@/lib/email/send'
 
 /**
- * Input for creating a booking via server action.
+ * Input for creating a booking via direct call.
  */
 export interface CreateBookingActionInput {
   customerId: string
@@ -25,92 +26,116 @@ export interface CreateBookingActionInput {
 }
 
 /**
- * Result from booking action including email status.
+ * Result from booking action.
  */
 export type CreateBookingActionResult =
-  | { success: true; bookingId: string; emailSent: boolean }
+  | { success: true; bookingId: string }
   | { success: false; error: string }
 
 /**
- * Creates a booking and sends a confirmation email.
- *
- * This action:
- * 1. Calls the booking service to create the booking with proper transaction isolation
- * 2. Fetches customer, worker, and service details for the email
- * 3. Sends a localized confirmation email (failure doesn't block booking)
+ * State returned from form-based booking action.
+ */
+export type BookingFormState = {
+  error?: string
+} | null
+
+/**
+ * Creates a booking via direct API call.
  *
  * @param input - Booking details
- * @returns Result with booking ID and email status
- *
- * @example
- * const result = await createBookingAction({
- *   customerId: 'uuid',
- *   workerId: 'uuid',
- *   serviceId: 'uuid',
- *   date: '2024-06-15',
- *   startTime: '10:00',
- *   endTime: '11:00',
- * })
- *
- * if (result.success) {
- *   console.log('Booking created:', result.bookingId)
- *   if (result.emailSent) {
- *     console.log('Confirmation email sent')
- *   }
- * }
+ * @returns Result with booking ID or error
  */
 export async function createBookingAction(
   input: CreateBookingActionInput
 ): Promise<CreateBookingActionResult> {
-  // 1. Create the booking using the service
   const bookingResult: BookingResult<{ id: string }> = await createBooking(input)
 
   if (!bookingResult.success) {
     return { success: false, error: bookingResult.error }
   }
 
-  const booking = bookingResult.booking
-  let emailSent = false
-
-  // 2. Fetch details for email (in parallel)
-  try {
-    const [customer, worker, service] = await Promise.all([
-      prisma.customer.findUnique({ where: { id: input.customerId } }),
-      prisma.worker.findUnique({ where: { id: input.workerId } }),
-      prisma.service.findUnique({ where: { id: input.serviceId } }),
-    ])
-
-    // 3. Send confirmation email if we have all the data
-    if (customer && worker && service && customer.email) {
-      const locale = (customer.locale as 'ja' | 'en') || 'ja'
-
-      // Parse date for formatting
-      const startsAt = new Date(`${input.date}T${input.startTime}:00`)
-
-      const emailResult = await sendBookingConfirmation({
-        to: customer.email,
-        customerName: customer.name,
-        serviceName: locale === 'ja' ? service.name : (service.nameEn || service.name),
-        workerName: locale === 'ja' ? worker.name : (worker.nameEn || worker.name),
-        date: new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
-          dateStyle: 'long',
-        }).format(startsAt),
-        time: new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
-          timeStyle: 'short',
-        }).format(startsAt),
-        locale,
-      })
-
-      emailSent = emailResult !== null
-    }
-  } catch (error) {
-    // Log email error but don't fail the booking
-    console.error('[Booking Action] Email notification failed:', error)
-  }
-
   return {
     success: true,
-    bookingId: booking.id,
-    emailSent,
+    bookingId: bookingResult.booking.id,
+  }
+}
+
+/**
+ * Creates a booking from form submission and redirects to confirmation.
+ *
+ * This action:
+ * 1. Verifies customer ID from cookie
+ * 2. Gets the active service for duration calculation
+ * 3. Creates booking using the booking service (with serializable transactions)
+ * 4. Redirects to confirmation page on success
+ *
+ * @param prevState - Previous form state (for progressive enhancement)
+ * @param formData - Form submission data (workerId, date, time, resourceId, locale)
+ * @returns Error state if creation fails, or redirects on success
+ */
+export async function submitBookingForm(
+  prevState: BookingFormState,
+  formData: FormData
+): Promise<BookingFormState> {
+  // Get customer ID from cookie
+  const cookieStore = await cookies()
+  const customerId = cookieStore.get('customerId')?.value
+  const locale = (formData.get('locale') as string) || 'ja'
+
+  // If no customer ID, redirect to registration
+  if (!customerId) {
+    redirect(`/${locale}/register`)
+  }
+
+  // Extract form data
+  const workerId = formData.get('workerId') as string
+  const date = formData.get('date') as string
+  const time = formData.get('time') as string
+  const resourceId = formData.get('resourceId') as string | null
+
+  // Validate required fields
+  if (!workerId || !date || !time) {
+    return { error: 'Missing required booking information' }
+  }
+
+  try {
+    // Get default service
+    const service = await prisma.service.findFirst({ where: { isActive: true } })
+    if (!service) {
+      return { error: 'No service available' }
+    }
+
+    // Calculate end time based on service duration
+    const [hours, minutes] = time.split(':').map(Number)
+    const startMinutes = hours * 60 + minutes
+    const endMinutes = startMinutes + service.duration
+    const endHours = Math.floor(endMinutes / 60)
+    const endMins = endMinutes % 60
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
+
+    // Create booking using booking service
+    const result = await createBooking({
+      customerId,
+      serviceId: service.id,
+      workerId,
+      resourceId: resourceId || undefined,
+      date,
+      startTime: time,
+      endTime,
+    })
+
+    if (!result.success) {
+      return { error: result.error }
+    }
+
+    // Redirect to confirmation page with booking ID
+    redirect(`/${locale}/booking/confirm?id=${result.booking.id}`)
+  } catch (error) {
+    // Check if it's a redirect (Next.js throws NEXT_REDIRECT)
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error
+    }
+    console.error('Failed to create booking:', error)
+    return { error: 'Failed to create booking. Please try again.' }
   }
 }

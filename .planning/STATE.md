@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 1 of 12 (in progress)
+Plan: 2 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-01-PLAN.md (Database Schema)
+Last activity: 2026-02-05 — Completed 01-02-PLAN.md (Project Structure and i18n)
 
-Progress: [█░░░░░░░░░] 8%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 4 min
-- Total execution time: 0.07 hours
+- Total execution time: 0.13 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 1 | 4 min | 4 min |
+| 01-mvp | 2 | 8 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m
-- Trend: -
+- Last 5 plans: 4m, 4m
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -50,6 +50,9 @@ Recent decisions affecting current work:
 - Deterministic seed IDs for idempotent upsert operations (01-01)
 - Prisma singleton via globalThis pattern (01-01)
 - Japanese as primary name field, English as optional nameEn (01-01)
+- Japanese (ja) as default locale (01-02)
+- createNavigation pattern for typed navigation helpers (01-02)
+- Tailwind CSS 4 with @tailwindcss/postcss plugin (01-02)
 
 ### Pending Todos
 
@@ -61,6 +64,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T04:29:03Z
-Stopped at: Completed 01-01-PLAN.md (Database Schema)
-Resume file: .planning/phases/01-mvp/01-02-PLAN.md
+Last session: 2026-02-05T04:29:38Z
+Stopped at: Completed 01-02-PLAN.md (Project Structure and i18n)
+Resume file: .planning/phases/01-mvp/01-03-PLAN.md

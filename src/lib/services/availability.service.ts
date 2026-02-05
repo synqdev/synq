@@ -47,6 +47,7 @@ export interface AvailableSlot {
   date: string;                   // YYYY-MM-DD format
   startTime: string;              // HH:MM format
   endTime: string;                // HH:MM format
+  duration: number;               // Duration in minutes (for frontend cell rendering)
   availableResourceIds: string[]; // Resources that can be booked for this slot
 }
 
@@ -234,6 +235,7 @@ export function getAvailableSlots(
         date,
         startTime: slotStartTime,
         endTime: slotEndTime,
+        duration: serviceDuration,
         availableResourceIds,
       });
     }

@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 9 of 12 (complete)
+Plan: 10 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 - Completed 01-09-PLAN.md (Admin Authentication and Dashboard)
+Last activity: 2026-02-05 - Completed 01-10-PLAN.md (Admin CRUD Management)
 
-Progress: [█████████░] 75%
+Progress: [██████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 6 min
-- Total execution time: 1.0 hours
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 9 | 60 min | 7 min |
+| 01-mvp | 10 | 64 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 2m, 4m, 8m, 10m
-- Trend: stable (admin dashboard complete)
+- Last 5 plans: 2m, 4m, 8m, 10m, 4m
+- Trend: stable (admin CRUD complete)
 
 *Updated after each plan completion*
 
@@ -72,6 +72,9 @@ Recent decisions affecting current work:
 - JWT tokens via jose library for Edge-compatible admin auth (01-09)
 - Middleware checks cookie presence only; full JWT verification in pages (01-09)
 - Route group (admin) with nested admin/ folder for correct /admin/* URLs (01-09)
+- Soft delete for all entities (isActive=false) to preserve booking history (01-10)
+- Inline table editing replaces row with form rather than modal (01-10)
+- Tab-style admin navigation in header under title (01-10)
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T18:39:50Z
-Stopped at: Completed 01-09-PLAN.md (Admin Authentication and Dashboard)
-Resume file: .planning/phases/01-mvp/01-10-PLAN.md
+Last session: 2026-02-05T18:45:09Z
+Stopped at: Completed 01-10-PLAN.md (Admin CRUD Management)
+Resume file: .planning/phases/01-mvp/01-11-PLAN.md

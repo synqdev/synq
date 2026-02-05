@@ -13,15 +13,18 @@
   },
   "booking": {
     "title": "Booking",
-    "selectTime": "Select time",
+    "selectTime": "Please select a time slot",
     "selectService": "Select service",
     "selectWorker": "Select worker",
-    "confirm": "Confirm",
+    "confirm": "Book Now",
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
     "pending": "Pending",
     "emailSent": "Confirmation email sent",
-    "emailFailed": "Failed to send confirmation email"
+    "emailFailed": "Failed to send confirmation email",
+    "noSlots": "No available slots for this date",
+    "selectedSlot": "Selected",
+    "bookingError": "Booking failed. Please try again."
   },
   "admin": {
     "title": "Admin",

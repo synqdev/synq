@@ -13,15 +13,18 @@
   },
   "booking": {
     "title": "予約",
-    "selectTime": "時間を選択",
+    "selectTime": "時間を選択してください",
     "selectService": "サービスを選択",
     "selectWorker": "スタッフを選択",
-    "confirm": "確定",
+    "confirm": "予約する",
     "confirmed": "予約確定",
     "cancelled": "キャンセル済み",
     "pending": "確認中",
     "emailSent": "確認メールを送信しました",
-    "emailFailed": "確認メールの送信に失敗しました"
+    "emailFailed": "確認メールの送信に失敗しました",
+    "noSlots": "この日は予約可能な枠がありません",
+    "selectedSlot": "選択中",
+    "bookingError": "予約に失敗しました。もう一度お試しください。"
   },
   "admin": {
     "title": "管理画面",

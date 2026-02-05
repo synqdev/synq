@@ -12,26 +12,26 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 Phase: 1 of 3 (MVP)
 Plan: 8 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-08-PLAN.md (Email Integration)
+Last activity: 2026-02-05 — Completed 01-07-PLAN.md (User Registration and Booking Flow)
 
-Progress: [██████░░░░] 58%
+Progress: [████████░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 6 min
-- Total execution time: 0.70 hours
+- Total execution time: 0.82 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 7 | 42 min | 6 min |
+| 01-mvp | 8 | 50 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 6m, 18m, 4m, 2m, 4m
-- Trend: stable (email integration straightforward)
+- Last 5 plans: 18m, 4m, 2m, 4m, 8m
+- Trend: stable (user registration flow complete)
 
 *Updated after each plan completion*
 
@@ -66,6 +66,9 @@ Recent decisions affecting current work:
 - Sticky worker names and header for calendar scroll persistence (01-06)
 - Graceful email degradation: failures logged but don't block booking (01-08)
 - @/emails/* path alias for email templates (01-08)
+- Cookie-based customer ID for lazy auth, 7-day httpOnly (01-07)
+- SWR with 10-second polling for real-time availability (01-07)
+- useActionState pattern for server action form handling (01-07)
 
 ### Pending Todos
 
@@ -77,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T09:35:16Z
-Stopped at: Completed 01-08-PLAN.md (Email Integration)
+Last session: 2026-02-05T09:38:10Z
+Stopped at: Completed 01-07-PLAN.md (User Registration and Booking Flow)
 Resume file: .planning/phases/01-mvp/01-09-PLAN.md

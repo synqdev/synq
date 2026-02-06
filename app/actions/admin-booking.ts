@@ -110,12 +110,12 @@ export async function blockWorkerTime(formData: FormData) {
   endsAt.setHours(endHours, endMins, 0, 0)
 
   // Create booking with system entities
+  // Note: resourceId is omitted for block bookings (doesn't require specific resource)
   const booking = await prisma.booking.create({
     data: {
       customerId: '00000000-0000-0000-0000-000000000000', // SYSTEM_BLOCKER
       serviceId: 'block-service', // BLOCK_SERVICE
       workerId: parsed.workerId,
-      resourceId: undefined, // Block doesn't require specific resource
       startsAt,
       endsAt,
       status: 'CONFIRMED',

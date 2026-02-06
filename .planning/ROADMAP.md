@@ -78,8 +78,17 @@ Plans:
   9. Admin can view repeat customer rate
   10. Admin can export reports as CSV
 
+**Plans:** 8 plans in 4 waves
+
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 02-01-PLAN.md — Database schema migration (new tables + field extensions) (Wave 1)
+- [ ] 02-02-PLAN.md — Customer list with search, filter, pagination (Wave 2)
+- [ ] 02-05-PLAN.md — Sales reporting dashboard (revenue + worker metrics) (Wave 2)
+- [ ] 02-03-PLAN.md — Customer detail with booking history and notes (Wave 3)
+- [ ] 02-04-PLAN.md — Intake form upload (Supabase Storage) (Wave 3)
+- [ ] 02-06-PLAN.md — Worker rankings and repeat customer rate (Wave 3)
+- [ ] 02-07-PLAN.md — CSV export (customers, bookings, revenue) (Wave 4)
+- [ ] 02-08-PLAN.md — Integration, i18n, and end-to-end verification (Wave 4)
 
 ### Phase 3: Differentiation
 **Goal**: Deliver full mindmap vision with loyalty program, dynamic pricing, and customer app features
@@ -88,7 +97,7 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
   1. Customer can purchase and use multi-session tickets (回数券)
-  2. Customer loyalty tiers work (Bronze → Silver → Gold → Platinum → Diamond)
+  2. Customer loyalty tiers work (Bronze -> Silver -> Gold -> Platinum -> Diamond)
   3. Higher tiers get booking priority and discounts
   4. Dynamic pricing adjusts based on time/demand
   5. Customer app shows remaining sessions, next appointment, booking history
@@ -101,10 +110,10 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. MVP | 14/14 | ✓ Complete | 2026-02-05 |
-| 2. Parity | 0/? | Not started | - |
+| 1. MVP | 14/14 | Complete | 2026-02-05 |
+| 2. Parity | 0/8 | In Progress | - |
 | 3. Differentiation | 0/? | Not started | - |

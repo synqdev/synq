@@ -126,3 +126,65 @@ export function generateTimeSlots(
 
   return slots;
 }
+
+import { BUSINESS_TIMEZONE } from '@/lib/constants'
+
+/**
+ * Creates a Date object from date (YYYY-MM-DD) and time (HH:MM) strings,
+ * interpreted in the business timezone.
+ *
+ * @param date - Date string (YYYY-MM-DD)
+ * @param time - Time string (HH:MM)
+ * @returns Date object representing that instant
+ */
+export function toZonedTime(date: string, time: string): Date {
+  const [hours, minutes] = time.split(':').map(Number)
+  const normalizedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+
+  // Construct ISO string with fixed offset if Tokyo
+  // Asia/Tokyo is UTC+9
+  if (BUSINESS_TIMEZONE === 'Asia/Tokyo') {
+    return new Date(`${date}T${normalizedTime}:00+09:00`)
+  }
+
+  // Fallback (should ideally warn if timezone not handled)
+  return new Date(`${date}T${normalizedTime}:00`)
+}
+
+/**
+ * Formats a Date object or ISO string into date and time strings
+ * interpreted in the business timezone.
+ *
+ * @param date - Date object or ISO string
+ * @returns Object with date (YYYY-MM-DD) and time (HH:MM) strings
+ */
+export function formatInTimeZone(date: Date | string): { date: string; time: string } {
+  const d = new Date(date)
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(d)
+
+  const getPart = (type: string) => parts.find(p => p.type === type)?.value || ''
+
+  // local date parts
+  const year = getPart('year')
+  const month = getPart('month')
+  const day = getPart('day')
+
+  // Handle 24:00 edge case? Intl normally handles valid times (00:00 - 23:59)
+  // But we should pad hour/minute just in case formatToParts doesn't (it usually does if 2-digit specified)
+  const hour = getPart('hour').padStart(2, '0')
+  const minute = getPart('minute').padStart(2, '0')
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hour}:${minute}`
+  }
+}

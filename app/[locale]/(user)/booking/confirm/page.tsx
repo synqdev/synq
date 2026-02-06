@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/db/client';
+import { BUSINESS_TIMEZONE } from '@/lib/constants';
 import { Card, CardHeader, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
@@ -77,11 +78,14 @@ export default async function ConfirmPage({
   }
 
   // Format date and time with locale
+  // Format date and time with locale
   const dateFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
     dateStyle: 'full',
+    timeZone: BUSINESS_TIMEZONE,
   });
   const timeFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
     timeStyle: 'short',
+    timeZone: BUSINESS_TIMEZONE,
   });
 
   const formattedDate = dateFormatter.format(booking.startsAt);

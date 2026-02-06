@@ -41,7 +41,7 @@ export function SlotSelectionClient({
       return
     }
 
-    // Navigate to confirmation page with all booking details
+    // Navigate to preview page with all booking details
     const params = new URLSearchParams({
       serviceId,
       date,
@@ -50,7 +50,7 @@ export function SlotSelectionClient({
       resourceId,
     })
 
-    router.push(`/${locale}/booking/confirm?${params.toString()}`)
+    router.push(`/${locale}/booking/preview?${params.toString()}`)
   }
 
   // Check if there are any available slots

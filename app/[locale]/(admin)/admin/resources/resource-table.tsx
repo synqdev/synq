@@ -9,6 +9,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteResource } from '@/app/actions/resources'
 import { ResourceForm } from './resource-form'
@@ -20,32 +21,19 @@ interface Resource {
   createdAt: Date
 }
 
-interface Labels {
-  name: string
-  status: string
-  active: string
-  inactive: string
-  actions: string
-  edit: string
-  delete: string
-  save: string
-  cancel: string
-  noResources: string
-  confirmDelete: string
-}
-
 interface ResourceTableProps {
   resources: Resource[]
-  labels: Labels
 }
 
-export function ResourceTable({ resources, labels }: ResourceTableProps) {
+export function ResourceTable({ resources }: ResourceTableProps) {
   const router = useRouter()
+  const tCommon = useTranslations('common')
+  const tResources = useTranslations('admin.resourcesPage')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`${labels.confirmDelete}\n\n${name}`)) return
+    if (!confirm(`${tResources('confirmDelete')}\n\n${name}`)) return
 
     startTransition(async () => {
       await deleteResource(id)
@@ -61,7 +49,7 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
   if (resources.length === 0) {
     return (
       <p className="text-center text-secondary-500 py-8">
-        {labels.noResources}
+        {tResources('notFound')}
       </p>
     )
   }
@@ -71,9 +59,9 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
       <table className="w-full text-left text-sm">
         <thead className="border-b border-secondary-200 text-secondary-600">
           <tr>
-            <th className="px-4 py-3 font-medium">{labels.name}</th>
-            <th className="px-4 py-3 font-medium">{labels.status}</th>
-            <th className="px-4 py-3 font-medium text-right">{labels.actions}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('name')}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('status')}</th>
+            <th className="px-4 py-3 font-medium text-right">{tCommon('actions')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-secondary-100">
@@ -82,7 +70,6 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
               {editingId === resource.id ? (
                 <td colSpan={3} className="px-4 py-4">
                   <ResourceForm
-                    labels={labels}
                     mode="edit"
                     resource={resource}
                     onCancel={handleEditCancel}
@@ -95,13 +82,12 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        resource.isActive
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${resource.isActive
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}
+                        }`}
                     >
-                      {resource.isActive ? labels.active : labels.inactive}
+                      {resource.isActive ? tCommon('active') : tCommon('inactive')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -111,7 +97,7 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
                         size="sm"
                         onClick={() => setEditingId(resource.id)}
                       >
-                        {labels.edit}
+                        {tCommon('edit')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -120,7 +106,7 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
                         disabled={isPending}
                         className="text-red-600 hover:bg-red-50"
                       >
-                        {labels.delete}
+                        {tCommon('delete')}
                       </Button>
                     </div>
                   </td>

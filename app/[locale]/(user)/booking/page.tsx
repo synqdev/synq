@@ -1,16 +1,16 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { prisma } from '@/lib/db/client'
+import { BookingSelectionForm } from './booking-selection-form'
 
 interface BookingPageProps {
   params: Promise<{ locale: string }>
 }
 
 /**
- * Booking Entry Point
- *
- * Redirects user to appropriate step in booking flow:
- * - No customer ID → Registration page
- * - Has customer ID → Service selection
+ * Unified Booking Page
+ * 
+ * Combines Service and Date selection into a single step.
  */
 export default async function BookingPage({ params }: BookingPageProps) {
   const { locale } = await params
@@ -19,9 +19,23 @@ export default async function BookingPage({ params }: BookingPageProps) {
 
   if (!customerId) {
     // No customer ID - send to registration
-    redirect(`/${locale}/register?redirect=${encodeURIComponent(`/${locale}/booking/service`)}`)
+    // We send them back to this page (/booking) after registration
+    redirect(`/${locale}/register?redirect=${encodeURIComponent(`/${locale}/booking`)}`)
   }
 
-  // Has customer - go to service selection
-  redirect(`/${locale}/booking/service`)
+  // Fetch active services
+  const services = await prisma.service.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' },
+  })
+
+  return (
+    <div className="max-w-xl mx-auto p-6 md:p-8">
+      <h1 className="text-3xl font-black mb-8 text-center uppercase tracking-tight">
+        {locale === 'ja' ? '予約の詳細' : 'Booking Details'}
+      </h1>
+
+      <BookingSelectionForm services={services} locale={locale} />
+    </div>
+  )
 }

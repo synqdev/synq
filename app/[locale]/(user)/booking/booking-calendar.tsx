@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useActionState } from 'react';
 import { useAvailability, type WorkerWithSlots } from '@/hooks/useAvailability';
-import { TimelineCalendar } from '@/components/calendar';
+import { EmployeeTimeline, type TimelineSlot, type TimelineWorker } from '@/components/calendar';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Card } from '@/components/ui/card';
@@ -43,7 +43,7 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
   );
 
   // Fetch availability data with SWR polling
-  const { workers, isLoading, error } = useAvailability(selectedDate);
+  const { workers, isLoading, error, serviceDuration } = useAvailability(selectedDate);
 
   // Convert API response to calendar format
   const calendarWorkers: CalendarWorker[] = useMemo(
@@ -108,6 +108,29 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
     );
   }
 
+  // Transform to TimelineWorker format for EmployeeTimeline
+  const timelineWorkers: TimelineWorker[] = useMemo(() => {
+    return workers.map((w) => {
+      // Find slots for this worker
+      const workerSlots = w.slots.map((s): TimelineSlot => ({
+        startTime: s.startTime,
+        duration: serviceDuration,
+        type: 'available',
+        data: {
+          resourceIds: s.availableResourceIds,
+          endTime: s.endTime
+        }
+      }));
+
+      return {
+        id: w.id,
+        name: w.name,
+        nameEn: w.nameEn || undefined,
+        slots: workerSlots
+      };
+    });
+  }, [workers, serviceDuration]);
+
   return (
     <div className="space-y-6">
       {/* Date picker */}
@@ -127,14 +150,23 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
       </div>
 
       {/* Calendar */}
-      <TimelineCalendar
-        date={new Date(selectedDate)}
-        workers={calendarWorkers}
-        slots={calendarSlots}
-        mode="interactive"
-        onSlotSelect={handleSlotSelect}
-        selectedSlot={selectedSlot}
+      <EmployeeTimeline
+        workers={timelineWorkers}
+        mode="user"
+        onSlotClick={(slot, workerId) => {
+          if (slot.type === 'available') {
+            // Reconstruct CalendarSlot for selection
+            const calendarSlot: CalendarSlot = {
+              time: slot.startTime,
+              workerId: workerId,
+              resourceId: slot.data?.resourceIds?.[0],
+              isAvailable: true
+            };
+            handleSlotSelect(calendarSlot);
+          }
+        }}
         timeRange={{ start: '09:00', end: '19:00' }}
+        className="min-h-[400px]"
       />
 
       {/* No slots message */}

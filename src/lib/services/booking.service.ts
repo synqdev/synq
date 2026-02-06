@@ -16,6 +16,7 @@
 
 import { prisma } from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
+
 import * as Sentry from '@sentry/nextjs';
 import {
   createBookingSchema,
@@ -220,6 +221,7 @@ export async function createBooking(
   }
 
   // Should not reach here, but TypeScript needs a return
+  /* istanbul ignore next */
   return { success: false, error: 'Max retries exceeded' };
 }
 

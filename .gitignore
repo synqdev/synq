@@ -5,6 +5,13 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/playwright/.auth/
+.playwright/
+
+# next.js
+.next/
 
 # next.js
 /.next/
@@ -13,6 +20,8 @@
 # production
 /build
 
+#mobile builds
+/mobile
 # misc
 .DS_Store
 *.pem

@@ -213,30 +213,338 @@ describe('Booking Validation', () => {
   });
 });
 
+// Mock Prisma Client
+jest.mock('@/lib/db/client', () => ({
+  prisma: {
+    $transaction: jest.fn((callback) => callback(prismaMock)),
+    booking: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+  },
+}));
+
+// Mock @prisma/client to ensure unified class identity for instanceof checks
+jest.mock('@prisma/client', () => {
+  class MockPrismaClientKnownRequestError extends Error {
+    code: string;
+    clientVersion: string;
+    meta?: any;
+    constructor(message: string, { code, clientVersion, meta }: any) {
+      super(message);
+      this.code = code;
+      this.clientVersion = clientVersion;
+      this.meta = meta;
+    }
+  }
+
+  return {
+    Prisma: {
+      PrismaClientKnownRequestError: MockPrismaClientKnownRequestError,
+      TransactionIsolationLevel: {
+        Serializable: 'Serializable'
+      }
+    }
+  };
+});
+
+// Mock Sentry
+jest.mock('@sentry/nextjs', () => ({
+  captureException: jest.fn(),
+}));
+
+import { prisma } from '@/lib/db/client';
+import { createBooking, cancelBooking } from '@/lib/services/booking.service';
+import * as Sentry from '@sentry/nextjs';
+import { Prisma } from '@prisma/client';
+
+// Define the mock transaction client
+const prismaMock = {
+  booking: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    count: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
+  resource: {
+    findMany: jest.fn(),
+  },
+};
+
 describe('Booking Service', () => {
-  // These tests will fail until booking.service.ts is implemented
+  const validBookingInput = {
+    customerId: '123e4567-e89b-12d3-a456-426614174000',
+    workerId: '123e4567-e89b-12d3-a456-426614174001',
+    serviceId: '123e4567-e89b-12d3-a456-426614174002',
+    date: '2024-01-15',
+    startTime: '10:00',
+    endTime: '11:00',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default transaction mock implementation
+    (prisma.$transaction as jest.Mock).mockImplementation((cb) => cb(prismaMock));
+  });
+
   describe('createBooking', () => {
-    it('should create a booking with available slot', async () => {
-      // Import will fail until service is created
-      const { createBooking } = await import('@/lib/services/booking.service');
-      expect(createBooking).toBeDefined();
+    it('should create a booking with available slot and auto-assigned resource', async () => {
+      // Mock worker availability (no conflicts)
+      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+
+      // Mock resource availability check
+      // First call is findMany (finding all resources)
+      prismaMock.resource.findMany.mockResolvedValueOnce([
+        { id: 'res-1', name: 'Resource 1', isActive: true },
+      ]);
+      // Second call is count (checking conflict for res-1) - no conflicts
+      prismaMock.booking.count.mockResolvedValueOnce(0);
+
+      // Mock creation
+      const createdBooking = { id: 'booking-1', ...validBookingInput, status: 'CONFIRMED' };
+      prismaMock.booking.create.mockResolvedValueOnce(createdBooking);
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.booking).toEqual(createdBooking);
+        expect(prismaMock.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+          data: expect.objectContaining({
+            resourceId: 'res-1',
+          }),
+        }));
+      }
+    });
+
+    it('should create a booking with specified resource', async () => {
+      const inputWithResource = {
+        ...validBookingInput,
+        resourceId: '123e4567-e89b-12d3-a456-426614174003', // Valid UUID
+      };
+
+      // Mock worker availability (no conflicts)
+      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+
+      // Mock specified resource availability (checking conflicts directly)
+      // Note: Logic calls tx.booking.findMany for resource conflicts when ID is provided
+      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+
+      const createdBooking = { id: 'booking-2', ...inputWithResource, status: 'CONFIRMED' };
+      prismaMock.booking.create.mockResolvedValueOnce(createdBooking);
+
+      const result = await createBooking(inputWithResource);
+
+      expect(result.success).toBe(true);
+      expect(prismaMock.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          resourceId: '123e4567-e89b-12d3-a456-426614174003',
+        }),
+      }));
+    });
+
+    it('should fail when validation fails', async () => {
+      const invalidInput = { ...validBookingInput, startTime: 'invalid' };
+      const result = await createBooking(invalidInput as any);
+      expect(result.success).toBe(false);
     });
 
     it('should fail when worker is not available', async () => {
-      const { createBooking } = await import('@/lib/services/booking.service');
-      expect(typeof createBooking).toBe('function');
+      // Mock worker availability (conflict found)
+      prismaMock.booking.findMany.mockResolvedValueOnce([{ id: 'conflict-1' }]);
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Worker not available at this time');
+      }
+      expect(prismaMock.booking.create).not.toHaveBeenCalled();
     });
 
-    it('should fail when no resource is available', async () => {
-      const { createBooking } = await import('@/lib/services/booking.service');
-      expect(typeof createBooking).toBe('function');
+    it('should fail when specified resource is not available', async () => {
+      const inputWithResource = {
+        ...validBookingInput,
+        resourceId: '123e4567-e89b-12d3-a456-426614174003', // Valid UUID
+      };
+
+      // Mock worker availability (no conflicts)
+      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+
+      // Mock resource availability (conflict found)
+      prismaMock.booking.findMany.mockResolvedValueOnce([{ id: 'conflict-res' }]);
+
+      const result = await createBooking(inputWithResource);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Resource not available at this time');
+      }
+    });
+
+    it('should fail when no auto-assigned resource is available', async () => {
+      // Mock worker availability
+      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+
+      // Mock resource finding
+      prismaMock.resource.findMany.mockResolvedValueOnce([
+        { id: 'res-1', name: 'Resource 1' },
+      ]);
+      // Mock conflict for res-1
+      prismaMock.booking.count.mockResolvedValueOnce(1);
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('No resources available at this time');
+      }
+    });
+
+    it('should return null if no resources exist in DB (auto-assign)', async () => {
+      // Mock worker availability
+      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+
+      // Mock resource finding - empty list
+      prismaMock.resource.findMany.mockResolvedValueOnce([]);
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('No resources available at this time');
+      }
+    });
+
+    it('should retry on serialization failure and succeed', async () => {
+      // First attempt fails with P2034
+      const error = new Prisma.PrismaClientKnownRequestError('Serialization failure', {
+        code: 'P2034',
+        clientVersion: '5.0.0',
+      });
+
+      (prisma.$transaction as jest.Mock)
+        .mockRejectedValueOnce(error) // Fail 1st time
+        .mockImplementationOnce((cb) => cb(prismaMock)); // Succeed 2nd time
+
+      // Setup success mocks for 2nd attempt
+      prismaMock.booking.findMany.mockResolvedValueOnce([]); // Worker ok
+      prismaMock.resource.findMany.mockResolvedValueOnce([{ id: 'res-1' }]); // Find res
+      prismaMock.booking.count.mockResolvedValueOnce(0); // Res ok
+      prismaMock.booking.create.mockResolvedValueOnce({ id: 'booking-retry' });
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(true);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fail after max retries', async () => {
+      const error = new Prisma.PrismaClientKnownRequestError('Serialization failure', {
+        code: 'P2034',
+        clientVersion: '5.0.0',
+      });
+
+      // Fail all 3 attempts
+      (prisma.$transaction as jest.Mock).mockRejectedValue(error);
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(false);
+      // It returns "Unknown error occurred" or caught inside? 
+      // Wait, the code loops MAX_RETRIES. After loop finishes, there is a return statement.
+      // "return { success: false, error: 'Max retries exceeded' };"
+      // But if it fails on the last attempt, it goes to catch block.
+      // If attempt < MAX_RETRIES it retries.
+      // When attempt === MAX_RETRIES, condition `attempt < MAX_RETRIES` is false.
+      // So on the last failure, it falls through to Sentry capture and returns error.
+      // But `error` is instanceof Error, so it returns error.message "Serialization failure"
+      // Let's verify logic:
+      // attempt=1 (fails) -> retry
+      // attempt=2 (fails) -> retry
+      // attempt=3 (fails) -> attempt < 3 is false. Falls through.
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle non-retryable errors and report to Sentry', async () => {
+      const error = new Error('Database connection failed');
+      (prisma.$transaction as jest.Mock).mockRejectedValueOnce(error);
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Database connection failed');
+      }
+      expect(Sentry.captureException).toHaveBeenCalled();
+    });
+
+    it('should handle unknown errors', async () => {
+      (prisma.$transaction as jest.Mock).mockRejectedValueOnce('String error');
+
+      const result = await createBooking(validBookingInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Unknown error occurred');
+      }
     });
   });
 
   describe('cancelBooking', () => {
-    it('should cancel a booking', async () => {
-      const { cancelBooking } = await import('@/lib/services/booking.service');
-      expect(cancelBooking).toBeDefined();
+    const validCancelInput = { bookingId: '123e4567-e89b-12d3-a456-426614174004' }; // Valid UUID
+
+    it('should cancel a booking successfully', async () => {
+      // Mock finding booking
+      (prisma.booking.findUnique as jest.Mock).mockResolvedValueOnce({ id: '123e4567-e89b-12d3-a456-426614174004' });
+      // Mock update
+      (prisma.booking.update as jest.Mock).mockResolvedValueOnce({ id: '123e4567-e89b-12d3-a456-426614174004', status: 'CANCELLED' });
+
+      const result = await cancelBooking(validCancelInput);
+
+      expect(result.success).toBe(true);
+      expect(prisma.booking.update).toHaveBeenCalledWith({
+        where: { id: '123e4567-e89b-12d3-a456-426614174004' },
+        data: { status: 'CANCELLED' },
+      });
+    });
+
+    it('should fail validation', async () => {
+      const result = await cancelBooking({ bookingId: 'invalid' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should return error if booking not found', async () => {
+      (prisma.booking.findUnique as jest.Mock).mockResolvedValueOnce(null);
+
+      const result = await cancelBooking(validCancelInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Booking not found');
+      }
+    });
+
+    it('should handle errors and report to Sentry', async () => {
+      (prisma.booking.findUnique as jest.Mock).mockRejectedValueOnce(new Error('DB Error'));
+
+      const result = await cancelBooking(validCancelInput);
+
+      expect(result.success).toBe(false);
+      expect(Sentry.captureException).toHaveBeenCalled();
+    });
+
+    it('should handle unknown errors', async () => {
+      (prisma.booking.findUnique as jest.Mock).mockRejectedValueOnce('Unknown');
+
+      const result = await cancelBooking(validCancelInput);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Unknown error occurred');
+      }
     });
   });
 });

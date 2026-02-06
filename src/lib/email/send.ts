@@ -50,10 +50,19 @@ export async function sendBookingConfirmation(
     return null
   }
 
+  // In development/testing without verified domain, send to verified email
+  // Resend only allows sending to your own email in test mode
+  const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.RESEND_VERIFIED_DOMAIN
+  const recipientEmail = isDevelopment ? 'dev@synqreserve.com' : to
+
+  if (isDevelopment && to !== recipientEmail) {
+    console.log(`[Email] Development mode: Redirecting email from ${to} to ${recipientEmail}`)
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM || 'SYNQ <onboarding@resend.dev>',
-      to,
+      to: recipientEmail,
       subject: getSubject(locale),
       react: BookingConfirmation({ ...templateProps, locale }),
     })

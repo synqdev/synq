@@ -9,7 +9,16 @@
     "edit": "Edit",
     "back": "Back",
     "next": "Next",
-    "submit": "Submit"
+    "submit": "Submit",
+    "name": "Name",
+    "nameEn": "English Name",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "actions": "Actions",
+    "message": "Message",
+    "phone": "Phone",
+    "email": "Email"
   },
   "booking": {
     "title": "Booking",
@@ -33,11 +42,50 @@
     "services": "Services",
     "resources": "Resources",
     "bookings": "Bookings",
-    "settings": "Settings"
+    "settings": "Settings",
+    "nav": {
+      "dashboard": "Dashboard",
+      "workers": "Workers",
+      "services": "Services",
+      "resources": "Resources"
+    },
+    "dashboardPage": {
+      "title": "Dashboard",
+      "previous": "Previous",
+      "today": "Today",
+      "next": "Next",
+      "bookings": "{count} bookings",
+      "lastUpdated": "Last updated: ",
+      "confirmCancel": "Cancel this booking?",
+      "cancelFailed": "Failed to cancel booking"
+    },
+    "workersPage": {
+      "title": "Worker Management",
+      "add": "Add Worker",
+      "notFound": "No workers found",
+      "confirmDelete": "Are you sure you want to delete this worker?"
+    },
+    "servicesPage": {
+      "title": "Service Management",
+      "add": "Add Service",
+      "description": "Description",
+      "duration": "Duration",
+      "price": "Price",
+      "notFound": "No services found",
+      "confirmDelete": "Are you sure you want to delete this service?"
+    },
+    "resourcesPage": {
+      "title": "Resource Management",
+      "subtitle": "Treatment Beds/Rooms",
+      "add": "Add Resource",
+      "notFound": "No resources found",
+      "confirmDelete": "Are you sure you want to delete this resource?"
+    }
   },
   "auth": {
     "login": "Login",
     "logout": "Logout",
+    "signOut": "Sign Out",
     "register": "Register",
     "email": "Email",
     "password": "Password"

@@ -1,12 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { AdminCalendar } from './admin-calendar';
-import type { CalendarWorker, CalendarSlot } from '@/types/calendar';
+import { AdminCalendar } from '@/app/[locale]/(admin)/admin/dashboard/admin-calendar';
+import type { CalendarSlot } from '@/types/calendar';
 
 const meta: Meta<typeof AdminCalendar> = {
     title: 'Calendar/AdminCalendar',
     component: AdminCalendar,
     parameters: {
         layout: 'fullscreen',
+        nextjs: {
+            appDirectory: true,
+        },
     },
     tags: ['autodocs'],
 };
@@ -14,11 +17,12 @@ const meta: Meta<typeof AdminCalendar> = {
 export default meta;
 type Story = StoryObj<typeof AdminCalendar>;
 
-// Mock data (shared mocks could be moved to a utility file in a real app)
-const workers: CalendarWorker[] = [
-    { id: '1', name: 'Alice Smith' },
-    { id: '2', name: 'Bob Jones' },
-    { id: '3', name: 'Charlie Day' },
+// Mock data
+// Workers in AdminCalendar are simple objects { id, name, nameEn? }
+const workers = [
+    { id: '1', name: 'John Doe', nameEn: 'John' },
+    { id: '2', name: 'Jane Smith', nameEn: 'Jane' },
+    { id: '3', name: 'Bob Wilson', nameEn: 'Bob' },
     { id: '4', name: 'Diana Prince' },
     { id: '5', name: 'Evan Wright' },
 ];
@@ -53,10 +57,9 @@ const slots: CalendarSlot[] = workers.flatMap(w => createMockSlots(w.id));
 export const Default: Story = {
     args: {
         date: mockDate,
-        workers,
+        workers: workers as any[], // AdminCalendar expects Worker types from its own module, casting for story compatibility
         slots,
-        mode: 'interactive',
-        timeRange: { start: '09:00', end: '18:00' },
+        locale: 'en',
     },
 };
 
@@ -65,6 +68,6 @@ export const Empty: Story = {
         date: mockDate,
         workers: [],
         slots: [],
-        mode: 'interactive',
+        locale: 'en',
     },
 };

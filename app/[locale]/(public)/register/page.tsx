@@ -2,7 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { RegisterForm } from './register-form';
 
 interface RegisterPageProps {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: string }>
+  searchParams: Promise<{ redirect?: string }>
 }
 
 /**
@@ -10,10 +11,11 @@ interface RegisterPageProps {
  *
  * Allows new customers to register with email, name, and phone.
  * Uses lazy auth: no password required, customer identified by email.
- * After successful registration, redirects to booking calendar.
+ * After successful registration, redirects to booking flow or specified redirect URL.
  */
-export default async function RegisterPage({ params }: RegisterPageProps) {
-  const { locale } = await params;
+export default async function RegisterPage({ params, searchParams }: RegisterPageProps) {
+  const { locale } = await params
+  const { redirect: redirectUrl } = await searchParams
   const t = await getTranslations('register');
   const tCommon = await getTranslations('common');
 
@@ -27,6 +29,7 @@ export default async function RegisterPage({ params }: RegisterPageProps) {
 
         <RegisterForm
           locale={locale}
+          redirectUrl={redirectUrl}
           labels={{
             email: t('email'),
             name: t('name'),

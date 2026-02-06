@@ -1,38 +1,27 @@
-import { getTranslations } from 'next-intl/server';
-import { BookingCalendar } from './booking-calendar';
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
 interface BookingPageProps {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: string }>
 }
 
 /**
- * Booking Calendar Page
+ * Booking Entry Point
  *
- * Displays the timeline calendar with live availability.
- * Users can select a time slot and book an appointment.
- * Uses SWR for real-time availability polling (10 second intervals).
+ * Redirects user to appropriate step in booking flow:
+ * - No customer ID → Registration page
+ * - Has customer ID → Service selection
  */
 export default async function BookingPage({ params }: BookingPageProps) {
-  const { locale } = await params;
-  const t = await getTranslations('booking');
-  const tCommon = await getTranslations('common');
+  const { locale } = await params
+  const cookieStore = await cookies()
+  const customerId = cookieStore.get('customerId')?.value
 
-  return (
-    <div>
-      <h1 className="mb-2 text-2xl font-bold text-secondary-900">{t('title')}</h1>
-      <p className="mb-6 text-secondary-600">{t('selectTime')}</p>
+  if (!customerId) {
+    // No customer ID - send to registration
+    redirect(`/${locale}/register?redirect=${encodeURIComponent(`/${locale}/booking/service`)}`)
+  }
 
-      <BookingCalendar
-        locale={locale}
-        labels={{
-          book: t('confirm'),
-          loading: tCommon('loading'),
-          error: tCommon('error'),
-          noSlots: t('noSlots'),
-          selectSlot: t('selectTime'),
-          selectedSlot: t('selectedSlot'),
-        }}
-      />
-    </div>
-  );
+  // Has customer - go to service selection
+  redirect(`/${locale}/booking/service`)
 }

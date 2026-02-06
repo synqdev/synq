@@ -22,14 +22,8 @@ export default async function RegisterPage({ params, searchParams }: RegisterPag
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-secondary-900">{t('title')}</h1>
-          <p className="mt-2 text-secondary-600">{t('subtitle')}</p>
-        </div>
-
         <RegisterForm
           locale={locale}
-          redirectUrl={redirectUrl}
           labels={{
             email: t('email'),
             name: t('name'),

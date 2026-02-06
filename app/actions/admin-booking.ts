@@ -14,6 +14,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db/client'
 import { updateBookingSchema, blockTimeSchema } from '@/lib/validations/admin-booking'
 import { getAdminSession } from '@/lib/auth/admin'
+import { toZonedTime } from '@/lib/utils/time'
 
 /**
  * Cancel a booking by setting its status to CANCELLED.
@@ -100,22 +101,23 @@ export async function blockWorkerTime(formData: FormData) {
   const parsed = blockTimeSchema.parse(raw)
 
   // Parse start and end times
-  const [startHours, startMins] = parsed.startTime.split(':').map(Number)
-  const [endHours, endMins] = parsed.endTime.split(':').map(Number)
-
-  const startsAt = new Date(parsed.date)
-  startsAt.setHours(startHours, startMins, 0, 0)
-
-  const endsAt = new Date(parsed.date)
-  endsAt.setHours(endHours, endMins, 0, 0)
+  // We use toZonedTime to ensure dates are created in the business timezone
+  const dateStr = parsed.date.toISOString().split('T')[0]
+  const startsAt = toZonedTime(dateStr, parsed.startTime)
+  const endsAt = toZonedTime(dateStr, parsed.endTime)
 
   // Create booking with system entities
   // Note: resourceId is omitted for block bookings (doesn't require specific resource)
+  // However, schema requires it, so we attach the first available resource
+  const resource = await prisma.resource.findFirst()
+  if (!resource) throw new Error('No resource available for blocking')
+
   const booking = await prisma.booking.create({
     data: {
       customerId: '00000000-0000-0000-0000-000000000000', // SYSTEM_BLOCKER
       serviceId: 'block-service', // BLOCK_SERVICE
       workerId: parsed.workerId,
+      resourceId: resource.id,
       startsAt,
       endsAt,
       status: 'CONFIRMED',

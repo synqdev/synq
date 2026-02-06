@@ -104,7 +104,7 @@ export async function submitBookingForm(
   const date = formData.get('date') as string
   const time = formData.get('time') as string
   const resourceId = formData.get('resourceId') as string | null
-
+  console.log('formData date', date)
   // Validate required fields
   if (!workerId || !date || !time) {
     return { error: 'Missing required booking information' }

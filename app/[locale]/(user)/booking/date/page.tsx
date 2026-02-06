@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 
 interface DatePageProps {
   params: Promise<{ locale: string }>
@@ -21,7 +22,12 @@ export default async function DateSelectionPage({ params, searchParams }: DatePa
   }
 
   // Fetch service details
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  // Get the host from request headers for server-side fetch
+  const headersList = await headers()
+  const host = headersList.get('host') || 'localhost:3000'
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`
+
   const services = await fetch(`${baseUrl}/api/services`, {
     cache: 'force-cache',
   }).then(r => r.json())

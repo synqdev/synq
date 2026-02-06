@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { EmployeeTimeline, type TimelineEvent } from './employee-timeline';
-import type { CalendarWorker } from '@/types/calendar';
+import { EmployeeTimeline, type TimelineSlot, type TimelineWorker } from './employee-timeline';
 import { useState } from 'react';
 
 const meta: Meta<typeof EmployeeTimeline> = {
@@ -15,45 +14,67 @@ const meta: Meta<typeof EmployeeTimeline> = {
 export default meta;
 type Story = StoryObj<typeof EmployeeTimeline>;
 
-const workers: CalendarWorker[] = [
-  { id: '1', name: 'Staff 1' },
+// Mock Data
+const initialWorkers: TimelineWorker[] = [
+  {
+    id: '1',
+    name: 'Staff 1',
+    slots: [
+      { startTime: '10:00', duration: 180, type: 'blocked' }, // 10-13 Blocked
+      { startTime: '13:00', duration: 60, type: 'booked', data: { customer: 'John', service: 'Haircut' } }, // 13-14 Booked
+      { startTime: '14:00', duration: 120, type: 'booked', data: { customer: 'Jane', service: 'Coloring' } }, // 14-16 Booked
+      // 16-18 Gap
+      { startTime: '18:00', duration: 60, type: 'booked' }, // 18-19 Booked
+      { startTime: '16:00', duration: 120, type: 'available' }, // Explicit available slot for testing
+    ]
+  }
 ];
 
-const mockDate = new Date('2024-02-14');
-
-const initialEvents: TimelineEvent[] = [
-  { workerId: '1', time: '10:00', duration: 180, type: 'blocked' }, // 10-13 Blocked (3h)
-  { workerId: '1', time: '13:00', duration: 60, type: 'booked', data: { customer: 'John', service: 'Haircut', notes: 'Prefers scissors' } }, // 13-14 Booked (1h)
-  { workerId: '1', time: '14:00', duration: 120, type: 'booked', data: { customer: 'Jane', service: 'Coloring' } }, // 14-16 Booked (2h)
-  // 16-18 Gap (Available)
-  { workerId: '1', time: '18:00', duration: 60, type: 'booked' }, // 18-19 Booked
-];
-
-// Stateful wrapper to demonstrate removal and updates
+// Stateful wrapper
 const StatefulTimeline = (args: any) => {
-  const [events, setEvents] = useState(args.events);
+  const [workers, setWorkers] = useState<TimelineWorker[]>(args.workers);
 
-  const handleRemove = (eventToRemove: TimelineEvent) => {
-    console.log('Removing event:', eventToRemove);
-    setEvents(events.filter((e: TimelineEvent) => e !== eventToRemove));
+  const handleSlotRemove = (slotToRemove: TimelineSlot, workerId: string) => {
+    console.log('Removing slot:', slotToRemove, 'from worker:', workerId);
+    setWorkers(currentWorkers =>
+      currentWorkers.map(worker => {
+        if (worker.id !== workerId) return worker;
+        return {
+          ...worker,
+          slots: worker.slots.filter(s => s !== slotToRemove)
+        };
+      })
+    );
   };
 
-  const handleUpdate = (eventToUpdate: TimelineEvent, newData: any) => {
-    console.log('Updating event:', eventToUpdate, 'New Data:', newData);
-    setEvents(events.map((e: TimelineEvent) =>
-      e === eventToUpdate ? { ...e, data: newData } : e
-    ));
+  const handleSlotClick = (slot: TimelineSlot, workerId: string) => {
+    console.log('Clicked slot:', slot, 'Worker:', workerId);
   };
 
-  return <EmployeeTimeline {...args} events={events} onEventRemove={handleRemove} onEventUpdate={handleUpdate} />;
+  return (
+    <EmployeeTimeline
+      {...args}
+      workers={workers}
+      onSlotRemove={handleSlotRemove}
+      onSlotClick={handleSlotClick}
+    />
+  );
 };
 
-export const MockupExample: Story = {
+export const AdminMode: Story = {
   render: (args) => <StatefulTimeline {...args} />,
   args: {
-    date: mockDate,
-    workers,
-    events: initialEvents,
+    mode: 'admin',
+    workers: initialWorkers,
+    timeRange: { start: '10:00', end: '19:00' },
+  },
+};
+
+export const UserMode: Story = {
+  render: (args) => <StatefulTimeline {...args} />,
+  args: {
+    mode: 'user',
+    workers: initialWorkers,
     timeRange: { start: '10:00', end: '19:00' },
   },
 };
@@ -61,15 +82,17 @@ export const MockupExample: Story = {
 export const MultipleStaff: Story = {
   render: (args) => <StatefulTimeline {...args} />,
   args: {
-    date: mockDate,
+    mode: 'admin',
     workers: [
-      { id: '1', name: 'Staff 1' },
-      { id: '2', name: 'Staff 2' },
-    ],
-    events: [
-      ...initialEvents,
-      { workerId: '2', time: '12:00', duration: 60, type: 'booked', data: { customer: 'Alice', service: 'Consultation' } }, // Staff 2 booked 12-13
-      { workerId: '2', time: '14:00', duration: 60, type: 'blocked' }, // Staff 2 blocked 14-15
+      ...initialWorkers,
+      {
+        id: '2',
+        name: 'Staff 2',
+        slots: [
+          { startTime: '12:00', duration: 60, type: 'booked', data: { customer: 'Alice' } },
+          { startTime: '14:00', duration: 60, type: 'blocked' },
+        ]
+      }
     ],
     timeRange: { start: '10:00', end: '19:00' },
   },

@@ -85,3 +85,14 @@ export async function registerCustomer(
   const locale = parsed.data.locale;
   redirect(`/${locale}/booking`);
 }
+
+/**
+ * Signs out the current customer by clearing the customerId cookie.
+ *
+ * @param locale - The locale to redirect to after signout
+ */
+export async function signoutCustomer(locale: string = 'en') {
+  const cookieStore = await cookies();
+  cookieStore.delete('customerId');
+  redirect(`/${locale}`);
+}

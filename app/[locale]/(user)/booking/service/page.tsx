@@ -1,8 +1,12 @@
 import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/db/client'
 
 interface ServicePageProps {
   params: Promise<{ locale: string }>
 }
+
+// Revalidate this page every 5 minutes (services change rarely)
+export const revalidate = 300
 
 /**
  * Service Selection Page
@@ -14,26 +18,11 @@ interface ServicePageProps {
 export default async function ServiceSelectionPage({ params }: ServicePageProps) {
   const { locale } = await params
 
-  // Fetch services from API
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  let services: any[] = []
-  let error = null
-
-  try {
-    const response = await fetch(`${baseUrl}/api/services`, {
-      cache: 'force-cache', // Services change rarely
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch services: ${response.status}`)
-    }
-
-    const data = await response.json()
-    services = Array.isArray(data) ? data : []
-  } catch (e) {
-    console.error('Failed to fetch services:', e)
-    error = e instanceof Error ? e.message : 'Failed to load services'
-  }
+  // Fetch services directly from database (much faster than API call)
+  const services = await prisma.service.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' },
+  })
 
   async function selectService(formData: FormData) {
     'use server'
@@ -48,19 +37,7 @@ export default async function ServiceSelectionPage({ params }: ServicePageProps)
         {locale === 'ja' ? 'サービス選択' : 'Select Service'}
       </h1>
 
-      {error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <p className="text-red-600 font-bold mb-2">
-            {locale === 'ja' ? 'エラー' : 'Error'}
-          </p>
-          <p className="text-red-500 text-sm mb-4">{error}</p>
-          <p className="text-gray-600 text-sm">
-            {locale === 'ja'
-              ? 'サーバーを再起動してください: npm run dev'
-              : 'Please restart the server: npm run dev'}
-          </p>
-        </div>
-      ) : services.length === 0 ? (
+      {services.length === 0 ? (
         <p className="text-gray-500 text-center py-12">
           {locale === 'ja' ? 'サービスがありません' : 'No services available'}
         </p>
@@ -69,7 +46,7 @@ export default async function ServiceSelectionPage({ params }: ServicePageProps)
           <input type="hidden" name="locale" value={locale} />
 
           <div className="space-y-4">
-            {services.map((service: any) => (
+            {services.map((service) => (
               <button
                 key={service.id}
                 type="submit"

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { SlotSelectionClient } from './slot-selection-client'
 import { mapAvailabilityToCalendar } from '@/lib/mappers/calendar'
 
@@ -6,6 +7,10 @@ interface SlotsPageProps {
   params: Promise<{ locale: string }>
   searchParams: Promise<{ serviceId?: string; date?: string }>
 }
+
+// Force dynamic rendering - availability changes with each booking
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 /**
  * Slot Selection Page
@@ -23,7 +28,12 @@ export default async function SlotSelectionPage({ params, searchParams }: SlotsP
   }
 
   // Fetch availability
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  // Get the host from request headers for server-side fetch
+  const headersList = await headers()
+  const host = headersList.get('host') || 'localhost:3000'
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`
+
   let availability
   let error = null
 

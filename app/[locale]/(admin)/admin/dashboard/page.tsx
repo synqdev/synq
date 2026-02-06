@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getAdminSession } from '@/lib/auth/admin'
 import { prisma } from '@/lib/db/client'
-import { AdminCalendar } from './admin-calendar'
-import type { CalendarSlot } from '@/types/calendar'
+import { AdminDashboardClient } from './admin-dashboard-client'
+import { mapAdminBookingsToCalendar } from '@/lib/mappers/calendar'
+import type { AdminBooking } from '@/lib/mappers/calendar'
 
 interface AdminDashboardPageProps {
   params: Promise<{ locale: string }>
@@ -12,7 +13,7 @@ interface AdminDashboardPageProps {
 /**
  * Admin Dashboard Page
  *
- * Protected admin page showing calendar with all bookings.
+ * Protected admin page showing calendar with all bookings using EmployeeTimeline.
  * Fetches workers and bookings for the selected date.
  */
 export default async function AdminDashboardPage({
@@ -65,42 +66,29 @@ export default async function AdminDashboardPage({
     }),
   ])
 
-  // Transform bookings to calendar slots
-  const slots: CalendarSlot[] = bookings.map((booking) => ({
-    time: booking.startsAt.toISOString().split('T')[1].slice(0, 5),
+  // Transform to mapper format
+  const adminBookings: AdminBooking[] = bookings.map((booking) => ({
+    id: booking.id,
     workerId: booking.workerId,
-    resourceId: booking.resourceId,
-    isAvailable: false,
-    booking: {
-      id: booking.id,
-      startsAt: booking.startsAt,
-      endsAt: booking.endsAt,
-      workerId: booking.workerId,
-      resourceId: booking.resourceId,
-      customerName: booking.customer.name,
-      serviceName:
-        locale === 'ja'
-          ? booking.service.name
-          : booking.service.nameEn || booking.service.name,
-      status: booking.status as 'CONFIRMED' | 'CANCELLED' | 'NOSHOW',
-    },
+    startsAt: booking.startsAt,
+    endsAt: booking.endsAt,
+    customerName: booking.customer.name,
+    status: booking.status,
   }))
 
-  // Transform workers for calendar (with proper null handling)
-  const calendarWorkers = workers.map((w) => ({
-    id: w.id,
-    name: w.name,
-    nameEn: w.nameEn,
-  }))
+  // Use mapper to transform for EmployeeTimeline
+  const timelineWorkers = mapAdminBookingsToCalendar(
+    workers.map((w) => ({ id: w.id, name: w.name, nameEn: w.nameEn ?? undefined })),
+    adminBookings
+  )
 
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">
         {locale === 'ja' ? 'ダッシュボード' : 'Dashboard'}
       </h2>
-      <AdminCalendar
-        workers={calendarWorkers}
-        slots={slots}
+      <AdminDashboardClient
+        initialWorkers={timelineWorkers}
         date={date}
         locale={locale}
       />

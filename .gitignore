@@ -11,12 +11,14 @@
 .playwright/
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
 /build
 
+#mobile builds
+/mobile
 # misc
 .DS_Store
 *.pem

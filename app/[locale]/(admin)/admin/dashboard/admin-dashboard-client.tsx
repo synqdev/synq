@@ -171,15 +171,15 @@ export function AdminDashboardClient({
           <Button variant="outline" size="sm" onClick={goToNext}>
             {t('next')}
           </Button>
-        </div>
-
-        <div className="flex items-center gap-4">
           <Input
             type="date"
             value={formatDateParam(date)}
             onChange={handleDateChange}
-            className="w-40"
+            className="w-40 ml-2"
           />
+        </div>
+
+        <div className="flex items-center gap-4">
           <span className="text-sm text-gray-600">
             {t('bookings', { count: bookingCount })}
           </span>

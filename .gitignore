@@ -43,3 +43,33 @@ next-env.d.ts
 # storybook
 *storybook.log
 storybook-static
+
+# mobile
+**/Pods
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
+
+# coverage
+coverage/
+**/coverage/
+
+# mac
+.DS_Store
+
+# xcode
+**/*.pbxuser
+**/*.mode1v3
+**/*.mode2v3
+**/*.perspectivev3
+**/*.usercontent
+**/*.xccheckout
+**/*.moved-aside
+**/*.xcuserstate
+**/*.xcscmblueprint
+DerivedData/
+**/DerivedData/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint

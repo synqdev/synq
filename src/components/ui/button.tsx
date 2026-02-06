@@ -5,7 +5,7 @@ import { Spinner } from './spinner'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Visual style variant */
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'iso'
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'iso' | 'destructive'
   /** Size variant */
   size?: 'sm' | 'md' | 'lg'
   /** Show loading spinner and disable button */
@@ -23,6 +23,8 @@ const variantClasses = {
     'text-secondary-700 hover:bg-secondary-100 focus-visible:ring-secondary-500 disabled:text-secondary-400',
   iso:
     'bg-white text-black border-2 border-black rounded-xl font-black hover:bg-gray-100 transition-colors h-12 px-6',
+  destructive:
+    'bg-error-500 text-white hover:bg-error-600 focus-visible:ring-error-500 disabled:bg-error-300',
 } as const
 
 const sizeClasses = {
@@ -57,7 +59,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={`
           inline-flex items-center justify-center gap-2
           rounded-lg font-medium
-          transition-colors duration-200
+          transition-all duration-200
+          active:scale-95
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
           disabled:cursor-not-allowed
           ${variantClasses[variant]}

@@ -9,6 +9,7 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations, useFormatter } from 'next-intl'
 import { EmployeeTimeline } from '@/components/calendar/employee-timeline'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +22,6 @@ import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employe
 interface AdminDashboardClientProps {
   initialWorkers: TimelineWorker[]
   date: Date
-  locale: string
 }
 
 /**
@@ -29,18 +29,6 @@ interface AdminDashboardClientProps {
  */
 function formatDateParam(date: Date): string {
   return date.toISOString().split('T')[0]
-}
-
-/**
- * Format date for display in header.
- */
-function formatDisplayDate(date: Date, locale: string): string {
-  return date.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  })
 }
 
 /**
@@ -55,9 +43,10 @@ function formatDisplayDate(date: Date, locale: string): string {
 export function AdminDashboardClient({
   initialWorkers,
   date,
-  locale,
 }: AdminDashboardClientProps) {
   const router = useRouter()
+  const t = useTranslations('admin.dashboardPage')
+  const format = useFormatter()
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Format date for API
@@ -80,18 +69,18 @@ export function AdminDashboardClient({
   const polledTimelineWorkers =
     polledWorkers.length > 0
       ? mapAdminBookingsToCalendar(
-          polledWorkers,
-          polledSlots
-            .filter((s) => s.booking)
-            .map((s) => ({
-              id: s.booking!.id,
-              workerId: s.booking!.workerId,
-              startsAt: s.booking!.startsAt,
-              endsAt: s.booking!.endsAt,
-              customerName: s.booking!.customerName || 'Unknown',
-              status: s.booking!.status,
-            }))
-        )
+        polledWorkers,
+        polledSlots
+          .filter((s) => s.booking)
+          .map((s) => ({
+            id: s.booking!.id,
+            workerId: s.booking!.workerId,
+            startsAt: s.booking!.startsAt,
+            endsAt: s.booking!.endsAt,
+            customerName: s.booking!.customerName || 'Unknown',
+            status: s.booking!.status,
+          }))
+      )
       : []
 
   // Use polled data if available, otherwise fall back to initial server data
@@ -137,7 +126,7 @@ export function AdminDashboardClient({
     const bookingId = slot.data?.bookingId
     if (!bookingId) return
 
-    if (!confirm(locale === 'ja' ? '予約をキャンセルしますか？' : 'Cancel this booking?')) {
+    if (!confirm(t('confirmCancel'))) {
       return
     }
 
@@ -148,7 +137,7 @@ export function AdminDashboardClient({
       refresh()
     } catch (error) {
       console.error('Failed to cancel booking:', error)
-      alert(locale === 'ja' ? 'キャンセルに失敗しました' : 'Failed to cancel booking')
+      alert(t('cancelFailed'))
     } finally {
       setIsProcessing(false)
     }
@@ -156,11 +145,11 @@ export function AdminDashboardClient({
 
   // Format last updated time
   const lastUpdatedStr = lastUpdated
-    ? lastUpdated.toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
+    ? format.dateTime(lastUpdated, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
     : null
 
   // Count bookings for today
@@ -174,13 +163,13 @@ export function AdminDashboardClient({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goToPrevious}>
-            {locale === 'ja' ? '前日' : 'Previous'}
+            {t('previous')}
           </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
-            {locale === 'ja' ? '今日' : 'Today'}
+            {t('today')}
           </Button>
           <Button variant="outline" size="sm" onClick={goToNext}>
-            {locale === 'ja' ? '翌日' : 'Next'}
+            {t('next')}
           </Button>
         </div>
 
@@ -192,7 +181,7 @@ export function AdminDashboardClient({
             className="w-40"
           />
           <span className="text-sm text-gray-600">
-            {bookingCount} {locale === 'ja' ? '件の予約' : 'bookings'}
+            {t('bookings', { count: bookingCount })}
           </span>
           {(isLoading || isProcessing) && <Spinner size="sm" />}
         </div>
@@ -202,14 +191,19 @@ export function AdminDashboardClient({
       {lastUpdatedStr && (
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          {locale === 'ja' ? '最終更新: ' : 'Last updated: '}
+          {t('lastUpdated')}
           {lastUpdatedStr}
         </div>
       )}
 
       {/* Date display */}
       <div className="text-lg font-medium text-gray-900">
-        {formatDisplayDate(date, locale)}
+        {format.dateTime(date, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          weekday: 'long',
+        })}
       </div>
 
       {/* Employee Timeline */}

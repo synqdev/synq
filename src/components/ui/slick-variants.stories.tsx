@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { Button } from './button';
 import { DatePicker } from './date-picker';
 import { SettingsDropdown } from './settings-dropdown';
+import { ActionPopover } from './action-popover';
+import { Select } from './select';
 
 const meta: Meta = {
     title: 'UI/SlickVariants',
@@ -35,6 +37,23 @@ export const AllVariants: StoryObj = {
                     onProfile={() => alert('Profile clicked')}
                     onLogout={() => alert('Logout clicked')}
                 />
+
+                {/* Action Popover */}
+                <ActionPopover
+                    label="ACTIONS"
+                    title="BLOCK TIME"
+                    actionLabel="APPLY"
+                    onAction={() => alert('Block time')}
+                >
+                    <Select
+                        label="Duration"
+                        options={[
+                            { value: '60', label: '1 hour' },
+                            { value: '120', label: '2 hours' },
+                        ]}
+                        value="60"
+                    />
+                </ActionPopover>
             </div>
 
             <div className="text-sm text-gray-500 max-w-md">

@@ -9,20 +9,22 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 interface AdminNavProps {
   locale: string
 }
 
 const navItems = [
-  { href: '/admin/dashboard', labelJa: 'ダッシュボード', labelEn: 'Dashboard' },
-  { href: '/admin/workers', labelJa: 'スタッフ', labelEn: 'Workers' },
-  { href: '/admin/services', labelJa: 'サービス', labelEn: 'Services' },
-  { href: '/admin/resources', labelJa: 'ベッド', labelEn: 'Resources' },
+  { href: '/admin/dashboard', labelKey: 'dashboard' },
+  { href: '/admin/workers', labelKey: 'workers' },
+  { href: '/admin/services', labelKey: 'services' },
+  { href: '/admin/resources', labelKey: 'resources' },
 ]
 
 export function AdminNav({ locale }: AdminNavProps) {
   const pathname = usePathname()
+  const t = useTranslations('admin.nav')
 
   return (
     <nav className="border-t border-gray-100 bg-white">
@@ -31,7 +33,6 @@ export function AdminNav({ locale }: AdminNavProps) {
           {navItems.map((item) => {
             const fullHref = `/${locale}${item.href}`
             const isActive = pathname === fullHref || pathname.startsWith(`${fullHref}/`)
-            const label = locale === 'ja' ? item.labelJa : item.labelEn
 
             return (
               <Link
@@ -45,7 +46,7 @@ export function AdminNav({ locale }: AdminNavProps) {
                   }
                 `}
               >
-                {label}
+                {t(item.labelKey)}
                 {isActive && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
                 )}

@@ -247,7 +247,7 @@ export function useAdaptivePolling(baseInterval: number = 10000): number {
   const [interval, setIntervalState] = useState(baseInterval)
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: ReturnType<typeof setTimeout>
 
     const handleActivity = () => {
       setIntervalState(baseInterval) // Fast polling on activity

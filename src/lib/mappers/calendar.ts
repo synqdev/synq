@@ -7,6 +7,7 @@
 
 import type { AvailableSlot } from '@/lib/services/availability.service'
 import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employee-timeline'
+import { formatInTimeZone } from '@/lib/utils/time'
 
 // API response types
 export interface AvailabilityResponse {
@@ -76,7 +77,8 @@ export function mapAdminBookingsToCalendar(
     slots: bookings
       .filter(b => b.workerId === worker.id)
       .map(booking => {
-        const start = booking.startsAt.toTimeString().slice(0, 5) // "HH:MM"
+        // Convert UTC Date to JST time string
+        const { time: start } = formatInTimeZone(booking.startsAt)
         const duration = Math.floor(
           (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60000
         )

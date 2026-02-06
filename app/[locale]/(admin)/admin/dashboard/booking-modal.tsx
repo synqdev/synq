@@ -1,9 +1,10 @@
 'use client'
 
 /**
- * Booking Modal Component
+ * Booking Side Panel Component
  *
- * Admin modal for viewing, editing, and canceling bookings.
+ * Slide-in panel for viewing, editing, and canceling bookings.
+ * Uses CSS transitions instead of floating modal for better UX.
  * Provides full booking management within the dashboard calendar view.
  */
 
@@ -39,9 +40,10 @@ interface BookingModalProps {
 }
 
 /**
- * Modal for viewing and managing booking details.
+ * Side panel for viewing and managing booking details.
  *
  * Features:
+ * - Slides in from right with CSS transitions
  * - View booking information (read-only)
  * - Edit booking (change time, worker)
  * - Cancel booking with confirmation
@@ -110,18 +112,25 @@ export function BookingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <>
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className={`fixed inset-0 bg-black/50 transition-opacity duration-300 z-40 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
+      {/* Slide-in Side Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="p-6">
+          {/* Header */}
+          <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-secondary-900">
             {locale === 'ja' ? '予約詳細' : 'Booking Details'}
           </h2>
@@ -324,7 +333,8 @@ export function BookingModal({
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

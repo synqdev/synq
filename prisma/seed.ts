@@ -56,13 +56,15 @@ async function main() {
   // Create block service (for admin time blocking)
   const blockService = await prisma.service.upsert({
     where: { id: 'block-service' },
-    update: {},
+    update: {
+      duration: 60,
+    },
     create: {
       id: 'block-service',
       name: 'Unavailable',
       nameEn: 'Unavailable',
       description: 'Blocked time slot',
-      duration: 30,
+      duration: 60,
       price: 0,
       isActive: false, // Hidden from public
     },

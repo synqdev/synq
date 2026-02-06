@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { Service, Worker, Customer } from '@prisma/client'
 
 import { BUSINESS_TIMEZONE } from '@/lib/constants'
+import { Spinner } from '@/components/ui/spinner'
 
 interface BookingPreviewProps {
   locale: string
@@ -139,13 +140,16 @@ export function BookingPreview({
           disabled={isSubmitting}
           className="flex-1 px-6 py-3 bg-primary-500 text-white rounded-lg font-medium hover:bg-primary-600 transition disabled:opacity-50"
         >
-          {isSubmitting
-            ? locale === 'ja'
-              ? '予約中...'
-              : 'Booking...'
-            : locale === 'ja'
-              ? '予約を確定'
-              : 'Confirm Booking'}
+          {isSubmitting ? (
+            <div className="flex items-center gap-2">
+              <Spinner size="sm" className="text-white" />
+              <span>{locale === 'ja' ? '予約中...' : 'Booking...'}</span>
+            </div>
+          ) : locale === 'ja' ? (
+            '予約を確定'
+          ) : (
+            'Confirm Booking'
+          )}
         </button>
       </div>
     </div>

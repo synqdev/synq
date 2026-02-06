@@ -1,27 +1,118 @@
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, useMemo, useState } from 'react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 
-// Timeline slot types
+const BookingActionMenu = ({
+    onEdit,
+    onViewNotes,
+    onCancel
+}: {
+    onEdit: () => void
+    onViewNotes: () => void
+    onCancel: () => void
+}) => {
+    const [showConfirm, setShowConfirm] = useState(false)
+
+    return (
+        <Popover onOpenChange={(open) => !open && setShowConfirm(false)}>
+            <PopoverTrigger asChild>
+                <button
+                    className="p-1 rounded-full hover:bg-white/50 text-gray-500 hover:text-black transition-colors cursor-pointer"
+                    aria-label="Options"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="1" />
+                        <circle cx="19" cy="12" r="1" />
+                        <circle cx="5" cy="12" r="1" />
+                    </svg>
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-1" align="end">
+                {showConfirm ? (
+                    <div className="flex flex-col gap-2 p-2">
+                        <p className="text-sm font-medium text-center">Are you sure?</p>
+                        <div className="flex gap-2 justify-center">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setShowConfirm(false)}
+                            >
+                                No
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={onCancel}
+                            >
+                                Yes, Cancel
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-1">
+                        <button
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors font-medium"
+                            onClick={onEdit}
+                        >
+                            Edit Details
+                        </button>
+                        <button
+                            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors font-medium"
+                            onClick={onViewNotes}
+                        >
+                            View Notes
+                        </button>
+                        <div className="h-px bg-gray-100 my-1" />
+                        <button
+                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors font-bold"
+                            onClick={() => setShowConfirm(true)}
+                        >
+                            Cancel Booking
+                        </button>
+                    </div>
+                )}
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+// Timeline slot types (re-exporting for compatibility if needed, or renaming)
 export interface TimelineSlot {
-  startTime: string    // "10:00"
-  duration: number     // 60
-  type: 'available' | 'booked' | 'blocked'
-  data?: any          // { customer, resourceIds, bookingId, etc. }
+    startTime: string    // "10:00"
+    duration: number     // 60
+    type: 'available' | 'booked' | 'blocked'
+    data?: any          // { customer, resourceIds, bookingId, etc. }
 }
 
 export interface TimelineWorker {
-  id: string
-  name: string
-  nameEn?: string
-  slots: TimelineSlot[]
+    id: string
+    name: string
+    nameEn?: string
+    slots: TimelineSlot[]
 }
 
 export interface EmployeeTimelineProps {
-  workers: TimelineWorker[]
-  mode?: 'admin' | 'user'
-  onSlotClick?: (slot: TimelineSlot, workerId: string) => void
-  onSlotRemove?: (slot: TimelineSlot, workerId: string) => void
-  timeRange?: { start: string; end: string }
-  className?: string
+    workers: TimelineWorker[]
+    mode?: 'admin' | 'user'
+    selectedSlot?: TimelineSlot | null
+    selectedWorkerId?: string | null // Added to scope selection to specific worker
+    onSlotClick?: (slot: TimelineSlot, workerId: string) => void
+    onSlotRemove?: (slot: TimelineSlot, workerId: string) => void
+    timeRange?: { start: string; end: string }
+    className?: string
+    date?: Date | string // Added for compatibility/reference
 }
 
 /**
@@ -35,166 +126,211 @@ export interface EmployeeTimelineProps {
  * - admin: Shows X button on booked slots for cancellation
  * - user: Makes available slots clickable for booking
  */
+// Helper to convert time string (HH:MM) to minutes from midnight
+const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number)
+    return hours * 60 + (minutes || 0)
+}
+
 export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps>(
-  ({
-    workers,
-    mode = 'user',
-    onSlotClick,
-    onSlotRemove,
-    timeRange = { start: '10:00', end: '19:00' },
-    className = ''
-  }, ref) => {
+    ({
+        workers,
+        mode = 'user',
+        selectedSlot,
+        selectedWorkerId,
+        onSlotClick,
+        onSlotRemove,
+        timeRange = { start: '10:00', end: '19:00' },
+        className = '',
+        // date is destructured but not used in rendering currently
+    }, ref) => {
 
-    // Helper to convert time string (HH:MM) to minutes from midnight
-    const timeToMinutes = (time: string) => {
-      const [hours, minutes] = time.split(':').map(Number)
-      return hours * 60 + (minutes || 0)
-    }
+        const startMinutes = useMemo(() => timeToMinutes(timeRange.start), [timeRange.start])
+        const endMinutes = useMemo(() => timeToMinutes(timeRange.end), [timeRange.end])
+        const totalDuration = endMinutes - startMinutes
 
-    const startMinutes = useMemo(() => timeToMinutes(timeRange.start), [timeRange.start])
-    const endMinutes = useMemo(() => timeToMinutes(timeRange.end), [timeRange.end])
-    const totalDuration = endMinutes - startMinutes
+        // Generate time labels (hours)
+        const timeLabels = useMemo(() => {
+            const labels: string[] = []
+            const [startHour] = timeRange.start.split(':').map(Number)
+            const [endHour] = timeRange.end.split(':').map(Number)
 
-    // Generate time labels (hours)
-    const timeLabels = useMemo(() => {
-      const labels: string[] = []
-      const [startHour] = timeRange.start.split(':').map(Number)
-      const [endHour] = timeRange.end.split(':').map(Number)
+            for (let hour = startHour; hour <= endHour; hour++) {
+                labels.push(`${hour.toString().padStart(2, '0')}:00`)
+            }
+            return labels
+        }, [timeRange.start, timeRange.end])
 
-      for (let hour = startHour; hour <= endHour; hour++) {
-        labels.push(`${hour.toString().padStart(2, '0')}:00`)
-      }
-      return labels
-    }, [timeRange.start, timeRange.end])
+        // Get slot color based on type
+        const getSlotColor = (type: TimelineSlot['type'], isSelected: boolean) => {
+            if (isSelected) return '#3b82f6' // Blue for selected
+            if (type === 'available') return '#d1fae5' // Green tint
+            if (type === 'booked') return '#e5e7eb'    // Gray (unavailable)
+            if (type === 'blocked') return '#666666'   // Dark gray
+            return '#e5e7eb'
+        }
 
-    // Get slot color based on type
-    const getSlotColor = (type: TimelineSlot['type']) => {
-      if (type === 'available') return '#d1fae5' // Green tint
-      if (type === 'booked') return '#e5e7eb'    // Gray (unavailable)
-      if (type === 'blocked') return '#666666'   // Dark gray
-      return '#e5e7eb'
-    }
+        // Pre-process workers to split available slots into 60-minute segments
+        const displayWorkers = useMemo(() => {
+            return workers.map((worker) => {
+                const splitSlots: TimelineSlot[] = []
 
-    return (
-      <div ref={ref} className={`flex flex-col gap-8 ${className}`}>
-        {workers.map((worker) => {
-          return (
-            <div key={worker.id} className="flex flex-col gap-1">
-              {/* Worker Name Label */}
-              <div className="text-xl font-bold font-mono uppercase tracking-wider pl-1 text-black">
-                {worker.name}
-              </div>
+                worker.slots.forEach((slot) => {
+                    // Only split available slots, usually for user selection granularly
+                    if (slot.type === 'available' && slot.duration > 60) {
+                        const chunks = Math.floor(slot.duration / 60)
+                        const startMin = timeToMinutes(slot.startTime)
 
-              {/* Timeline Container */}
-              <div className="relative w-full max-w-4xl">
-                {/* Base Grid (Hours) */}
-                <div className="flex rounded-xl overflow-hidden h-16 w-full bg-white shadow-sm relative z-0">
-                  {timeLabels.slice(0, -1).map((time) => (
-                    <div
-                      key={time}
-                      className="flex-1 border-r border-gray-200 last:border-r-0"
-                    />
-                  ))}
-                </div>
+                        for (let i = 0; i < chunks; i++) {
+                            const chunkStartMin = startMin + (i * 60)
+                            const hours = Math.floor(chunkStartMin / 60)
+                            const mins = chunkStartMin % 60
+                            const startTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
 
-                {/* Slots Overlay */}
-                <div className="absolute top-0 left-0 w-full h-16 pointer-events-none z-10 rounded-xl overflow-hidden">
-                  {worker.slots.map((slot, index) => {
-                    const slotStart = timeToMinutes(slot.startTime)
-                    const offset = slotStart - startMinutes
+                            splitSlots.push({
+                                ...slot,
+                                startTime,
+                                duration: 60
+                            })
+                        }
 
-                    // Calculate positioning percentages
-                    const left = (offset / totalDuration) * 100
-                    const width = (slot.duration / totalDuration) * 100
+                        // Handle remainder
+                        const remainder = slot.duration % 60
+                        if (remainder > 0) {
+                            const chunkStartMin = startMin + (chunks * 60)
+                            const hours = Math.floor(chunkStartMin / 60)
+                            const mins = chunkStartMin % 60
+                            const startTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
 
-                    const bgColor = getSlotColor(slot.type)
+                            splitSlots.push({
+                                ...slot,
+                                startTime,
+                                duration: remainder
+                            })
+                        }
+                    } else {
+                        splitSlots.push(slot)
+                    }
+                })
 
-                    // User mode: available slots are clickable
-                    const isClickable = mode === 'user' && slot.type === 'available'
+                return {
+                    ...worker,
+                    slots: splitSlots
+                }
+            })
+        }, [workers])
 
-                    // Admin mode: booked slots have remove button
-                    const hasRemoveButton = mode === 'admin' && slot.type === 'booked' && onSlotRemove
-
+        return (
+            <div ref={ref} className={`flex flex-col gap-8 ${className}`}>
+                {displayWorkers.map((worker) => {
                     return (
-                      <div
-                        key={`${slot.startTime}-${index}`}
-                        className={`absolute top-0 h-full group pointer-events-auto transition-all flex items-center justify-center border-r border-gray-200 box-border ${
-                          isClickable ? 'cursor-pointer hover:brightness-95' : ''
-                        }`}
-                        style={{
-                          left: `${left}%`,
-                          width: `${width}%`,
-                          backgroundColor: bgColor
-                        }}
-                        onClick={() => {
-                          if (isClickable && onSlotClick) {
-                            onSlotClick(slot, worker.id)
-                          }
-                        }}
-                      >
-                        {/* Booking Name */}
-                        {slot.type === 'booked' && (
-                          <span className="text-gray-700 font-bold text-sm truncate px-4 select-none">
-                            {slot.data?.customer || slot.data?.name || slot.data?.title || 'Booked'}
-                          </span>
-                        )}
+                        <div key={worker.id} className="flex flex-col gap-1">
+                            {/* Worker Name Label */}
+                            <div className="text-xl font-bold font-mono uppercase tracking-wider pl-1 text-black">
+                                {worker.name}
+                            </div>
 
-                        {/* Available slot indicator */}
-                        {slot.type === 'available' && mode === 'user' && (
-                          <span className="text-green-700 font-bold text-xs truncate px-4 select-none">
-                            Available
-                          </span>
-                        )}
+                            {/* Timeline Container */}
+                            <div className="relative w-full max-w-4xl h-16 mb-6">
+                                {/* Background Layer */}
+                                <div className="absolute inset-0 bg-white rounded-xl shadow-sm z-0" />
 
-                        {/* Remove button (admin mode only) */}
-                        {hasRemoveButton && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onSlotRemove(slot, worker.id)
-                            }}
-                            className="absolute top-1 right-1 p-0.5 rounded-full hover:bg-white/20 text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
-                            aria-label="Remove booking"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M18 6 6 18" />
-                              <path d="m6 6 12 12" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
+                                {/* Slots Layer (Base) */}
+                                <div className="absolute inset-0 z-10 rounded-xl overflow-hidden">
+                                    {worker.slots.map((slot, index) => {
+                                        const slotStart = timeToMinutes(slot.startTime)
+                                        const offset = slotStart - startMinutes
+
+                                        // Calculate positioning percentages
+                                        const left = (offset / totalDuration) * 100
+                                        const width = (slot.duration / totalDuration) * 100
+
+                                        // Check if this specific slot is selected (must match worker + time)
+                                        const isSelectedMatch = selectedSlot &&
+                                            selectedWorkerId === worker.id &&
+                                            selectedSlot.startTime === slot.startTime &&
+                                            selectedSlot.type === slot.type
+
+                                        const bgColor = getSlotColor(slot.type, isSelectedMatch || false)
+
+                                        const isClickable = mode === 'user' && slot.type === 'available'
+                                        const hasRemoveButton = mode === 'admin' && slot.type === 'booked' && onSlotRemove
+
+                                        return (
+                                            <div
+                                                key={`${slot.startTime}-${index}`}
+                                                className={`absolute top-0 bottom-0 group transition-all flex items-center justify-center
+                                                    ${isSelectedMatch ? 'z-[25]' : 'z-[15]'}
+                                                    ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}
+                                                `}
+                                                style={{
+                                                    left: `${left}%`,
+                                                    width: `${width}%`,
+                                                    backgroundColor: bgColor
+                                                }}
+                                                onClick={() => {
+                                                    if (isClickable && onSlotClick) {
+                                                        onSlotClick(slot, worker.id)
+                                                    }
+                                                }}
+                                            >
+                                                {/* Booking Name */}
+                                                {slot.type === 'booked' && (
+                                                    <span className="text-gray-700 font-bold text-sm truncate px-4 select-none">
+                                                        {slot.data?.customer || slot.data?.name || slot.data?.title || 'Booked'}
+                                                    </span>
+                                                )}
+
+                                                {/* Available slot indicator */}
+                                                {slot.type === 'available' && mode === 'user' && (
+                                                    <span className={`font-bold text-xs truncate px-4 select-none ${isSelectedMatch ? 'text-white' : 'text-green-700'}`}>
+                                                        {isSelectedMatch ? 'Selected' : 'Available'}
+                                                    </span>
+                                                )}
+
+                                                {/* Remove button (admin mode only) */}
+                                                {hasRemoveButton && (
+                                                    <div onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 z-[60]">
+                                                        <BookingActionMenu
+                                                            onEdit={() => console.log('Edit clicked')}
+                                                            onViewNotes={() => console.log('Notes clicked')}
+                                                            onCancel={() => onSlotRemove(slot, worker.id)}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+
+                                {/* Grid Overlay (Top) */}
+                                <div className="absolute inset-0 flex rounded-xl overflow-hidden pointer-events-none z-20 border border-gray-200">
+                                    {timeLabels.slice(0, -1).map((time) => (
+                                        <div
+                                            key={time}
+                                            className="flex-1 border-r border-gray-200 last:border-r-0"
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Time Labels (positioned absolutely below) */}
+                                <div className="absolute top-full left-0 w-full flex mt-1">
+                                    {timeLabels.map((time) => (
+                                        <div
+                                            key={time}
+                                            className="flex-1 text-[10px] font-bold text-black -ml-2"
+                                        >
+                                            {time}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     )
-                  })}
-                </div>
-
-                {/* Time Labels below */}
-                <div className="flex w-full px-0 mt-1">
-                  {timeLabels.map((time) => (
-                    <div
-                      key={time}
-                      className="flex-1 text-[10px] font-bold text-black -ml-2"
-                    >
-                      {time}
-                    </div>
-                  ))}
-                </div>
-              </div>
+                })}
             </div>
-          )
-        })}
-      </div>
-    )
-  }
+        )
+    }
 )
 
 EmployeeTimeline.displayName = 'EmployeeTimeline'

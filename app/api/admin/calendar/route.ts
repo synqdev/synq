@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/client'
 import { getAdminSession } from '@/lib/auth/admin'
+import { toZonedTime } from '@/lib/utils/time'
 
 /**
  * GET /api/admin/calendar
@@ -29,18 +30,14 @@ export async function GET(request: NextRequest) {
   // Parse date from query params
   const { searchParams } = request.nextUrl
   const dateStr = searchParams.get('date') || new Date().toISOString().split('T')[0]
-  const date = new Date(dateStr + 'T00:00:00')
 
-  if (isNaN(date.getTime())) {
-    return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
-  }
+  // Calculate day boundaries in JST (same as availability API)
+  const startOfDay = toZonedTime(dateStr, '00:00')
+  const endOfDay = new Date(startOfDay)
+  endOfDay.setDate(endOfDay.getDate() + 1)
 
-  // Calculate day boundaries
-  const startOfDay = new Date(date)
-  startOfDay.setHours(0, 0, 0, 0)
-  const endOfDay = new Date(date)
-  endOfDay.setHours(23, 59, 59, 999)
-
+  console.log('startOfDay (JST)', startOfDay.toISOString())
+  console.log('endOfDay (JST)', endOfDay.toISOString())
   // Fetch workers and bookings in parallel
   const [workers, bookings] = await Promise.all([
     prisma.worker.findMany({

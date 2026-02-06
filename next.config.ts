@@ -29,6 +29,10 @@ const sentryWebpackPluginOptions = {
   disableClientWebpackPlugin: !process.env.SENTRY_AUTH_TOKEN,
 }
 
-// Apply plugins: next-intl first, then Sentry
+// Apply plugins: next-intl first, then Sentry (only if DSN is configured)
 const configWithIntl = withNextIntl(nextConfig)
-export default withSentryConfig(configWithIntl, sentryWebpackPluginOptions)
+
+// Only enable Sentry if DSN is configured, otherwise just use config with intl
+export default process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(configWithIntl, sentryWebpackPluginOptions)
+  : configWithIntl

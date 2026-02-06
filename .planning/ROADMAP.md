@@ -10,7 +10,7 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: MVP** - Foundation, user booking, admin management, tests, email (complete booking system)
+- [x] **Phase 1: MVP** - Foundation, user booking, admin management, tests, email (complete booking system)
 - [ ] **Phase 2: Parity** - CRM, customer management, employee KPIs, sales reporting
 - [ ] **Phase 3: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
 
@@ -43,21 +43,23 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
   11. All booking/availability logic covered by unit and integration tests
   12. Concurrent booking attempts handled correctly
 
-**Plans:** 12 plans in 5 waves
+**Plans:** 14 plans in 7 waves
 
 Plans:
-- [ ] 01-01-PLAN.md — Database schema and seed data (Wave 1)
-- [ ] 01-02-PLAN.md — Project structure and i18n setup (Wave 1)
-- [ ] 01-03-PLAN.md — Component library foundation (Wave 1)
-- [ ] 01-04-PLAN.md — Availability service with TDD (Wave 2)
-- [ ] 01-05-PLAN.md — Booking service with TDD (Wave 2)
-- [ ] 01-06-PLAN.md — Calendar timeline component (Wave 3)
-- [ ] 01-07-PLAN.md — User registration and booking flow (Wave 3)
-- [ ] 01-08-PLAN.md — Email integration with Resend (Wave 3)
-- [ ] 01-09-PLAN.md — Admin authentication and dashboard (Wave 4)
-- [ ] 01-10-PLAN.md — Admin CRUD operations (Wave 4)
-- [ ] 01-11-PLAN.md — Security hardening (RLS, rate limiting) (Wave 5)
-- [ ] 01-12-PLAN.md — SWR polling and test finalization (Wave 5)
+- [x] 01-01-PLAN.md — Database schema and seed data (Wave 1)
+- [x] 01-02-PLAN.md — Project structure and i18n setup (Wave 1)
+- [x] 01-03-PLAN.md — Component library foundation (Wave 1)
+- [x] 01-04-PLAN.md — Availability service with TDD (Wave 2)
+- [x] 01-05-PLAN.md — Booking service with TDD (Wave 2)
+- [x] 01-06-PLAN.md — Calendar timeline component (Wave 3)
+- [x] 01-07-PLAN.md — User registration and booking flow (Wave 3)
+- [x] 01-08-PLAN.md — Email integration with Resend (Wave 3)
+- [x] 01-09-PLAN.md — Admin authentication and dashboard (Wave 4)
+- [x] 01-10-PLAN.md — Admin CRUD operations (Wave 4)
+- [x] 01-11-PLAN.md — Security hardening (RLS, rate limiting) (Wave 5)
+- [x] 01-12-PLAN.md — SWR polling and test finalization (Wave 5)
+- [x] 01-13-PLAN.md — Service-aware booking flow (TICKET 01-06) (Wave 6)
+- [x] 01-14-PLAN.md — Frontend refactor with EmployeeTimeline (Wave 7)
 
 ### Phase 2: Parity
 **Goal**: CRM and reporting features that achieve parity with current spreadsheet-based workflow
@@ -103,6 +105,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. MVP | 9/12 | In progress | - |
+| 1. MVP | 14/14 | ✓ Complete | 2026-02-05 |
 | 2. Parity | 0/? | Not started | - |
 | 3. Differentiation | 0/? | Not started | - |

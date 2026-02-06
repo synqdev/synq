@@ -115,7 +115,7 @@ export async function blockWorkerTime(formData: FormData) {
       customerId: '00000000-0000-0000-0000-000000000000', // SYSTEM_BLOCKER
       serviceId: 'block-service', // BLOCK_SERVICE
       workerId: parsed.workerId,
-      resourceId: null, // Block doesn't require specific resource
+      resourceId: undefined, // Block doesn't require specific resource
       startsAt,
       endsAt,
       status: 'CONFIRMED',

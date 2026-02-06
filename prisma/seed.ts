@@ -82,6 +82,28 @@ async function main() {
       price: 6000,
     },
     create: {
+      id: 'block-service',
+      name: 'Unavailable',
+      nameEn: 'Unavailable',
+      description: 'Blocked time slot',
+      duration: 30,
+      price: 0,
+      isActive: false, // Hidden from public
+    },
+  })
+  console.log(`Created block service: ${blockService.name}`)
+
+  // Create Standard Shiatsu service
+  const standardShiatsu = await prisma.service.upsert({
+    where: { id: 'service-shiatsu' },
+    update: {
+      name: 'スタンダード指圧',
+      nameEn: 'Standard Shiatsu',
+      description: '全身の指圧マッサージ（60分）',
+      duration: 60,
+      price: 6000,
+    },
+    create: {
       id: 'service-shiatsu',
       name: 'スタンダード指圧',
       nameEn: 'Standard Shiatsu',

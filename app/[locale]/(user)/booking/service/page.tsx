@@ -16,9 +16,24 @@ export default async function ServiceSelectionPage({ params }: ServicePageProps)
 
   // Fetch services from API
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const services = await fetch(`${baseUrl}/api/services`, {
-    cache: 'force-cache', // Services change rarely
-  }).then(r => r.json())
+  let services: any[] = []
+  let error = null
+
+  try {
+    const response = await fetch(`${baseUrl}/api/services`, {
+      cache: 'force-cache', // Services change rarely
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch services: ${response.status}`)
+    }
+
+    const data = await response.json()
+    services = Array.isArray(data) ? data : []
+  } catch (e) {
+    console.error('Failed to fetch services:', e)
+    error = e instanceof Error ? e.message : 'Failed to load services'
+  }
 
   async function selectService(formData: FormData) {
     'use server'
@@ -33,28 +48,46 @@ export default async function ServiceSelectionPage({ params }: ServicePageProps)
         {locale === 'ja' ? 'サービス選択' : 'Select Service'}
       </h1>
 
-      <form action={selectService}>
-        <input type="hidden" name="locale" value={locale} />
-
-        <div className="space-y-4">
-          {services.map((service: any) => (
-            <button
-              key={service.id}
-              type="submit"
-              name="serviceId"
-              value={service.id}
-              className="w-full text-left p-4 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition"
-            >
-              <div className="font-bold text-lg">
-                {locale === 'ja' ? service.name : service.nameEn || service.name}
-              </div>
-              <div className="text-gray-600">
-                {service.duration} {locale === 'ja' ? '分' : 'min'} · ¥{service.price.toLocaleString()}
-              </div>
-            </button>
-          ))}
+      {error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <p className="text-red-600 font-bold mb-2">
+            {locale === 'ja' ? 'エラー' : 'Error'}
+          </p>
+          <p className="text-red-500 text-sm mb-4">{error}</p>
+          <p className="text-gray-600 text-sm">
+            {locale === 'ja'
+              ? 'サーバーを再起動してください: npm run dev'
+              : 'Please restart the server: npm run dev'}
+          </p>
         </div>
-      </form>
+      ) : services.length === 0 ? (
+        <p className="text-gray-500 text-center py-12">
+          {locale === 'ja' ? 'サービスがありません' : 'No services available'}
+        </p>
+      ) : (
+        <form action={selectService}>
+          <input type="hidden" name="locale" value={locale} />
+
+          <div className="space-y-4">
+            {services.map((service: any) => (
+              <button
+                key={service.id}
+                type="submit"
+                name="serviceId"
+                value={service.id}
+                className="w-full text-left p-4 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition"
+              >
+                <div className="font-bold text-lg">
+                  {locale === 'ja' ? service.name : service.nameEn || service.name}
+                </div>
+                <div className="text-gray-600">
+                  {service.duration} {locale === 'ja' ? '分' : 'min'} · ¥{service.price.toLocaleString()}
+                </div>
+              </button>
+            ))}
+          </div>
+        </form>
+      )}
     </div>
   )
 }

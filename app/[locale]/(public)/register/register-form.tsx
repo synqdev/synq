@@ -31,7 +31,10 @@ export function RegisterForm({ locale, labels }: RegisterFormProps) {
   // Removed verification flow - not implemented in backend yet
 
   return (
-    <div className="w-full max-w-md bg-white border-2 border-black rounded-3xl p-6">
+    <div
+      className="w-full max-w-md bg-white border-2 border-black rounded-3xl p-6"
+      data-testid="register-form"
+    >
       <h2 className="text-2xl font-black mb-6 uppercase tracking-tight text-black text-center">Register</h2>
       <form action={formAction} className="flex flex-col gap-6">
         {/* Hidden locale field */}

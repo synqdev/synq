@@ -9,6 +9,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { EmployeeTimeline } from '@/components/calendar/employee-timeline'
 import { Button } from '@/components/ui/button'
 import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employee-timeline'
@@ -36,6 +37,8 @@ export function SlotSelectionClient({
   locale,
 }: SlotSelectionClientProps) {
   const router = useRouter()
+  const tBooking = useTranslations('booking')
+  const tCommon = useTranslations('common')
   const [selectedSlot, setSelectedSlot] = useState<TimelineSlot | null>(null)
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null)
 
@@ -79,12 +82,12 @@ export function SlotSelectionClient({
 
   if (!hasAvailableSlots) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12" data-testid="slots-empty">
         <p className="text-gray-500 text-lg">
-          {locale === 'ja' ? 'この日は空きがありません' : 'No availability on this date'}
+          {tBooking('noSlots')}
         </p>
         <p className="text-gray-400 mt-2">
-          {locale === 'ja' ? '別の日付を選択してください' : 'Please select a different date'}
+          {tBooking('selectDifferentDate')}
         </p>
       </div>
     )
@@ -108,14 +111,14 @@ export function SlotSelectionClient({
           onClick={() => router.back()}
           className="min-w-[120px]"
         >
-          {locale === 'ja' ? '戻る' : 'Back'}
+          {tCommon('back')}
         </Button>
         <Button
           onClick={handleNext}
           disabled={!selectedSlot}
           className="min-w-[120px]"
         >
-          {locale === 'ja' ? '次へ' : 'Next'}
+          {tCommon('next')}
         </Button>
       </div>
     </div>

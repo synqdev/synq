@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { getTranslations } from 'next-intl/server'
 import { prisma } from '@/lib/db/client'
 import { BookingSelectionForm } from './booking-selection-form'
 
@@ -14,6 +15,7 @@ interface BookingPageProps {
  */
 export default async function BookingPage({ params }: BookingPageProps) {
   const { locale } = await params
+  const tBooking = await getTranslations('booking')
   const cookieStore = await cookies()
   const customerId = cookieStore.get('customerId')?.value
 
@@ -30,9 +32,9 @@ export default async function BookingPage({ params }: BookingPageProps) {
   })
 
   return (
-    <div className="max-w-xl mx-auto p-6 md:p-8">
-      <h1 className="text-3xl font-black mb-8 text-center uppercase tracking-tight">
-        {locale === 'ja' ? '予約の詳細' : 'Booking Details'}
+    <div className="max-w-xl mx-auto p-6 md:p-8" data-testid="booking-page">
+      <h1 className="text-3xl font-black mb-8 text-center uppercase tracking-tight" data-testid="booking-heading">
+        {tBooking('detailsTitle')}
       </h1>
 
       <BookingSelectionForm services={services} locale={locale} />

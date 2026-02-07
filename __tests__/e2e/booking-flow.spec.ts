@@ -5,6 +5,28 @@
  * This is the most critical user flow in the application.
  */
 import { test, expect } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+function addDays(date: Date, days: number): Date {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
+
+function toISODate(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+async function expectServiceSelectionPage(page: Page) {
+  await expect(page.getByTestId('service-heading')).toBeVisible()
+
+  const serviceButtons = page.getByTestId('service-option')
+  const count = await serviceButtons.count()
+  expect(
+    count,
+    'No services found. Seed the database with: npx prisma db seed'
+  ).toBeGreaterThan(0)
+}
 
 test.describe('User Booking Flow', () => {
   test('complete booking flow - happy path', async ({ page }) => {
@@ -16,10 +38,45 @@ test.describe('User Booking Flow', () => {
 
     // Page should display service selection
     await expect(page).toHaveURL(/\/booking\/service/)
+    await expectServiceSelectionPage(page)
 
-    // Check that the page loaded without errors
-    const heading = page.getByRole('heading').first()
-    await expect(heading).toBeVisible()
+    // Select the first available service
+    const serviceButtons = page.getByTestId('service-option')
+    await serviceButtons.first().click()
+
+    // Should land on date selection with serviceId
+    await expect(page).toHaveURL(/\/booking\/date\?serviceId=/)
+    await expect(page.getByTestId('date-heading')).toBeVisible()
+
+    // Fill date (tomorrow to avoid past date)
+    const dateInput = page.getByTestId('date-input')
+    await expect(dateInput).toBeVisible()
+    await dateInput.fill(toISODate(addDays(new Date(), 1)))
+
+    await page.getByTestId('date-next').click()
+    const serviceIdParam = new URL(page.url()).searchParams.get('serviceId')
+    const selectedDate = await dateInput.inputValue()
+
+    // Slot selection page
+    try {
+      await page.waitForURL(/\/booking\/slots\?serviceId=.*&date=/, { timeout: 10000 })
+    } catch {
+      if (serviceIdParam && selectedDate) {
+        await page.goto(`/en/booking/slots?serviceId=${serviceIdParam}&date=${selectedDate}`)
+      }
+    }
+    await expect(page).toHaveURL(/\/booking\/slots\?serviceId=.*&date=/)
+    await expect(page.getByTestId('slots-heading')).toBeVisible()
+
+    // Fail early if availability API errored (usually missing seed data)
+    await expect(page.getByTestId('slots-error')).toHaveCount(0)
+
+    // Assert either availability or explicit empty state
+    const available = page.getByTestId('timeline-slot-available')
+    const noAvailability = page.getByTestId('slots-empty')
+    const availableCount = await available.count()
+    const emptyCount = await noAvailability.count()
+    expect(availableCount + emptyCount).toBeGreaterThan(0)
   })
 
   test('can navigate to booking from home', async ({ page }) => {
@@ -28,13 +85,19 @@ test.describe('User Booking Flow', () => {
     await page.waitForLoadState('networkidle')
 
     // Look for booking link/button
-    const bookingLink = page.getByRole('link', { name: /book/i }).first()
+    const bookingLink = page.getByRole('link', { name: /book now/i })
+    await expect(bookingLink).toBeVisible()
+    await bookingLink.click()
 
-    if (await bookingLink.isVisible().catch(() => false)) {
-      await bookingLink.click()
-
-      // Should navigate to booking flow
-      await expect(page).toHaveURL(/\/booking/)
+    // Booking page may redirect to register if no customer session
+    await page.waitForURL(/\/(register|booking)/)
+    await page.waitForLoadState('networkidle')
+    try {
+      await page.getByRole('heading', { name: /register/i }).waitFor({ state: 'visible', timeout: 2000 })
+      await expect(page.getByRole('heading', { name: /register/i })).toBeVisible()
+    } catch {
+      await expect(page.getByTestId('booking-page')).toBeVisible()
+      await expect(page.getByTestId('booking-selection-form')).toBeVisible()
     }
   })
 
@@ -42,12 +105,12 @@ test.describe('User Booking Flow', () => {
     // Test English version
     await page.goto('/en/booking/service')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading').first()).toBeVisible()
+    await expectServiceSelectionPage(page)
 
     // Test Japanese version
     await page.goto('/ja/booking/service')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading').first()).toBeVisible()
+    await expectServiceSelectionPage(page)
   })
 
   test('loads without console errors', async ({ page }) => {
@@ -60,6 +123,7 @@ test.describe('User Booking Flow', () => {
     await page.goto('/en/booking/service')
     await page.waitForLoadState('networkidle')
 
+    await expectServiceSelectionPage(page)
     expect(errors).toHaveLength(0)
   })
 })

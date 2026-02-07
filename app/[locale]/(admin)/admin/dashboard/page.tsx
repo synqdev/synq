@@ -87,8 +87,8 @@ export default async function AdminDashboardPage({
   )
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">
+    <div data-testid="admin-dashboard-page">
+      <h2 className="text-2xl font-bold mb-6" data-testid="admin-dashboard-heading">
         {t('title')}
       </h2>
       <AdminDashboardClient

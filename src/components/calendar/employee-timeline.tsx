@@ -226,12 +226,20 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
         }, [workers])
 
         return (
-            <div ref={ref} className={`flex flex-col gap-8 ${className}`}>
+            <div
+                ref={ref}
+                className={`flex flex-col gap-8 ${className}`}
+                data-testid="employee-timeline"
+            >
                 {displayWorkers.map((worker) => {
                     return (
                         <div key={worker.id} className="flex flex-col gap-1">
                             {/* Worker Name Label */}
-                            <div className="text-xl font-bold font-mono uppercase tracking-wider pl-1 text-black">
+                            <div
+                                className="text-xl font-bold font-mono uppercase tracking-wider pl-1 text-black"
+                                data-testid="timeline-worker-name"
+                                data-worker-id={worker.id}
+                            >
                                 {worker.name}
                             </div>
 
@@ -290,14 +298,20 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                             >
                                                 {/* Booking Name */}
                                                 {slot.type === 'booked' && (
-                                                    <span className="text-gray-700 font-bold text-sm truncate px-4 select-none">
+                                                    <span
+                                                        className="text-gray-700 font-bold text-sm truncate px-4 select-none"
+                                                        data-testid="timeline-slot-booked"
+                                                    >
                                                         {slot.data?.customer || slot.data?.name || slot.data?.title || 'Booked'}
                                                     </span>
                                                 )}
 
                                                 {/* Available slot indicator */}
                                                 {slot.type === 'available' && mode === 'user' && (
-                                                    <span className={`font-bold text-xs truncate px-4 select-none ${isSelectedMatch ? 'text-white' : 'text-green-700'}`}>
+                                                    <span
+                                                        className={`font-bold text-xs truncate px-4 select-none ${isSelectedMatch ? 'text-white' : 'text-green-700'}`}
+                                                        data-testid="timeline-slot-available"
+                                                    >
                                                         {isSelectedMatch ? 'Selected' : 'Available'}
                                                     </span>
                                                 )}
@@ -334,6 +348,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                         <div
                                             key={time}
                                             className="flex-1 text-[10px] font-bold text-black px-1 text-left"
+                                            data-testid="timeline-time-label"
                                         >
                                             {time}
                                         </div>

@@ -45,6 +45,7 @@ export function AdminDashboardClient({
 }: AdminDashboardClientProps) {
   const router = useRouter()
   const t = useTranslations('admin.dashboardPage')
+  const tCommon = useTranslations('common')
   const format = useFormatter()
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -207,30 +208,52 @@ export function AdminDashboardClient({
   }, 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="admin-dashboard-client">
       {/* Date navigation header */}
       {/* Date navigation header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Button variant="iso" size="sm" onClick={goToPrevious} className="h-[42px]">
+          <Button
+            variant="iso"
+            size="sm"
+            onClick={goToPrevious}
+            className="h-[42px]"
+            data-testid="admin-date-previous"
+          >
             {t('previous')}
           </Button>
-          <Button variant="iso" size="sm" onClick={goToToday} className="h-[42px]">
+          <Button
+            variant="iso"
+            size="sm"
+            onClick={goToToday}
+            className="h-[42px]"
+            data-testid="admin-date-today"
+          >
             {t('today')}
           </Button>
-          <Button variant="iso" size="sm" onClick={goToNext} className="h-[42px]">
+          <Button
+            variant="iso"
+            size="sm"
+            onClick={goToNext}
+            className="h-[42px]"
+            data-testid="admin-date-next"
+          >
             {t('next')}
           </Button>
           <DatePicker
             value={formatDateParam(date)}
             onChange={handleDateChange}
             className="w-40 ml-2 h-[42px]"
+            data-testid="admin-date-picker"
           />
         </div>
 
         {/* Center: Booking Count */}
         <div className="hidden md:flex items-center justify-center flex-1">
-          <span className="text-sm text-gray-400 font-medium uppercase tracking-wider">
+          <span
+            className="text-sm text-gray-400 font-medium uppercase tracking-wider"
+            data-testid="admin-booking-count"
+          >
             {t('bookings', { count: bookingCount })}
           </span>
         </div>
@@ -259,7 +282,7 @@ export function AdminDashboardClient({
                 className={`h-[42px] min-w-[140px] gap-2 ${!selectedSlot ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border-gray-300' : ''}`}
                 disabled={!selectedSlot}
               >
-                ACTIONS
+                {tCommon('actions')}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -276,7 +299,7 @@ export function AdminDashboardClient({
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-48 p-2 border-2 border-black rounded-xl">
-              <div className="font-black mb-2 px-2 text-sm uppercase tracking-wider">BLOCK TIME</div>
+              <div className="font-black mb-2 px-2 text-sm uppercase tracking-wider">{t('blockTime')}</div>
               <div className="flex flex-col gap-1">
                 <Button
                   variant="ghost"
@@ -284,7 +307,7 @@ export function AdminDashboardClient({
                   className="justify-start font-bold uppercase hover:bg-black hover:text-white transition-colors"
                   onClick={() => handleBlockTime(60)}
                 >
-                  Block 1 Hour
+                  {t('duration1h')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -292,7 +315,7 @@ export function AdminDashboardClient({
                   className="justify-start font-bold uppercase hover:bg-black hover:text-white transition-colors"
                   onClick={() => handleBlockTime(120)}
                 >
-                  Block 2 Hours
+                  {t('duration2h')}
                 </Button>
               </div>
             </PopoverContent>
@@ -302,7 +325,7 @@ export function AdminDashboardClient({
 
       {/* Last updated indicator */}
       {lastUpdatedStr && (
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-gray-500" data-testid="admin-last-updated">
           <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           {t('lastUpdated')}
           {lastUpdatedStr}
@@ -310,7 +333,7 @@ export function AdminDashboardClient({
       )}
 
       {/* Date display */}
-      <div className="text-lg font-medium text-gray-900">
+      <div className="text-lg font-medium text-gray-900" data-testid="admin-date-display">
         {format.dateTime(date, {
           year: 'numeric',
           month: 'long',

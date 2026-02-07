@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         status: true,
         workerId: true,
         resourceId: true,
+        serviceId: true,
         customer: {
           select: {
             name: true,
@@ -99,6 +100,7 @@ export async function GET(request: NextRequest) {
     endsAt: b.endsAt.toISOString(),
     workerId: b.workerId,
     resourceId: b.resourceId,
+    serviceId: b.serviceId,
     customerName: b.customer.name,
     customerEmail: b.customer.email,
     customerPhone: b.customer.phone,

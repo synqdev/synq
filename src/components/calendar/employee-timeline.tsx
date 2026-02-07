@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button'
 const BookingActionMenu = ({
     onEdit,
     onViewNotes,
-    onCancel
+    onCancel,
+    isDarkBackground = false
 }: {
     onEdit: () => void
     onViewNotes: () => void
     onCancel: () => void
+    isDarkBackground?: boolean
 }) => {
     const [showConfirm, setShowConfirm] = useState(false)
 
@@ -17,7 +19,8 @@ const BookingActionMenu = ({
         <Popover onOpenChange={(open) => !open && setShowConfirm(false)}>
             <PopoverTrigger asChild>
                 <button
-                    className="p-1 rounded-full hover:bg-white/50 text-gray-500 hover:text-black transition-colors cursor-pointer"
+                    className={`p-1 rounded-full hover:bg-white/50 transition-colors cursor-pointer ${isDarkBackground ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-black'
+                        }`}
                     aria-label="Options"
                 >
                     <svg
@@ -51,9 +54,9 @@ const BookingActionMenu = ({
                                 No
                             </Button>
                             <Button
-                                variant="destructive"
+                                variant="secondary"
                                 size="sm"
-                                className="h-7 px-2 text-xs"
+                                className="h-7 px-2 text-xs bg-red-600 text-white hover:bg-red-700 hover:text-white border-0"
                                 onClick={onCancel}
                             >
                                 Yes, Cancel
@@ -106,8 +109,9 @@ export interface TimelineWorker {
 export interface EmployeeTimelineProps {
     workers: TimelineWorker[]
     mode?: 'admin' | 'user'
+    onSlotSelect?: (slot: TimelineSlot, workerId: string) => void
     selectedSlot?: TimelineSlot | null
-    selectedWorkerId?: string | null // Added to scope selection to specific worker
+    selectedWorkerId?: string | null
     onSlotClick?: (slot: TimelineSlot, workerId: string) => void
     onSlotRemove?: (slot: TimelineSlot, workerId: string) => void
     timeRange?: { start: string; end: string }
@@ -139,6 +143,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
         selectedSlot,
         selectedWorkerId,
         onSlotClick,
+        onSlotSelect,
         onSlotRemove,
         timeRange = { start: '10:00', end: '19:00' },
         className = '',
@@ -254,14 +259,18 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                         const bgColor = getSlotColor(slot.type, isSelectedMatch || false)
 
                                         const isClickable = mode === 'user' && slot.type === 'available'
-                                        const hasRemoveButton = mode === 'admin' && slot.type === 'booked' && onSlotRemove
+                                        const hasRemoveButton = mode === 'admin' && (slot.type === 'booked' || slot.type === 'blocked') && onSlotRemove
+                                        // Z-index hierarchy: Booked/Blocked > Available. Selection boosts Z.
+                                        const zIndex = (slot.type === 'booked' || slot.type === 'blocked')
+                                            ? (isSelectedMatch ? 'z-[40]' : 'z-[30]')
+                                            : (isSelectedMatch ? 'z-[20]' : 'z-[10]')
 
                                         return (
                                             <div
                                                 key={`${slot.startTime}-${index}`}
                                                 className={`absolute top-0 bottom-0 group transition-all flex items-center justify-center
-                                                    ${isSelectedMatch ? 'z-[25]' : 'z-[15]'}
-                                                    ${isClickable ? 'cursor-pointer hover:brightness-95' : ''}
+                                                    ${zIndex}
+                                                    ${(isClickable || (mode === 'admin' && slot.type === 'available')) ? 'cursor-pointer hover:brightness-95' : ''}
                                                 `}
                                                 style={{
                                                     left: `${left}%`,
@@ -269,8 +278,13 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                                     backgroundColor: bgColor
                                                 }}
                                                 onClick={() => {
-                                                    if (isClickable && onSlotClick) {
+                                                    // User mode: Click to book (if available)
+                                                    if (mode === 'user' && slot.type === 'available' && onSlotClick) {
                                                         onSlotClick(slot, worker.id)
+                                                    }
+                                                    // Admin mode: Click to select (if available)
+                                                    if (mode === 'admin' && slot.type === 'available' && onSlotSelect) {
+                                                        onSlotSelect(slot, worker.id)
                                                     }
                                                 }}
                                             >
@@ -295,6 +309,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                                             onEdit={() => console.log('Edit clicked')}
                                                             onViewNotes={() => console.log('Notes clicked')}
                                                             onCancel={() => onSlotRemove(slot, worker.id)}
+                                                            isDarkBackground={slot.type === 'blocked'}
                                                         />
                                                     </div>
                                                 )}
@@ -313,12 +328,12 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                     ))}
                                 </div>
 
-                                {/* Time Labels (positioned absolutely below) */}
-                                <div className="absolute top-full left-0 w-full flex mt-1">
+                                {/* Time Labels (bottom-left inside each cell) */}
+                                <div className="absolute bottom-1 left-0 w-full flex pointer-events-none z-30">
                                     {timeLabels.map((time) => (
                                         <div
                                             key={time}
-                                            className="flex-1 text-[10px] font-bold text-black -ml-2"
+                                            className="flex-1 text-[10px] font-bold text-black px-1 text-left"
                                         >
                                             {time}
                                         </div>

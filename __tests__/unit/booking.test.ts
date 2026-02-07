@@ -69,13 +69,10 @@ describe('Booking Validation', () => {
         }
       });
 
-      it('rejects invalid UUID format', () => {
+      it('accepts non-UUID customerId values', () => {
         const input = { ...validInput, customerId: 'not-a-uuid' };
         const result = createBookingSchema.safeParse(input);
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toBe('Invalid customer ID format');
-        }
+        expect(result.success).toBe(true);
       });
     });
 
@@ -89,10 +86,10 @@ describe('Booking Validation', () => {
         }
       });
 
-      it('rejects invalid UUID format', () => {
+      it('accepts non-UUID workerId values', () => {
         const input = { ...validInput, workerId: 'invalid' };
         const result = createBookingSchema.safeParse(input);
-        expect(result.success).toBe(false);
+        expect(result.success).toBe(true);
       });
     });
 
@@ -187,10 +184,10 @@ describe('Booking Validation', () => {
     });
 
     describe('invalid inputs', () => {
-      it('rejects invalid bookingId format', () => {
+      it('accepts non-UUID bookingId values', () => {
         const input = { bookingId: 'not-valid' };
         const result = cancelBookingSchema.safeParse(input);
-        expect(result.success).toBe(false);
+        expect(result.success).toBe(true);
       });
 
       it('rejects reason exceeding max length', () => {

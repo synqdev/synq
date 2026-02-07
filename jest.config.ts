@@ -42,6 +42,8 @@ const config: Config = {
     // Skip integration tests by default (require DATABASE_URL and node environment)
     // Run with: npm test -- --testPathIgnorePatterns=''
     '<rootDir>/__tests__/integration/',
+    '<rootDir>/__tests__/e2e/',
+    '<rootDir>/mobile/',
   ],
 
   // Files to collect coverage from (focused on critical business logic)

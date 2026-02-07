@@ -60,10 +60,12 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         <Button
           label={t('bookAnother')}
           variant="outline"
+          style={styles.actionButton}
           onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Booking' }] })}
         />
         <Button
           label={t('backHome')}
+          style={styles.actionButton}
           onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Booking' }] })}
         />
       </View>
@@ -127,5 +129,9 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: theme.spacing.md,
+    alignItems: 'stretch',
+  },
+  actionButton: {
+    width: '100%',
   },
 });

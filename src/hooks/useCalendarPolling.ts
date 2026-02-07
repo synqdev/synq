@@ -53,6 +53,7 @@ interface AdminCalendarData {
     endsAt: string
     workerId: string
     resourceId: string
+    serviceId: string
     customerName: string
     customerEmail: string
     serviceName: string
@@ -199,6 +200,7 @@ export function useCalendarPolling({
     endsAt: new Date(b.endsAt),
     workerId: b.workerId,
     resourceId: b.resourceId,
+    serviceId: b.serviceId,
     customerName: b.customerName,
     serviceName: b.serviceName,
     status: b.status,

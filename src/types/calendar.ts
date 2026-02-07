@@ -16,6 +16,7 @@ export interface CalendarBooking {
   workerId: string
   resourceId: string
   customerName?: string  // For admin view
+  serviceId?: string     // For identifying blocked slots
   serviceName?: string   // For admin view
   status: 'CONFIRMED' | 'CANCELLED' | 'NOSHOW'
 }

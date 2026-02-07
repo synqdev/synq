@@ -4,7 +4,7 @@
  * Admin Dashboard Client Component
  *
  * Interactive wrapper for EmployeeTimeline in admin mode.
- * Handles booking cancellation and real-time updates via SWR.
+ * Handles booking cancellation, blocking, and real-time updates via SWR.
  */
 
 import { useState, useCallback } from 'react'
@@ -12,12 +12,17 @@ import { useRouter } from 'next/navigation'
 import { useTranslations, useFormatter } from 'next-intl'
 import { EmployeeTimeline } from '@/components/calendar/employee-timeline'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Spinner } from '@/components/ui/spinner'
 import { useCalendarPolling } from '@/hooks/useCalendarPolling'
 import { mapAdminBookingsToCalendar } from '@/lib/mappers/calendar'
-import { cancelBooking } from '@/app/actions/admin-booking'
+import { cancelBooking, blockWorkerTime } from '@/app/actions/admin-booking'
 import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employee-timeline'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 interface AdminDashboardClientProps {
   initialWorkers: TimelineWorker[]
@@ -32,13 +37,7 @@ function formatDateParam(date: Date): string {
 }
 
 /**
- * Admin dashboard client with date navigation and booking cancellation.
- *
- * Features:
- * - Date picker navigation
- * - Previous/next day buttons
- * - Click X button on bookings to cancel
- * - Real-time updates via SWR polling (10 seconds)
+ * Admin dashboard client with date navigation, booking cancellation, and blocking.
  */
 export function AdminDashboardClient({
   initialWorkers,
@@ -48,6 +47,10 @@ export function AdminDashboardClient({
   const t = useTranslations('admin.dashboardPage')
   const format = useFormatter()
   const [isProcessing, setIsProcessing] = useState(false)
+
+  // Selection state for blocking
+  const [selectedSlot, setSelectedSlot] = useState<TimelineSlot | null>(null)
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null)
 
   // Format date for API
   const dateStr = formatDateParam(date)
@@ -79,6 +82,7 @@ export function AdminDashboardClient({
             endsAt: s.booking!.endsAt,
             customerName: s.booking!.customerName || 'Unknown',
             status: s.booking!.status,
+            serviceId: s.booking!.serviceId || '',
           }))
       )
       : []
@@ -143,6 +147,51 @@ export function AdminDashboardClient({
     }
   }
 
+  // Handle slot selection (memoized)
+  const handleSlotSelect = useCallback((slot: TimelineSlot, workerId: string) => {
+    setSelectedSlot(slot)
+    setSelectedWorkerId(workerId)
+  }, [])
+
+  // Handle blocking time
+  const handleBlockTime = async (durationMinutes: number = 60) => {
+    if (!selectedSlot || !selectedWorkerId) {
+      alert(t('selectSlotFirst'))
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      console.log('Blocking time with:', { selectedWorkerId, dateStr, startTime: selectedSlot.startTime })
+      const formData = new FormData()
+      formData.append('workerId', selectedWorkerId)
+      formData.append('date', dateStr)
+      formData.append('startTime', selectedSlot.startTime)
+
+      // Calculate end time
+      const [hours, minutes] = selectedSlot.startTime.split(':').map(Number)
+      const startTotalMins = hours * 60 + minutes
+      const endTotalMins = startTotalMins + durationMinutes
+      const endHours = Math.floor(endTotalMins / 60)
+      const endMinutes = endTotalMins % 60
+      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`
+
+      formData.append('endTime', endTime)
+
+      await blockWorkerTime(formData)
+      refresh()
+
+      // Reset selection
+      setSelectedSlot(null)
+      setSelectedWorkerId(null)
+    } catch (error) {
+      console.error('Failed to block time:', error)
+      alert(t('blockFailed'))
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   // Format last updated time
   const lastUpdatedStr = lastUpdated
     ? format.dateTime(lastUpdated, {
@@ -160,30 +209,94 @@ export function AdminDashboardClient({
   return (
     <div className="space-y-4">
       {/* Date navigation header */}
+      {/* Date navigation header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToPrevious}>
+          <Button variant="iso" size="sm" onClick={goToPrevious} className="h-[42px]">
             {t('previous')}
           </Button>
-          <Button variant="outline" size="sm" onClick={goToToday}>
+          <Button variant="iso" size="sm" onClick={goToToday} className="h-[42px]">
             {t('today')}
           </Button>
-          <Button variant="outline" size="sm" onClick={goToNext}>
+          <Button variant="iso" size="sm" onClick={goToNext} className="h-[42px]">
             {t('next')}
           </Button>
+          <DatePicker
+            value={formatDateParam(date)}
+            onChange={handleDateChange}
+            className="w-40 ml-2 h-[42px]"
+          />
+        </div>
+
+        {/* Center: Booking Count */}
+        <div className="hidden md:flex items-center justify-center flex-1">
+          <span className="text-sm text-gray-400 font-medium uppercase tracking-wider">
+            {t('bookings', { count: bookingCount })}
+          </span>
         </div>
 
         <div className="flex items-center gap-4">
-          <Input
-            type="date"
-            value={formatDateParam(date)}
-            onChange={handleDateChange}
-            className="w-40"
-          />
-          <span className="text-sm text-gray-600">
-            {t('bookings', { count: bookingCount })}
-          </span>
           {(isLoading || isProcessing) && <Spinner size="sm" />}
+
+          {/* Selection Indicator */}
+          {selectedSlot && (
+            <div className="flex flex-col items-end mr-2">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                SELECTED
+              </span>
+              <span className="text-sm font-black text-black">
+                {workers.find(w => w.id === selectedWorkerId)?.name} · {selectedSlot.startTime}
+              </span>
+            </div>
+          )}
+
+          {/* Actions Dropdown */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="iso"
+                size="sm"
+                className={`h-[42px] min-w-[140px] gap-2 ${!selectedSlot ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-400 border-gray-300' : ''}`}
+                disabled={!selectedSlot}
+              >
+                ACTIONS
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-2 border-2 border-black rounded-xl">
+              <div className="font-black mb-2 px-2 text-sm uppercase tracking-wider">BLOCK TIME</div>
+              <div className="flex flex-col gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start font-bold uppercase hover:bg-black hover:text-white transition-colors"
+                  onClick={() => handleBlockTime(60)}
+                >
+                  Block 1 Hour
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start font-bold uppercase hover:bg-black hover:text-white transition-colors"
+                  onClick={() => handleBlockTime(120)}
+                >
+                  Block 2 Hours
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -212,6 +325,9 @@ export function AdminDashboardClient({
         mode="admin"
         timeRange={{ start: '10:00', end: '19:00' }}
         onSlotRemove={handleSlotRemove}
+        onSlotSelect={handleSlotSelect}
+        selectedSlot={selectedSlot}
+        selectedWorkerId={selectedWorkerId}
         className="min-h-[400px]"
       />
     </div>

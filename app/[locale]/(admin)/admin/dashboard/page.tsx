@@ -77,6 +77,7 @@ export default async function AdminDashboardPage({
     endsAt: booking.endsAt,
     customerName: booking.customer.name,
     status: booking.status,
+    serviceId: booking.serviceId,
   }))
 
   // Use mapper to transform for EmployeeTimeline

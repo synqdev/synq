@@ -106,11 +106,17 @@ export function PreviewScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.actions}>
-        <Button label={t('back')} variant="outline" onPress={() => navigation.goBack()} />
+        <Button
+          label={t('back')}
+          variant="outline"
+          onPress={() => navigation.goBack()}
+          style={styles.actionButton}
+        />
         <Button
           label={loading ? t('booking') : t('confirm')}
           onPress={handleConfirm}
           disabled={loading}
+          style={styles.actionButton}
         />
       </View>
     </Screen>
@@ -151,7 +157,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   actions: {
-    flexDirection: 'row',
     gap: theme.spacing.md,
+    alignItems: 'stretch',
+    marginTop: theme.spacing.lg,
+  },
+  actionButton: {
+    width: '100%',
   },
 });

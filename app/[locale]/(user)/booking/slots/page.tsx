@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { getTranslations } from 'next-intl/server'
 import { SlotSelectionClient } from './slot-selection-client'
 import { mapAvailabilityToCalendar } from '@/lib/mappers/calendar'
 
@@ -22,6 +23,8 @@ export const revalidate = 0
 export default async function SlotSelectionPage({ params, searchParams }: SlotsPageProps) {
   const { locale } = await params
   const { serviceId, date } = await searchParams
+  const tBooking = await getTranslations('booking')
+  const tCommon = await getTranslations('common')
 
   if (!serviceId || !date) {
     redirect(`/${locale}/booking/service`)
@@ -59,31 +62,27 @@ export default async function SlotSelectionPage({ params, searchParams }: SlotsP
   const timelineWorkers = availability ? mapAvailabilityToCalendar(availability) : []
 
   return (
-    <div className="max-w-[828px] mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-2">
-        {locale === 'ja' ? '時間選択' : 'Select Time'}
+    <div className="max-w-[828px] mx-auto p-6" data-testid="slots-page">
+      <h1 className="text-3xl font-bold mb-2" data-testid="slots-heading">
+        {tBooking('selectTimeTitle')}
       </h1>
       {availability && (
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 mb-6" data-testid="slots-service">
           {availability.serviceName} · {date}
         </p>
       )}
 
       {error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-600 font-bold mb-2">
-            {locale === 'ja' ? 'エラーが発生しました' : 'Error'}
-          </p>
-          <p className="text-red-500 text-sm mb-4">{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center" data-testid="slots-error">
+          <p className="text-red-600 font-bold mb-2">{tCommon('error')}</p>
+          <p className="text-red-500 text-sm mb-4" data-testid="slots-error-message">{error}</p>
           <p className="text-gray-600 text-sm">
-            {locale === 'ja'
-              ? 'データベースがシードされているか確認してください: npx prisma db seed'
-              : 'Please ensure database is seeded: npx prisma db seed'}
+            {tBooking('seedRequired')}
           </p>
         </div>
       ) : timelineWorkers.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">
-          {locale === 'ja' ? '空きがありません' : 'No availability'}
+        <p className="text-gray-500 text-center py-12" data-testid="slots-empty">
+          {tBooking('noAvailability')}
         </p>
       ) : (
         <SlotSelectionClient
@@ -95,10 +94,11 @@ export default async function SlotSelectionPage({ params, searchParams }: SlotsP
       )}
 
       <a
+        data-testid="slots-back"
         href={`/${locale}/booking/date?serviceId=${serviceId}`}
         className="block mt-6 text-center text-gray-600 hover:text-gray-800"
       >
-        {locale === 'ja' ? '← 日付選択に戻る' : '← Back to date selection'}
+        {tBooking('backToDate')}
       </a>
     </div>
   )

@@ -92,11 +92,19 @@ test.describe('User Booking Flow', () => {
     // Booking page may redirect to register if no customer session
     await page.waitForURL(/\/(register|booking)/)
     await page.waitForLoadState('networkidle')
-    try {
-      await page.getByRole('heading', { name: /register/i }).waitFor({ state: 'visible', timeout: 2000 })
-      await expect(page.getByRole('heading', { name: /register/i })).toBeVisible()
-    } catch {
-      await expect(page.getByTestId('booking-page')).toBeVisible()
+
+    const registerEmail = page.getByRole('textbox', { name: /email/i })
+    const bookingPage = page.getByTestId('booking-page')
+
+    await Promise.race([
+      registerEmail.waitFor({ state: 'visible' }),
+      bookingPage.waitFor({ state: 'visible' }),
+    ])
+
+    if (await registerEmail.isVisible().catch(() => false)) {
+      await expect(registerEmail).toBeVisible()
+    } else {
+      await expect(bookingPage).toBeVisible()
       await expect(page.getByTestId('booking-selection-form')).toBeVisible()
     }
   })

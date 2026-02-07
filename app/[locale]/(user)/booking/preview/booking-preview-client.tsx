@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import type { Service, Worker, Customer } from '@prisma/client'
 
 import { BUSINESS_TIMEZONE } from '@/lib/constants'
 import { Spinner } from '@/components/ui/spinner'
+import { getLocaleDateTag, getLocalizedName } from '@/lib/i18n/locale'
 
 interface BookingPreviewProps {
   locale: string
@@ -27,6 +29,8 @@ export function BookingPreview({
   resourceId,
 }: BookingPreviewProps) {
   const router = useRouter()
+  const tBooking = useTranslations('booking')
+  const tCommon = useTranslations('common')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -63,11 +67,11 @@ export function BookingPreview({
 
 
 
-  const dateFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  const dateFormatter = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
     dateStyle: 'full',
     timeZone: BUSINESS_TIMEZONE,
   })
-  const timeFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  const timeFormatter = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
     timeStyle: 'short',
     timeZone: BUSINESS_TIMEZONE,
   })
@@ -75,33 +79,31 @@ export function BookingPreview({
   const formattedDate = dateFormatter.format(startTime)
   const formattedTime = `${timeFormatter.format(startTime)} - ${timeFormatter.format(endTime)}`
 
-  const serviceName = locale === 'ja' ? service.name : service.nameEn || service.name
-  const workerName = locale === 'ja' ? worker.name : worker.nameEn || worker.name
+  const serviceName = getLocalizedName(locale, service.name, service.nameEn)
+  const workerName = getLocalizedName(locale, worker.name, worker.nameEn)
 
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-2">
-        {locale === 'ja' ? '予約内容確認' : 'Review Booking'}
+        {tBooking('reviewTitle')}
       </h1>
       <p className="text-gray-600 mb-8">
-        {locale === 'ja'
-          ? '予約内容をご確認の上、確定してください'
-          : 'Please review your booking details and confirm'}
+        {tBooking('reviewSubtitle')}
       </p>
 
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
         <div className="flex justify-between border-b pb-4">
-          <span className="text-gray-600">{locale === 'ja' ? 'サービス' : 'Service'}</span>
+          <span className="text-gray-600">{tBooking('reviewService')}</span>
           <span className="font-medium">{serviceName}</span>
         </div>
 
         <div className="flex justify-between border-b pb-4">
-          <span className="text-gray-600">{locale === 'ja' ? '担当者' : 'Staff'}</span>
+          <span className="text-gray-600">{tBooking('reviewStaff')}</span>
           <span className="font-medium">{workerName}</span>
         </div>
 
         <div className="flex justify-between border-b pb-4">
-          <span className="text-gray-600">{locale === 'ja' ? '日時' : 'Date & Time'}</span>
+          <span className="text-gray-600">{tBooking('reviewDateTime')}</span>
           <div className="text-right">
             <div className="font-medium">{formattedDate}</div>
             <div className="text-gray-600 text-sm">{formattedTime}</div>
@@ -109,14 +111,14 @@ export function BookingPreview({
         </div>
 
         <div className="flex justify-between border-b pb-4">
-          <span className="text-gray-600">{locale === 'ja' ? '時間' : 'Duration'}</span>
+          <span className="text-gray-600">{tBooking('reviewDuration')}</span>
           <span className="font-medium">
-            {service.duration} {locale === 'ja' ? '分' : 'min'}
+            {service.duration} {tCommon('minutes')}
           </span>
         </div>
 
         <div className="flex justify-between pb-4">
-          <span className="text-gray-600">{locale === 'ja' ? '料金' : 'Price'}</span>
+          <span className="text-gray-600">{tBooking('reviewPrice')}</span>
           <span className="font-medium text-lg">¥{service.price.toLocaleString()}</span>
         </div>
       </div>
@@ -133,7 +135,7 @@ export function BookingPreview({
           disabled={isSubmitting}
           className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition disabled:opacity-50"
         >
-          {locale === 'ja' ? '戻る' : 'Back'}
+          {tCommon('back')}
         </button>
         <button
           onClick={handleConfirm}
@@ -143,12 +145,10 @@ export function BookingPreview({
           {isSubmitting ? (
             <div className="flex items-center gap-2">
               <Spinner size="sm" className="text-white" />
-              <span>{locale === 'ja' ? '予約中...' : 'Booking...'}</span>
+              <span>{tBooking('bookingInProgress')}</span>
             </div>
-          ) : locale === 'ja' ? (
-            '予約を確定'
           ) : (
-            'Confirm Booking'
+            tBooking('confirmBooking')
           )}
         </button>
       </div>

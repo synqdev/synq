@@ -10,6 +10,7 @@ import { formatInTimeZone } from '@/lib/utils/time'
 import { sendBookingConfirmation } from '@/lib/email/send'
 import { prisma } from '@/lib/db/client'
 import { z } from 'zod'
+import { getLocaleDateTag } from '@/lib/i18n/locale'
 
 const createBookingSchema = z.object({
   serviceId: z.string().min(1),
@@ -87,9 +88,11 @@ export async function POST(request: NextRequest) {
 
       // Format date for email
       const bookingDate = new Date(startParts.date)
-      const formattedDate = locale === 'ja'
-        ? `${bookingDate.getFullYear()}年${bookingDate.getMonth() + 1}月${bookingDate.getDate()}日`
-        : bookingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      const formattedDate = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(bookingDate)
 
       console.log('[Booking API] Sending confirmation email to:', booking.customer.email)
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useActionState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAvailability, type WorkerWithSlots } from '@/hooks/useAvailability';
 import { EmployeeTimeline, type TimelineSlot, type TimelineWorker } from '@/components/calendar';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Card } from '@/components/ui/card';
 import { submitBookingForm, type BookingFormState } from '@/app/actions/booking';
 import type { CalendarSlot, CalendarWorker } from '@/types/calendar';
+import { getLocalizedName } from '@/lib/i18n/locale';
 
 interface BookingCalendarProps {
   locale: string;
@@ -26,6 +28,7 @@ interface BookingCalendarProps {
  * Uses SWR to poll availability every 10 seconds.
  */
 export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
+  const tCommon = useTranslations('common');
   // Get today's date in YYYY-MM-DD format
   const today = useMemo(() => {
     const d = new Date();
@@ -136,7 +139,7 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
       {/* Date picker */}
       <div className="flex items-center gap-4">
         <label htmlFor="date" className="text-sm font-medium text-secondary-700">
-          {locale === 'ja' ? '日付' : 'Date'}:
+          {tCommon('date')}:
         </label>
         <input
           type="date"
@@ -181,7 +184,7 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
             <div>
               <p className="text-sm font-medium text-primary-700">{labels.selectedSlot}</p>
               <p className="text-lg font-semibold text-primary-900">
-                {selectedSlot.time} - {locale === 'ja' ? selectedWorker.name : (selectedWorker.nameEn || selectedWorker.name)}
+                {selectedSlot.time} - {getLocalizedName(locale, selectedWorker.name, selectedWorker.nameEn)}
               </p>
             </div>
 

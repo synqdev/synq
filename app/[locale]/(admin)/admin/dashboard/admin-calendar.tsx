@@ -8,8 +8,9 @@
  * Uses SWR polling for real-time updates (10 second intervals).
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { EmployeeTimeline } from '@/components/calendar'
 import { Button } from '@/components/ui/button'
 import { ActionPopover } from '@/components/ui/action-popover'
@@ -21,6 +22,7 @@ import type { CalendarSlot, CalendarWorker } from '@/types/calendar'
 import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employee-timeline'
 import { BookingModal, type BookingDetails, type Worker } from './booking-modal'
 import { blockWorkerTime, cancelBooking } from '@/app/actions/admin-booking'
+import { getLocaleDateTag, getLocalizedName } from '@/lib/i18n/locale'
 
 interface AdminCalendarProps {
   workers: Worker[]
@@ -40,7 +42,7 @@ function formatDateParam(date: Date): string {
  * Format date for display in header.
  */
 function formatDisplayDate(date: Date, locale: string): string {
-  return date.toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  return date.toLocaleDateString(getLocaleDateTag(locale), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -75,6 +77,8 @@ export function AdminCalendar({
   locale,
 }: AdminCalendarProps) {
   const router = useRouter()
+  const tDashboard = useTranslations('admin.dashboardPage')
+  const tCommon = useTranslations('common')
   const [selectedBooking, setSelectedBooking] = useState<BookingDetails | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<TimelineSlot | null>(null)
@@ -194,7 +198,7 @@ export function AdminCalendar({
 
   // Format last updated time
   const lastUpdatedStr = lastUpdated
-    ? lastUpdated.toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    ? lastUpdated.toLocaleTimeString(getLocaleDateTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -214,13 +218,13 @@ export function AdminCalendar({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button variant="iso" onClick={goToPrevious}>
-            {locale === 'ja' ? '前日' : 'Previous'}
+            {tDashboard('previous')}
           </Button>
           <Button variant="iso" onClick={goToToday}>
-            {locale === 'ja' ? '今日' : 'Today'}
+            {tDashboard('today')}
           </Button>
           <Button variant="iso" onClick={goToNext}>
-            {locale === 'ja' ? '翌日' : 'Next'}
+            {tDashboard('next')}
           </Button>
         </div>
 
@@ -233,9 +237,9 @@ export function AdminCalendar({
             className="w-48"
           />
           <ActionPopover
-            label={locale === 'ja' ? '操作' : 'Actions'}
-            title={locale === 'ja' ? '時間をブロック' : 'Block Time'}
-            actionLabel={locale === 'ja' ? '適用' : 'Apply'}
+            label={tCommon('actions')}
+            title={tDashboard('blockTime')}
+            actionLabel={tCommon('apply')}
             actionDisabled={!selectedSlot || !selectedWorkerId || isBlocking}
             onAction={async () => {
               if (!selectedSlot || !selectedWorkerId) return
@@ -259,7 +263,7 @@ export function AdminCalendar({
                 refresh()
               } catch (error) {
                 console.error('Failed to block time:', error)
-                alert(locale === 'ja' ? 'ブロックに失敗しました' : 'Failed to block time')
+                alert(tDashboard('blockFailed'))
               } finally {
                 setIsBlocking(false)
               }
@@ -267,26 +271,24 @@ export function AdminCalendar({
           >
             <div className="text-xs text-gray-600">
               {selectedWorker && selectedSlot
-                ? `${selectedWorker.name} · ${selectedSlot.startTime}`
-                : locale === 'ja'
-                  ? '空き枠を選択してください'
-                  : 'Select an available slot'}
+                ? `${getLocalizedName(locale, selectedWorker.name, selectedWorker.nameEn)} · ${selectedSlot.startTime}`
+                : tDashboard('selectSlot')}
             </div>
             <Select
-              label={locale === 'ja' ? 'ブロック時間' : 'Block duration'}
+              label={tDashboard('blockDuration')}
               value={blockDuration}
               onChange={setBlockDuration}
               options={[
-                { value: '60', label: locale === 'ja' ? '1時間' : '1 hour' },
-                { value: '120', label: locale === 'ja' ? '2時間' : '2 hours' },
-                { value: '180', label: locale === 'ja' ? '3時間' : '3 hours' },
-                { value: '240', label: locale === 'ja' ? '4時間' : '4 hours' },
+                { value: '60', label: tDashboard('duration1h') },
+                { value: '120', label: tDashboard('duration2h') },
+                { value: '180', label: tDashboard('duration3h') },
+                { value: '240', label: tDashboard('duration4h') },
               ]}
               disabled={!selectedSlot || !selectedWorkerId || isBlocking}
             />
           </ActionPopover>
           <span className="text-sm text-gray-600">
-            {bookingCount} {locale === 'ja' ? '件の予約' : 'bookings'}
+            {tDashboard('bookings', { count: bookingCount })}
           </span>
           {isLoading && <Spinner size="sm" />}
         </div>
@@ -296,7 +298,7 @@ export function AdminCalendar({
       {lastUpdatedStr && (
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          {locale === 'ja' ? '最終更新: ' : 'Last updated: '}
+          {tDashboard('lastUpdated')}
           {lastUpdatedStr}
         </div>
       )}
@@ -347,7 +349,7 @@ export function AdminCalendar({
                 refresh()
               } catch (error) {
                 console.error('Failed to cancel booking:', error)
-                alert(locale === 'ja' ? 'キャンセルに失敗しました' : 'Failed to cancel booking')
+                alert(tDashboard('cancelFailed'))
               }
             }
           }

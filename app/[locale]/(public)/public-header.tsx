@@ -1,6 +1,8 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { isLocale } from '@/lib/i18n/locale'
 
 interface PublicHeaderProps {
     locale: string
@@ -9,6 +11,7 @@ interface PublicHeaderProps {
 export function PublicHeader({ locale }: PublicHeaderProps) {
     const pathname = usePathname()
     const router = useRouter()
+    const tCommon = useTranslations('common')
 
     const switchLocale = (newLocale: string) => {
         // Replace the locale in the current path
@@ -29,21 +32,21 @@ export function PublicHeader({ locale }: PublicHeaderProps) {
                     <div className="flex gap-2">
                         <button
                             onClick={() => switchLocale('ja')}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${locale === 'ja'
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${isLocale(locale, 'ja')
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            日本語
+                            {tCommon('localeJa')}
                         </button>
                         <button
                             onClick={() => switchLocale('en')}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${locale === 'en'
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${isLocale(locale, 'en')
                                 ? 'bg-primary-500 text-white'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            English
+                            {tCommon('localeEn')}
                         </button>
                     </div>
                 </div>

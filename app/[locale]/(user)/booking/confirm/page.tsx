@@ -4,6 +4,7 @@ import { BUSINESS_TIMEZONE } from '@/lib/constants';
 import { Card, CardHeader, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { getLocaleDateTag, getLocalizedName } from '@/lib/i18n/locale';
 
 interface ConfirmPageProps {
   params: Promise<{ locale: string }>;
@@ -79,11 +80,11 @@ export default async function ConfirmPage({
 
   // Format date and time with locale
   // Format date and time with locale
-  const dateFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  const dateFormatter = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
     dateStyle: 'full',
     timeZone: BUSINESS_TIMEZONE,
   });
-  const timeFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  const timeFormatter = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
     timeStyle: 'short',
     timeZone: BUSINESS_TIMEZONE,
   });
@@ -92,12 +93,8 @@ export default async function ConfirmPage({
   const formattedTime = `${timeFormatter.format(booking.startsAt)} - ${timeFormatter.format(booking.endsAt)}`;
 
   // Get localized names
-  const workerName = locale === 'ja'
-    ? booking.worker.name
-    : booking.worker.nameEn || booking.worker.name;
-  const serviceName = locale === 'ja'
-    ? booking.service.name
-    : booking.service.nameEn || booking.service.name;
+  const workerName = getLocalizedName(locale, booking.worker.name, booking.worker.nameEn);
+  const serviceName = getLocalizedName(locale, booking.service.name, booking.service.nameEn);
 
   // Get status label
   const statusLabels: Record<string, string> = {

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 1: MVP
+**Current focus:** Phase 2: Parity
 
 ## Current Position
 
-Phase: 1 of 3 (MVP)
-Plan: 14 of 14 (complete)
-Status: Phase complete
-Last activity: 2026-02-06 - Completed 01-14-PLAN.md (Frontend refactor with EmployeeTimeline)
+Phase: 2 of 3 (Parity)
+Plan: 0 of 8 (not started)
+Status: Phase planning
+Last activity: 2026-02-07 - Backfilled session summaries into planning docs
 
-Progress: [████████████] 100%
+Progress: [----------] 0%
 
 ## Performance Metrics
 
@@ -93,10 +93,17 @@ Recent decisions affecting current work:
 - Multi-page booking flow with URL param state management (01-14)
 - Mapper pattern for API-to-component data transformation (01-14)
 - Green (#d1fae5) for available slots, gray (#e5e7eb) for booked (01-14)
+- EmployeeTimeline name retained; TimelineCalendar reverted (2026-02-06)
+- Admin cancel confirmation handled in popover (no browser confirm/alert) (2026-02-06)
+- Admin timeline includes base available slot for day background (2026-02-06)
+- Jest unit runs ignore mobile and e2e tests (2026-02-06)
+- Zod validation allows non-UUID IDs for worker/booking tests (2026-02-06)
+- auth.signOut uses i18n messages (2026-02-06)
+- Booking calendar uses serviceDuration from API (no hardcoded 60) (2026-02-06)
 
 ### Pending Todos
 
-None yet.
+- Warning: empty package-lock.json causes `Unexpected end of JSON input` during installs.
 
 ### Blockers/Concerns
 
@@ -104,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:11:25Z
-Stopped at: Completed 01-14-PLAN.md (Frontend refactor with EmployeeTimeline) - Phase 1 MVP complete
+Last session: 2026-02-07
+Stopped at: Preparing to discuss Phase 2 admin primitives for Storybook
 Resume file: None (Phase 1 complete - ready for Phase 2 planning)

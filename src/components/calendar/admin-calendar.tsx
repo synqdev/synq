@@ -1,18 +1,18 @@
 'use client'
 
 import { forwardRef, useState } from 'react'
-import { TimelineCalendar, type TimelineCalendarProps } from './timeline-calendar'
+import { EmployeeTimeline, type EmployeeTimelineProps } from './employee-timeline'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
-export interface AdminCalendarProps extends TimelineCalendarProps {
+export interface AdminCalendarProps extends EmployeeTimelineProps {
     onDateChange?: (date: Date) => void
     onViewChange?: (view: 'day' | 'week') => void
 }
 
 /**
  * AdminCalendar component.
- * Wraps the TimelineCalendar with admin-specific controls (date navigation, view toggles).
+ * Wraps the EmployeeTimeline with admin-specific controls (date navigation, view toggles).
  * Designed to match the 'adminview' mockup structure.
  */
 export const AdminCalendar = forwardRef<HTMLDivElement, AdminCalendarProps>(
@@ -22,10 +22,14 @@ export const AdminCalendar = forwardRef<HTMLDivElement, AdminCalendarProps>(
             onDateChange,
             onViewChange,
             className = '',
-            ...calendarProps
+            ...timelineProps
         },
         ref
     ) => {
+        // Safe check for date since EmployeeTimeline doesn't strictly require it in props
+        // but AdminCalendar logic relies on it for display
+        const validDate = typeof date === 'string' ? new Date(date) : (date || new Date())
+        
         const [currentView, setCurrentView] = useState<'day' | 'week'>('day')
 
         const handleViewChange = (view: 'day' | 'week') => {
@@ -33,7 +37,7 @@ export const AdminCalendar = forwardRef<HTMLDivElement, AdminCalendarProps>(
             onViewChange?.(view)
         }
 
-        const formattedDate = date.toLocaleDateString('en-US', {
+        const formattedDate = validDate.toLocaleDateString('en-US', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -96,10 +100,9 @@ export const AdminCalendar = forwardRef<HTMLDivElement, AdminCalendarProps>(
 
                 {/* Calendar View */}
                 <Card className="flex-1 border-0 shadow-none">
-                    <TimelineCalendar
-                        date={date}
-                        {...calendarProps}
-                        mode="interactive"
+                    <EmployeeTimeline
+                        {...timelineProps}
+                        mode="admin"
                         className="h-full border-0"
                     />
                 </Card>

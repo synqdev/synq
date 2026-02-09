@@ -97,3 +97,23 @@ export const MultipleStaff: Story = {
     timeRange: { start: '10:00', end: '19:00' },
   },
 };
+
+export const NinetyMinuteBooking: Story = {
+  args: {
+    mode: 'user',
+    workers: [
+      {
+        id: '1',
+        name: 'Staff 1',
+        slots: [
+          { startTime: '10:00', duration: 90, type: 'booked', data: { customer: 'Mika', service: 'Deep Tissue' } },
+          { startTime: '11:30', duration: 90, type: 'available' },
+          { startTime: '13:00', duration: 90, type: 'available' },
+        ],
+      },
+    ],
+    selectedWorkerId: '1',
+    selectedSlot: { startTime: '11:30', duration: 90, type: 'available' },
+    timeRange: { start: '10:00', end: '15:00' },
+  },
+};

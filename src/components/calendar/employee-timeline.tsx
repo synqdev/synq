@@ -175,14 +175,20 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
             return '#e5e7eb'
         }
 
-        // Pre-process workers to split available slots into 60-minute segments
+        // Pre-process workers:
+        // - admin mode: split long available ranges into 60-minute chunks for block selection
+        // - user mode: keep original slot duration so visual width matches selected service duration
         const displayWorkers = useMemo(() => {
             return workers.map((worker) => {
                 const splitSlots: TimelineSlot[] = []
 
                 worker.slots.forEach((slot) => {
-                    // Only split available slots, usually for user selection granularly
-                    if (slot.type === 'available' && slot.duration > 60) {
+                    const shouldSplitForAdmin =
+                        mode === 'admin' &&
+                        slot.type === 'available' &&
+                        slot.duration > 60
+
+                    if (shouldSplitForAdmin) {
                         const chunks = Math.floor(slot.duration / 60)
                         const startMin = timeToMinutes(slot.startTime)
 
@@ -223,7 +229,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                     slots: splitSlots
                 }
             })
-        }, [workers])
+        }, [workers, mode])
 
         return (
             <div
@@ -258,13 +264,24 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                         const left = (offset / totalDuration) * 100
                                         const width = (slot.duration / totalDuration) * 100
 
-                                        // Check if this specific slot is selected (must match worker + time)
-                                        const isSelectedMatch = selectedSlot &&
-                                            selectedWorkerId === worker.id &&
-                                            selectedSlot.startTime === slot.startTime &&
-                                            selectedSlot.type === slot.type
+                                        const selectedStart = selectedSlot ? timeToMinutes(selectedSlot.startTime) : null
+                                        const selectedEnd = selectedSlot && selectedStart !== null
+                                            ? selectedStart + selectedSlot.duration
+                                            : null
+                                        const slotEnd = slotStart + slot.duration
 
-                                        const bgColor = getSlotColor(slot.type, isSelectedMatch || false)
+                                        // Highlight based on overlap with selected slot duration.
+                                        const isSelectedMatch = Boolean(
+                                            selectedSlot &&
+                                            selectedWorkerId === worker.id &&
+                                            slot.type === 'available' &&
+                                            selectedStart !== null &&
+                                            selectedEnd !== null &&
+                                            slotStart < selectedEnd &&
+                                            slotEnd > selectedStart
+                                        )
+
+                                        const bgColor = getSlotColor(slot.type, isSelectedMatch)
 
                                         const isClickable = mode === 'user' && slot.type === 'available'
                                         const hasRemoveButton = mode === 'admin' && (slot.type === 'booked' || slot.type === 'blocked') && onSlotRemove
@@ -280,6 +297,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                                     ${zIndex}
                                                     ${(isClickable || (mode === 'admin' && slot.type === 'available')) ? 'cursor-pointer hover:brightness-95' : ''}
                                                 `}
+                                                data-testid={slot.type === 'available' ? 'timeline-slot-available' : undefined}
                                                 style={{
                                                     left: `${left}%`,
                                                     width: `${width}%`,
@@ -303,16 +321,6 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                                         data-testid="timeline-slot-booked"
                                                     >
                                                         {slot.data?.customer || slot.data?.name || slot.data?.title || 'Booked'}
-                                                    </span>
-                                                )}
-
-                                                {/* Available slot indicator */}
-                                                {slot.type === 'available' && mode === 'user' && (
-                                                    <span
-                                                        className={`font-bold text-xs truncate px-4 select-none ${isSelectedMatch ? 'text-white' : 'text-green-700'}`}
-                                                        data-testid="timeline-slot-available"
-                                                    >
-                                                        {isSelectedMatch ? 'Selected' : 'Available'}
                                                     </span>
                                                 )}
 

@@ -1,16 +1,19 @@
 'use client'
 
 /**
- * Booking Modal Component
+ * Booking Side Panel Component
  *
- * Admin modal for viewing, editing, and canceling bookings.
+ * Slide-in panel for viewing, editing, and canceling bookings.
+ * Uses CSS transitions instead of floating modal for better UX.
  * Provides full booking management within the dashboard calendar view.
  */
 
 import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cancelBooking, updateBooking } from '@/app/actions/admin-booking'
+import { getLocaleDateTag, getLocalizedName } from '@/lib/i18n/locale'
 
 export interface BookingDetails {
   id: string
@@ -21,7 +24,7 @@ export interface BookingDetails {
   customerName: string
   customerEmail?: string
   serviceName: string
-  status: 'CONFIRMED' | 'CANCELLED' | 'NOSHOW'
+  status: 'CONFIRMED' | 'CANCELLED' | 'NOSHOW' | 'PENDING'
 }
 
 export interface Worker {
@@ -39,9 +42,10 @@ interface BookingModalProps {
 }
 
 /**
- * Modal for viewing and managing booking details.
+ * Side panel for viewing and managing booking details.
  *
  * Features:
+ * - Slides in from right with CSS transitions
  * - View booking information (read-only)
  * - Edit booking (change time, worker)
  * - Cancel booking with confirmation
@@ -53,6 +57,9 @@ export function BookingModal({
   workers,
   locale,
 }: BookingModalProps) {
+  const tBookingModal = useTranslations('admin.bookingModal')
+  const tBooking = useTranslations('booking')
+  const tCommon = useTranslations('common')
   const [isPending, startTransition] = useTransition()
   const [mode, setMode] = useState<'view' | 'edit' | 'cancel'>('view')
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +72,7 @@ export function BookingModal({
         await cancelBooking(booking.id)
         onClose()
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to cancel booking')
+        setError(err instanceof Error ? err.message : tBookingModal('cancelError'))
       }
     })
   }
@@ -77,20 +84,20 @@ export function BookingModal({
         await updateBooking(formData)
         onClose()
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update booking')
+        setError(err instanceof Error ? err.message : tBookingModal('updateError'))
       }
     })
   }
 
   const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    return new Date(date).toLocaleTimeString(getLocaleDateTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
     })
   }
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    return new Date(date).toLocaleDateString(getLocaleDateTag(locale), {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -98,37 +105,46 @@ export function BookingModal({
   }
 
   const statusLabels = {
-    CONFIRMED: locale === 'ja' ? '確定' : 'Confirmed',
-    CANCELLED: locale === 'ja' ? 'キャンセル' : 'Cancelled',
-    NOSHOW: locale === 'ja' ? '無断欠席' : 'No Show',
+    CONFIRMED: tBooking('confirmed'),
+    CANCELLED: tBooking('cancelled'),
+    NOSHOW: tBooking('noShow'),
+    PENDING: 'Pending',
   }
 
   const statusColors = {
     CONFIRMED: 'bg-green-100 text-green-800',
     CANCELLED: 'bg-red-100 text-red-800',
     NOSHOW: 'bg-yellow-100 text-yellow-800',
+    PENDING: 'bg-blue-100 text-blue-800',
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <>
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className={`fixed inset-0 bg-black/50 transition-opacity duration-300 z-40 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
+      {/* Slide-in Side Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="p-6">
+          {/* Header */}
+          <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-secondary-900">
-            {locale === 'ja' ? '予約詳細' : 'Booking Details'}
+            {tBookingModal('title')}
           </h2>
           <button
             onClick={onClose}
             className="text-secondary-400 hover:text-secondary-600"
-            aria-label={locale === 'ja' ? '閉じる' : 'Close'}
+            aria-label={tBookingModal('close')}
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -157,7 +173,7 @@ export function BookingModal({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="font-medium text-secondary-500">
-                  {locale === 'ja' ? 'お客様' : 'Customer'}
+                  {tBookingModal('customer')}
                 </p>
                 <p className="text-secondary-900">{booking.customerName}</p>
                 {booking.customerEmail && (
@@ -166,19 +182,19 @@ export function BookingModal({
               </div>
               <div>
                 <p className="font-medium text-secondary-500">
-                  {locale === 'ja' ? 'サービス' : 'Service'}
+                  {tBookingModal('service')}
                 </p>
                 <p className="text-secondary-900">{booking.serviceName}</p>
               </div>
               <div>
                 <p className="font-medium text-secondary-500">
-                  {locale === 'ja' ? '日付' : 'Date'}
+                  {tBookingModal('date')}
                 </p>
                 <p className="text-secondary-900">{formatDate(booking.startsAt)}</p>
               </div>
               <div>
                 <p className="font-medium text-secondary-500">
-                  {locale === 'ja' ? '時間' : 'Time'}
+                  {tBookingModal('time')}
                 </p>
                 <p className="text-secondary-900">
                   {formatTime(booking.startsAt)} - {formatTime(booking.endsAt)}
@@ -186,10 +202,13 @@ export function BookingModal({
               </div>
               <div>
                 <p className="font-medium text-secondary-500">
-                  {locale === 'ja' ? '担当' : 'Worker'}
+                  {tBookingModal('worker')}
                 </p>
                 <p className="text-secondary-900">
-                  {workers.find((w) => w.id === booking.workerId)?.name || '-'}
+                  {(() => {
+                    const worker = workers.find((w) => w.id === booking.workerId)
+                    return worker ? getLocalizedName(locale, worker.name, worker.nameEn) : '-'
+                  })()}
                 </p>
               </div>
             </div>
@@ -203,7 +222,7 @@ export function BookingModal({
                   onClick={() => setMode('edit')}
                   className="flex-1"
                 >
-                  {locale === 'ja' ? '編集' : 'Edit'}
+                  {tBookingModal('edit')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -211,14 +230,14 @@ export function BookingModal({
                   onClick={() => setMode('cancel')}
                   className="flex-1 text-red-600 hover:bg-red-50"
                 >
-                  {locale === 'ja' ? 'キャンセル' : 'Cancel'}
+                  {tBookingModal('cancel')}
                 </Button>
               </div>
             )}
 
             <div className="pt-2">
               <Button variant="secondary" size="sm" onClick={onClose} className="w-full">
-                {locale === 'ja' ? '閉じる' : 'Close'}
+                {tBookingModal('close')}
               </Button>
             </div>
           </div>
@@ -230,13 +249,13 @@ export function BookingModal({
             <Input
               type="datetime-local"
               name="startsAt"
-              label={locale === 'ja' ? '開始日時' : 'Start Time'}
+              label={tBookingModal('startTime')}
               defaultValue={new Date(booking.startsAt).toISOString().slice(0, 16)}
             />
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-secondary-700">
-                {locale === 'ja' ? '担当者' : 'Worker'}
+                {tBookingModal('worker')}
               </label>
               <select
                 name="workerId"
@@ -254,7 +273,7 @@ export function BookingModal({
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-secondary-700">
-                {locale === 'ja' ? 'ステータス' : 'Status'}
+                {tBookingModal('status')}
               </label>
               <select
                 name="status"
@@ -264,12 +283,13 @@ export function BookingModal({
                 <option value="CONFIRMED">{statusLabels.CONFIRMED}</option>
                 <option value="CANCELLED">{statusLabels.CANCELLED}</option>
                 <option value="NOSHOW">{statusLabels.NOSHOW}</option>
+                <option value="PENDING">{statusLabels.PENDING}</option>
               </select>
             </div>
 
             <div className="flex gap-2 pt-2">
               <Button type="submit" loading={isPending} className="flex-1">
-                {locale === 'ja' ? '保存' : 'Save'}
+                {tCommon('save')}
               </Button>
               <Button
                 type="button"
@@ -277,7 +297,7 @@ export function BookingModal({
                 onClick={() => setMode('view')}
                 className="flex-1"
               >
-                {locale === 'ja' ? '戻る' : 'Back'}
+                {tCommon('back')}
               </Button>
             </div>
           </form>
@@ -288,9 +308,7 @@ export function BookingModal({
           <div className="space-y-4">
             <div className="rounded-md bg-red-50 p-4">
               <p className="text-sm text-red-700">
-                {locale === 'ja'
-                  ? 'この予約をキャンセルしてもよろしいですか？この操作は取り消せません。'
-                  : 'Are you sure you want to cancel this booking? This action cannot be undone.'}
+                {tBookingModal('confirmCancelMessage')}
               </p>
             </div>
 
@@ -311,7 +329,7 @@ export function BookingModal({
                 loading={isPending}
                 className="flex-1 bg-red-600 text-white hover:bg-red-700"
               >
-                {locale === 'ja' ? 'キャンセル確定' : 'Confirm Cancel'}
+                {tBookingModal('confirmCancelAction')}
               </Button>
               <Button
                 variant="outline"
@@ -319,12 +337,13 @@ export function BookingModal({
                 disabled={isPending}
                 className="flex-1"
               >
-                {locale === 'ja' ? '戻る' : 'Back'}
+                {tCommon('back')}
               </Button>
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

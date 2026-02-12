@@ -6,6 +6,7 @@ import {
   type AvailabilityResponse,
   type AdminBooking,
 } from '@/lib/mappers/calendar'
+import { toZonedTime } from '@/lib/utils/time'
 
 describe('Calendar Mappers', () => {
   describe('mapAvailabilityToCalendar', () => {
@@ -175,8 +176,8 @@ describe('Calendar Mappers', () => {
         {
           id: 'booking-1',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T10:00:00'),
-          endsAt: new Date('2026-02-10T11:00:00'),
+          startsAt: toZonedTime('2026-02-10', '10:00'),
+          endsAt: toZonedTime('2026-02-10', '11:00'),
           customerName: '山田太郎',
           status: 'CONFIRMED',
         },
@@ -185,6 +186,12 @@ describe('Calendar Mappers', () => {
       const result = mapAdminBookingsToCalendar(workers, bookings)
 
       expect(result[0].slots).toEqual([
+        {
+          startTime: '10:00',
+          duration: 540,
+          type: 'available',
+          data: {},
+        },
         {
           startTime: '10:00',
           duration: 60,
@@ -196,7 +203,14 @@ describe('Calendar Mappers', () => {
           },
         },
       ])
-      expect(result[1].slots).toEqual([])
+      expect(result[1].slots).toEqual([
+        {
+          startTime: '10:00',
+          duration: 540,
+          type: 'available',
+          data: {},
+        },
+      ])
     })
 
     it('handles worker with no bookings', () => {
@@ -209,8 +223,8 @@ describe('Calendar Mappers', () => {
         {
           id: 'booking-1',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T10:00:00'),
-          endsAt: new Date('2026-02-10T11:00:00'),
+          startsAt: toZonedTime('2026-02-10', '10:00'),
+          endsAt: toZonedTime('2026-02-10', '11:00'),
           customerName: '山田太郎',
           status: 'CONFIRMED',
         },
@@ -220,7 +234,14 @@ describe('Calendar Mappers', () => {
 
       expect(result[1].id).toBe('worker-2')
       expect(result[1].name).toBe('鈴木')
-      expect(result[1].slots).toEqual([])
+      expect(result[1].slots).toEqual([
+        {
+          startTime: '10:00',
+          duration: 540,
+          type: 'available',
+          data: {},
+        },
+      ])
     })
 
     it('calculates duration correctly for different booking lengths', () => {
@@ -230,24 +251,24 @@ describe('Calendar Mappers', () => {
         {
           id: 'booking-1',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T10:00:00'),
-          endsAt: new Date('2026-02-10T10:30:00'),
+          startsAt: toZonedTime('2026-02-10', '10:00'),
+          endsAt: toZonedTime('2026-02-10', '10:30'),
           customerName: '30min',
           status: 'CONFIRMED',
         },
         {
           id: 'booking-2',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T11:00:00'),
-          endsAt: new Date('2026-02-10T12:00:00'),
+          startsAt: toZonedTime('2026-02-10', '11:00'),
+          endsAt: toZonedTime('2026-02-10', '12:00'),
           customerName: '60min',
           status: 'CONFIRMED',
         },
         {
           id: 'booking-3',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T13:00:00'),
-          endsAt: new Date('2026-02-10T14:30:00'),
+          startsAt: toZonedTime('2026-02-10', '13:00'),
+          endsAt: toZonedTime('2026-02-10', '14:30'),
           customerName: '90min',
           status: 'CONFIRMED',
         },
@@ -255,9 +276,9 @@ describe('Calendar Mappers', () => {
 
       const result = mapAdminBookingsToCalendar(workers, bookings)
 
-      expect(result[0].slots[0].duration).toBe(30)
-      expect(result[0].slots[1].duration).toBe(60)
-      expect(result[0].slots[2].duration).toBe(90)
+      expect(result[0].slots[1].duration).toBe(30)
+      expect(result[0].slots[2].duration).toBe(60)
+      expect(result[0].slots[3].duration).toBe(90)
     })
 
     it('handles multiple bookings for one worker', () => {
@@ -267,16 +288,16 @@ describe('Calendar Mappers', () => {
         {
           id: 'booking-1',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T10:00:00'),
-          endsAt: new Date('2026-02-10T11:00:00'),
+          startsAt: toZonedTime('2026-02-10', '10:00'),
+          endsAt: toZonedTime('2026-02-10', '11:00'),
           customerName: '山田',
           status: 'CONFIRMED',
         },
         {
           id: 'booking-2',
           workerId: 'worker-1',
-          startsAt: new Date('2026-02-10T14:00:00'),
-          endsAt: new Date('2026-02-10T15:00:00'),
+          startsAt: toZonedTime('2026-02-10', '14:00'),
+          endsAt: toZonedTime('2026-02-10', '15:00'),
           customerName: '佐藤',
           status: 'CONFIRMED',
         },
@@ -284,9 +305,9 @@ describe('Calendar Mappers', () => {
 
       const result = mapAdminBookingsToCalendar(workers, bookings)
 
-      expect(result[0].slots).toHaveLength(2)
-      expect(result[0].slots[0].data.customer).toBe('山田')
-      expect(result[0].slots[1].data.customer).toBe('佐藤')
+      expect(result[0].slots).toHaveLength(3)
+      expect(result[0].slots[1].data.customer).toBe('山田')
+      expect(result[0].slots[2].data.customer).toBe('佐藤')
     })
 
     it('preserves nameEn field', () => {

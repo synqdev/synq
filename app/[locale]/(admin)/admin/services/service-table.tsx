@@ -9,6 +9,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteService } from '@/app/actions/services'
 import { ServiceForm } from './service-form'
@@ -24,28 +25,8 @@ interface Service {
   createdAt: Date
 }
 
-interface Labels {
-  name: string
-  nameEn: string
-  description: string
-  duration: string
-  durationUnit: string
-  price: string
-  status: string
-  active: string
-  inactive: string
-  actions: string
-  edit: string
-  delete: string
-  save: string
-  cancel: string
-  noServices: string
-  confirmDelete: string
-}
-
 interface ServiceTableProps {
   services: Service[]
-  labels: Labels
 }
 
 /**
@@ -62,13 +43,15 @@ function formatDuration(minutes: number, unit: string): string {
   return `${minutes} ${unit}`
 }
 
-export function ServiceTable({ services, labels }: ServiceTableProps) {
+export function ServiceTable({ services }: ServiceTableProps) {
   const router = useRouter()
+  const tCommon = useTranslations('common')
+  const tServices = useTranslations('admin.servicesPage')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`${labels.confirmDelete}\n\n${name}`)) return
+    if (!confirm(`${tServices('confirmDelete')}\n\n${name}`)) return
 
     startTransition(async () => {
       await deleteService(id)
@@ -84,7 +67,7 @@ export function ServiceTable({ services, labels }: ServiceTableProps) {
   if (services.length === 0) {
     return (
       <p className="text-center text-secondary-500 py-8">
-        {labels.noServices}
+        {tServices('notFound')}
       </p>
     )
   }
@@ -94,11 +77,11 @@ export function ServiceTable({ services, labels }: ServiceTableProps) {
       <table className="w-full text-left text-sm">
         <thead className="border-b border-secondary-200 text-secondary-600">
           <tr>
-            <th className="px-4 py-3 font-medium">{labels.name}</th>
-            <th className="px-4 py-3 font-medium">{labels.duration}</th>
-            <th className="px-4 py-3 font-medium">{labels.price}</th>
-            <th className="px-4 py-3 font-medium">{labels.status}</th>
-            <th className="px-4 py-3 font-medium text-right">{labels.actions}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('name')}</th>
+            <th className="px-4 py-3 font-medium">{tServices('duration')}</th>
+            <th className="px-4 py-3 font-medium">{tServices('price')}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('status')}</th>
+            <th className="px-4 py-3 font-medium text-right">{tCommon('actions')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-secondary-100">
@@ -107,7 +90,6 @@ export function ServiceTable({ services, labels }: ServiceTableProps) {
               {editingId === service.id ? (
                 <td colSpan={5} className="px-4 py-4">
                   <ServiceForm
-                    labels={labels}
                     mode="edit"
                     service={service}
                     onCancel={handleEditCancel}
@@ -122,20 +104,19 @@ export function ServiceTable({ services, labels }: ServiceTableProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-secondary-600">
-                    {formatDuration(service.duration, labels.durationUnit)}
+                    {formatDuration(service.duration, tCommon('min'))}
                   </td>
                   <td className="px-4 py-3 text-secondary-600">
                     {formatPrice(service.price)}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        service.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${service.isActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}
                     >
-                      {service.isActive ? labels.active : labels.inactive}
+                      {service.isActive ? tCommon('active') : tCommon('inactive')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -145,7 +126,7 @@ export function ServiceTable({ services, labels }: ServiceTableProps) {
                         size="sm"
                         onClick={() => setEditingId(service.id)}
                       >
-                        {labels.edit}
+                        {tCommon('edit')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -154,7 +135,7 @@ export function ServiceTable({ services, labels }: ServiceTableProps) {
                         disabled={isPending}
                         className="text-red-600 hover:bg-red-50"
                       >
-                        {labels.delete}
+                        {tCommon('delete')}
                       </Button>
                     </div>
                   </td>

@@ -83,8 +83,8 @@ export function BookingPreview({
   const workerName = getLocalizedName(locale, worker.name, worker.nameEn)
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-2">
+    <div className="max-w-2xl mx-auto p-6" data-testid="booking-preview">
+      <h1 className="text-3xl font-bold mb-2" data-testid="preview-heading">
         {tBooking('reviewTitle')}
       </h1>
       <p className="text-gray-600 mb-8">
@@ -94,37 +94,37 @@ export function BookingPreview({
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
         <div className="flex justify-between border-b pb-4">
           <span className="text-gray-600">{tBooking('reviewService')}</span>
-          <span className="font-medium">{serviceName}</span>
+          <span className="font-medium" data-testid="preview-service-name">{serviceName}</span>
         </div>
 
         <div className="flex justify-between border-b pb-4">
           <span className="text-gray-600">{tBooking('reviewStaff')}</span>
-          <span className="font-medium">{workerName}</span>
+          <span className="font-medium" data-testid="preview-worker-name">{workerName}</span>
         </div>
 
         <div className="flex justify-between border-b pb-4">
           <span className="text-gray-600">{tBooking('reviewDateTime')}</span>
           <div className="text-right">
-            <div className="font-medium">{formattedDate}</div>
-            <div className="text-gray-600 text-sm">{formattedTime}</div>
+            <div className="font-medium" data-testid="preview-date">{formattedDate}</div>
+            <div className="text-gray-600 text-sm" data-testid="preview-time">{formattedTime}</div>
           </div>
         </div>
 
         <div className="flex justify-between border-b pb-4">
           <span className="text-gray-600">{tBooking('reviewDuration')}</span>
-          <span className="font-medium">
+          <span className="font-medium" data-testid="preview-duration">
             {service.duration} {tCommon('minutes')}
           </span>
         </div>
 
         <div className="flex justify-between pb-4">
           <span className="text-gray-600">{tBooking('reviewPrice')}</span>
-          <span className="font-medium text-lg">¥{service.price.toLocaleString()}</span>
+          <span className="font-medium text-lg" data-testid="preview-price">¥{service.price.toLocaleString()}</span>
         </div>
       </div>
 
       {error && (
-        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4" data-testid="preview-error">
           <p className="text-red-600">{error}</p>
         </div>
       )}
@@ -133,6 +133,7 @@ export function BookingPreview({
         <button
           onClick={() => router.back()}
           disabled={isSubmitting}
+          data-testid="preview-back"
           className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition disabled:opacity-50"
         >
           {tCommon('back')}
@@ -140,6 +141,7 @@ export function BookingPreview({
         <button
           onClick={handleConfirm}
           disabled={isSubmitting}
+          data-testid="preview-confirm"
           className="flex-1 px-6 py-3 bg-primary-500 text-white rounded-lg font-medium hover:bg-primary-600 transition disabled:opacity-50"
         >
           {isSubmitting ? (

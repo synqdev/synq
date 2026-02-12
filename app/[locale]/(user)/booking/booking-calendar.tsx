@@ -67,6 +67,7 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
           workerId: worker.id,
           resourceId: slot.availableResourceIds[0], // Use first available resource
           isAvailable: true,
+          booking: null,
         }))
       ),
     [workers]
@@ -163,7 +164,8 @@ export function BookingCalendar({ locale, labels }: BookingCalendarProps) {
               time: slot.startTime,
               workerId: workerId,
               resourceId: slot.data?.resourceIds?.[0],
-              isAvailable: true
+              isAvailable: true,
+              booking: null,
             };
             handleSlotSelect(calendarSlot);
           }

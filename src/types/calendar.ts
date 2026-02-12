@@ -9,6 +9,8 @@ export interface CalendarWorker {
   nameEn?: string
 }
 
+export type BookingStatus = 'CONFIRMED' | 'CANCELLED' | 'NOSHOW' | 'PENDING'
+
 export interface CalendarBooking {
   id: string
   startsAt: Date
@@ -18,7 +20,7 @@ export interface CalendarBooking {
   customerName?: string  // For admin view
   serviceId?: string     // For identifying blocked slots
   serviceName?: string   // For admin view
-  status: 'CONFIRMED' | 'CANCELLED' | 'NOSHOW'
+  status: BookingStatus
 }
 
 export interface CalendarSlot {
@@ -26,7 +28,7 @@ export interface CalendarSlot {
   workerId: string
   resourceId?: string    // Assigned resource if available
   isAvailable: boolean
-  booking?: CalendarBooking  // Booking if slot is occupied
+  booking: CalendarBooking | null  // Booking if slot is occupied, null otherwise
 }
 
 export interface CalendarProps {

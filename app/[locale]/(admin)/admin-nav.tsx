@@ -26,6 +26,11 @@ export function AdminNav({ locale }: AdminNavProps) {
   const pathname = usePathname()
   const t = useTranslations('admin.nav')
 
+  // Prototype calendar route has its own in-canvas tab navigation.
+  if (pathname === `/${locale}/admin/dashboard/new`) {
+    return null
+  }
+
   return (
     <nav className="border-t border-gray-100 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

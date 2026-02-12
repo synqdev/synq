@@ -173,6 +173,7 @@ export function useCalendarPolling({
         workerId: worker.id,
         resourceId: slot.availableResourceIds[0],
         isAvailable: slot.availableResourceIds.length > 0,
+        booking: null,
       }))
     )
 

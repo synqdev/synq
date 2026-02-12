@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { AdminCalendar } from '@/app/[locale]/(admin)/admin/dashboard/admin-calendar';
-import type { CalendarSlot } from '@/types/calendar';
+import { AdminCalendar } from './admin-calendar';
+import type { TimelineWorker } from './employee-timeline';
 
 const meta: Meta<typeof AdminCalendar> = {
     title: 'Calendar/AdminCalendar',
@@ -17,49 +17,41 @@ const meta: Meta<typeof AdminCalendar> = {
 export default meta;
 type Story = StoryObj<typeof AdminCalendar>;
 
-// Mock data
-// Workers in AdminCalendar are simple objects { id, name, nameEn? }
-const workers = [
-    { id: '1', name: 'John Doe', nameEn: 'John' },
-    { id: '2', name: 'Jane Smith', nameEn: 'Jane' },
-    { id: '3', name: 'Bob Wilson', nameEn: 'Bob' },
-    { id: '4', name: 'Diana Prince' },
-    { id: '5', name: 'Evan Wright' },
+// Mock timeline data
+const workers: TimelineWorker[] = [
+    {
+        id: '1',
+        name: 'John Doe',
+        nameEn: 'John',
+        slots: [
+            { startTime: '09:00', duration: 60, type: 'available' },
+            { startTime: '10:00', duration: 60, type: 'booked', data: { customer: 'Mika' } },
+            { startTime: '11:00', duration: 120, type: 'available' },
+            { startTime: '13:00', duration: 60, type: 'blocked' },
+            { startTime: '14:00', duration: 120, type: 'available' },
+        ],
+    },
+    {
+        id: '2',
+        name: 'Jane Smith',
+        nameEn: 'Jane',
+        slots: [
+            { startTime: '09:00', duration: 120, type: 'available' },
+            { startTime: '11:00', duration: 60, type: 'booked', data: { customer: 'Alex' } },
+            { startTime: '12:00', duration: 120, type: 'available' },
+            { startTime: '14:00', duration: 60, type: 'blocked' },
+            { startTime: '15:00', duration: 180, type: 'available' },
+        ],
+    },
 ];
 
 const mockDate = new Date('2024-02-14');
 
-const createMockSlots = (workerId: string): CalendarSlot[] => {
-    const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-    return times.map(time => {
-        // Randomly assign some bookings
-        const isBooked = Math.random() > 0.7;
-        return {
-            time,
-            workerId,
-            isAvailable: !isBooked,
-            booking: isBooked ? {
-                id: `b-${workerId}-${time}`,
-                startsAt: new Date(`2024-02-14T${time}:00`),
-                endsAt: new Date(`2024-02-14T${time.split(':')[0]}:59`),
-                workerId,
-                resourceId: 'r1',
-                customerName: `Customer ${Math.floor(Math.random() * 100)}`,
-                serviceName: ['Haircut', 'Coloring', 'Styling'][Math.floor(Math.random() * 3)],
-                status: 'CONFIRMED',
-            } : undefined,
-        };
-    });
-};
-
-const slots: CalendarSlot[] = workers.flatMap(w => createMockSlots(w.id));
-
 export const Default: Story = {
     args: {
         date: mockDate,
-        workers: workers as any[], // AdminCalendar expects Worker types from its own module, casting for story compatibility
-        slots,
-        locale: 'en',
+        workers,
+        timeRange: { start: '09:00', end: '19:00' },
     },
 };
 
@@ -67,7 +59,6 @@ export const Empty: Story = {
     args: {
         date: mockDate,
         workers: [],
-        slots: [],
-        locale: 'en',
+        timeRange: { start: '09:00', end: '19:00' },
     },
 };

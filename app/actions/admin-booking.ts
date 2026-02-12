@@ -15,6 +15,7 @@ import { prisma } from '@/lib/db/client'
 import { updateBookingSchema, blockTimeSchema } from '@/lib/validations/admin-booking'
 import { getAdminSession } from '@/lib/auth/admin'
 import { toZonedTime } from '@/lib/utils/time'
+import { createBooking } from '@/lib/services/booking.service'
 
 /**
  * Cancel a booking by setting its status to CANCELLED.
@@ -158,4 +159,66 @@ export async function removeBlockedTime(bookingId: string) {
 
   revalidatePath('/admin/dashboard')
   return { success: true }
+}
+
+export interface SendBookingInput {
+  bookingId: string
+  workerId: string
+  date: string
+  startTime: string
+}
+
+export async function sendBooking(input: SendBookingInput) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) throw new Error('Unauthorized')
+
+  const existing = await prisma.booking.findUnique({
+    where: { id: input.bookingId },
+    select: { startsAt: true, endsAt: true },
+  })
+
+  if (!existing) {
+    throw new Error('Booking not found')
+  }
+
+  const startsAt = toZonedTime(input.date, input.startTime)
+  const durationMs = existing.endsAt.getTime() - existing.startsAt.getTime()
+  const endsAt = new Date(startsAt.getTime() + durationMs)
+
+  await prisma.booking.update({
+    where: { id: input.bookingId },
+    data: {
+      workerId: input.workerId,
+      startsAt,
+      endsAt,
+    },
+  })
+
+  revalidatePath('/admin/dashboard')
+  revalidatePath('/admin/dashboard/new')
+  return { success: true }
+}
+
+export interface CreateAdminBookingInput {
+  customerId: string
+  workerId: string
+  serviceId: string
+  date: string
+  startTime: string
+  endTime: string
+  resourceId?: string
+}
+
+export async function createAdminBooking(input: CreateAdminBookingInput) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) throw new Error('Unauthorized')
+
+  const result = await createBooking(input)
+  if (!result.success) {
+    throw new Error(result.error)
+  }
+
+  revalidatePath('/admin/dashboard')
+  revalidatePath('/admin/dashboard/new')
+  return { success: true, bookingId: result.booking.id }
 }

@@ -5,16 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 2: Parity
+**Current focus:** Phase 01.1: Post-MVP UI Enhancements
+**Phase 2 status:** Not started (intentionally deferred until Phase 01.1 completion)
 
 ## Current Position
 
-Phase: 2 of 3 (Parity)
-Plan: 0 of 8 (not started)
-Status: Phase planning
-Last activity: 2026-02-07 - Backfilled session summaries into planning docs
+Phase: 01.1 of 4 (Post-MVP UI Enhancements)
+Plan: 0 of 1 (in progress)
+Status: Active execution
+Last activity: 2026-02-11 - Calendar prototype componentization and Storybook parity iteration
 
-Progress: [----------] 0%
+Progress: [#####-----] 50%
 
 ## Performance Metrics
 
@@ -101,6 +102,11 @@ Recent decisions affecting current work:
 - auth.signOut uses i18n messages (2026-02-06)
 - Booking calendar uses serviceDuration from API (no hardcoded 60) (2026-02-06)
 
+### Roadmap Evolution
+
+- Phase 1.1 inserted after Phase 1: Post-MVP UI enhancements — prototype calendar, data table, updated types and exports (URGENT)
+- Created executable plan `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
+
 ### Pending Todos
 
 - Warning: empty package-lock.json causes `Unexpected end of JSON input` during installs.
@@ -111,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-07
-Stopped at: Preparing to discuss Phase 2 admin primitives for Storybook
-Resume file: None (Phase 1 complete - ready for Phase 2 planning)
+Last session: 2026-02-11
+Stopped at: Aligning settings rail and timetable composition in prototype calendar
+Resume file: `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`

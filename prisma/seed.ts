@@ -141,6 +141,40 @@ async function main() {
   ])
   console.log(`Created ${resources.length} resources (beds)`)
 
+  const customers = await Promise.all([
+    prisma.customer.upsert({
+      where: { id: 'customer-demo-1' },
+      update: {},
+      create: {
+        id: 'customer-demo-1',
+        name: 'Sato Hana',
+        email: 'sato.hana@example.com',
+        phone: '090-1111-2222',
+      },
+    }),
+    prisma.customer.upsert({
+      where: { id: 'customer-demo-2' },
+      update: {},
+      create: {
+        id: 'customer-demo-2',
+        name: 'Kobayashi Ren',
+        email: 'kobayashi.ren@example.com',
+        phone: '090-3333-4444',
+      },
+    }),
+    prisma.customer.upsert({
+      where: { id: 'customer-demo-3' },
+      update: {},
+      create: {
+        id: 'customer-demo-3',
+        name: 'Ito Mei',
+        email: 'ito.mei@example.com',
+        phone: '090-5555-6666',
+      },
+    }),
+  ])
+  console.log(`Created ${customers.length} demo customers`)
+
   // Create default WorkerSchedules (Mon-Sat 10:00-19:00)
   // dayOfWeek: 0=Sunday, 1=Monday, ..., 6=Saturday
   const workDays = [1, 2, 3, 4, 5, 6] // Monday to Saturday
@@ -164,6 +198,85 @@ async function main() {
     }
   }
   console.log(`Created schedules for ${workers.length} workers (Mon-Sat 10:00-19:00)`)
+
+  const businessDateString = (date: Date) => {
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }
+
+  const toJstDate = (date: string, time: string) => new Date(`${date}T${time}:00+09:00`)
+
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  let seededBookings = 0
+
+  for (let i = 0; i < 7; i += 1) {
+    const day = new Date(start)
+    day.setDate(start.getDate() + i)
+    const dateLabel = businessDateString(day)
+
+    const dayBookings = [
+      {
+        id: `booking-${dateLabel}-tanaka-1000`,
+        workerId: workers[0].id,
+        customerId: customers[0].id,
+        resourceId: resources[0].id,
+        serviceId: standardShiatsu.id,
+        startTime: '10:00',
+        endTime: '11:00',
+        status: 'CONFIRMED',
+      },
+      {
+        id: `booking-${dateLabel}-suzuki-1200`,
+        workerId: workers[1].id,
+        customerId: customers[1].id,
+        resourceId: resources[1].id,
+        serviceId: standardShiatsu.id,
+        startTime: '12:00',
+        endTime: '13:00',
+        status: i % 2 === 0 ? 'CONFIRMED' : 'PENDING',
+      },
+      {
+        id: `booking-${dateLabel}-yamamoto-1400`,
+        workerId: workers[2].id,
+        customerId: customers[2].id,
+        resourceId: resources[2].id,
+        serviceId: standardShiatsu.id,
+        startTime: '14:00',
+        endTime: '15:00',
+        status: 'CONFIRMED',
+      },
+    ] as const
+
+    for (const seedBooking of dayBookings) {
+      await prisma.booking.upsert({
+        where: { id: seedBooking.id },
+        update: {
+          workerId: seedBooking.workerId,
+          customerId: seedBooking.customerId,
+          resourceId: seedBooking.resourceId,
+          serviceId: seedBooking.serviceId,
+          startsAt: toJstDate(dateLabel, seedBooking.startTime),
+          endsAt: toJstDate(dateLabel, seedBooking.endTime),
+          status: seedBooking.status,
+        },
+        create: {
+          id: seedBooking.id,
+          workerId: seedBooking.workerId,
+          customerId: seedBooking.customerId,
+          resourceId: seedBooking.resourceId,
+          serviceId: seedBooking.serviceId,
+          startsAt: toJstDate(dateLabel, seedBooking.startTime),
+          endsAt: toJstDate(dateLabel, seedBooking.endTime),
+          status: seedBooking.status,
+        },
+      })
+      seededBookings += 1
+    }
+  }
+  console.log(`Seeded ${seededBookings} demo bookings for the next 7 days`)
 
   console.log('Seeding complete!')
 }

@@ -11,6 +11,7 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: MVP** - Foundation, user booking, admin management, tests, email (complete booking system)
+- [ ] **Phase 01.1: Post-MVP UI Enhancements (Inserted)** - Prototype calendar, data table, updated types/exports
 - [ ] **Phase 2: Parity** - CRM, customer management, employee KPIs, sales reporting
 - [ ] **Phase 3: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
 
@@ -61,6 +62,15 @@ Plans:
 - [x] 01-13-PLAN.md — Service-aware booking flow (TICKET 01-06) (Wave 6)
 - [x] 01-14-PLAN.md — Frontend refactor with EmployeeTimeline (Wave 7)
 
+### Phase 01.1: Post-MVP UI enhancements: prototype calendar, data table, updated types and exports (INSERTED)
+
+**Goal:** Stabilize calendar prototype UI architecture in Storybook and polish parity against reference mockups
+**Depends on:** Phase 1
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01.1-01-PLAN.md — Prototype calendar componentization + drag/layout parity polish (Wave 1)
+
 ### Phase 2: Parity
 **Goal**: CRM and reporting features that achieve parity with current spreadsheet-based workflow
 **Depends on**: Phase 1
@@ -110,10 +120,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3
+Phases execute in numeric order: 1 -> 01.1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. MVP | 14/14 | Complete | 2026-02-05 |
-| 2. Parity | 0/8 | In Progress | - |
+| 01.1 Post-MVP UI Enhancements | 0/1 | In Progress | - |
+| 2. Parity | 0/8 | Not started | - |
 | 3. Differentiation | 0/? | Not started | - |

@@ -26,7 +26,7 @@ export const updateBookingSchema = z.object({
   bookingId: z.string().uuid({ message: 'Invalid booking ID format' }),
   startsAt: z.coerce.date().optional(),
   workerId: z.string().min(1).optional(),
-  status: z.enum(['CONFIRMED', 'CANCELLED', 'NOSHOW']).optional(),
+  status: z.enum(['CONFIRMED', 'CANCELLED', 'NOSHOW', 'PENDING']).optional(),
 })
 
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>

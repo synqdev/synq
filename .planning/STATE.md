@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 3 of 12 (complete)
+Plan: 5 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-03-PLAN.md (UI Component Library)
+Last activity: 2026-02-05 — Completed 01-05-PLAN.md (Booking Service TDD)
 
-Progress: [███░░░░░░░] 25%
+Progress: [████░░░░░░] 42%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.23 hours
+- Total plans completed: 5
+- Average duration: 7 min
+- Total execution time: 0.60 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 3 | 14 min | 5 min |
+| 01-mvp | 5 | 36 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 4m, 6m
-- Trend: stable
+- Last 5 plans: 4m, 4m, 6m, 18m, 4m
+- Trend: stable (TDD plans efficient with prior session test setup)
 
 *Updated after each plan completion*
 
@@ -56,6 +56,12 @@ Recent decisions affecting current work:
 - React.forwardRef for all UI components (01-03)
 - Compound pattern for Card component (01-03)
 - Variant/size lookup objects for component styling (01-03)
+- Adjacent time ranges not overlapping - allows back-to-back bookings (01-04)
+- Pure functions separated from database layer for testability (01-04)
+- Jest with next/jest for TypeScript + path alias support (01-04)
+- Availability checks inline within transaction for atomicity (01-05)
+- Result type pattern for booking operations (success/error discriminated union) (01-05)
+- Integration tests excluded from default test run (require DATABASE_URL) (01-05)
 
 ### Pending Todos
 
@@ -67,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T04:31:49Z
-Stopped at: Completed 01-03-PLAN.md (UI Component Library)
-Resume file: .planning/phases/01-mvp/01-04-PLAN.md
+Last session: 2026-02-05T09:26:00Z
+Stopped at: Completed 01-05-PLAN.md (Booking Service TDD)
+Resume file: .planning/phases/01-mvp/01-06-PLAN.md

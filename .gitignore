@@ -81,3 +81,4 @@ DerivedData/
 *.moved-aside
 *.xccheckout
 *.xcscmblueprint
+.gemini/settings.json

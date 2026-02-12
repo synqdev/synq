@@ -220,6 +220,7 @@ export function Timetable({
 
       <div className="relative flex-1 rounded-[22px] rounded-tl-none rounded-tr-none bg-[#7d9ea7]/88 p-3">
         <div className="relative flex h-full flex-col rounded-[18px] rounded-tl-none rounded-tr-none border border-white/15 bg-[#78949c]/60 p-1">
+<<<<<<< HEAD
           <div className="relative h-[50px] border-b border-white/20">
             <div className="absolute top-[6px] text-[20px] font-semibold text-white/78" style={{ left: `${AVATAR_WIDTH}px` }}>{`${String(startHour).padStart(2, '0')}:00`}</div>
             <div
@@ -234,6 +235,24 @@ export function Timetable({
           <div className="relative min-h-0 flex-1" style={{ paddingBottom: customBody ? 0 : 'max(88px, 8vh)' }}>
             {customBody ? (
               <div className="relative z-10 h-full">{customBody}</div>
+=======
+          {!customBody ? (
+            <div className="relative h-[50px] border-b border-white/20">
+              <div className="absolute top-[6px] text-[20px] font-semibold text-white/78" style={{ left: `${AVATAR_WIDTH}px` }}>{`${String(startHour).padStart(2, '0')}:00`}</div>
+              <div
+                className="absolute top-[6px] text-[20px] font-semibold text-white/78"
+                style={{ left: `calc(${AVATAR_WIDTH}px + (100% - ${AVATAR_WIDTH + 16}px) * ${currentTimeLeft / 100})`, transform: 'translateX(-50%)' }}
+              >
+                {currentTimeLabel}
+              </div>
+              <div className="absolute right-4 top-[6px] text-[20px] font-semibold text-white/82">{`${String(endHour).padStart(2, '0')}:00`}</div>
+            </div>
+          ) : null}
+
+          <div className="relative min-h-0 flex-1" style={{ paddingBottom: customBody ? 0 : 'max(88px, 8vh)' }}>
+            {customBody ? (
+              <div className="relative z-10 h-full min-h-0 overflow-y-auto overflow-x-hidden p-4">{customBody}</div>
+>>>>>>> 499d98f (fix(ui): clean admin prototype panel tabs and scrolling)
             ) : (
               <>
             <div className="absolute top-0 bottom-0 right-4 z-0" style={{ left: `${AVATAR_WIDTH}px` }}>

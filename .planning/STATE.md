@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 5 of 12 (complete)
+Plan: 8 of 12 (complete)
 Status: In progress
-Last activity: 2026-02-05 — Completed 01-05-PLAN.md (Booking Service TDD)
+Last activity: 2026-02-05 — Completed 01-07-PLAN.md (User Registration and Booking Flow)
 
-Progress: [████░░░░░░] 42%
+Progress: [████████░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 7 min
-- Total execution time: 0.60 hours
+- Total plans completed: 8
+- Average duration: 6 min
+- Total execution time: 0.82 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 5 | 36 min | 7 min |
+| 01-mvp | 8 | 50 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 4m, 6m, 18m, 4m
-- Trend: stable (TDD plans efficient with prior session test setup)
+- Last 5 plans: 18m, 4m, 2m, 4m, 8m
+- Trend: stable (user registration flow complete)
 
 *Updated after each plan completion*
 
@@ -62,6 +62,13 @@ Recent decisions affecting current work:
 - Availability checks inline within transaction for atomicity (01-05)
 - Result type pattern for booking operations (success/error discriminated union) (01-05)
 - Integration tests excluded from default test run (require DATABASE_URL) (01-05)
+- Omit 'slot' from HTML attributes to avoid conflict with CalendarSlot prop (01-06)
+- Sticky worker names and header for calendar scroll persistence (01-06)
+- Graceful email degradation: failures logged but don't block booking (01-08)
+- @/emails/* path alias for email templates (01-08)
+- Cookie-based customer ID for lazy auth, 7-day httpOnly (01-07)
+- SWR with 10-second polling for real-time availability (01-07)
+- useActionState pattern for server action form handling (01-07)
 
 ### Pending Todos
 
@@ -73,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T09:26:00Z
-Stopped at: Completed 01-05-PLAN.md (Booking Service TDD)
-Resume file: .planning/phases/01-mvp/01-06-PLAN.md
+Last session: 2026-02-05T09:38:10Z
+Stopped at: Completed 01-07-PLAN.md (User Registration and Booking Flow)
+Resume file: .planning/phases/01-mvp/01-09-PLAN.md

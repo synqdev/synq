@@ -6,32 +6,38 @@ async function main() {
   console.log('Seeding database...')
 
   // Create Workers
+  // Use UUID-shaped IDs to match Prisma defaults (@default(uuid())).
+  // Keeping IDs stable makes repeated seeds idempotent.
+  const WORKER_TANAKA_ID = '11111111-1111-1111-1111-111111111111'
+  const WORKER_SUZUKI_ID = '22222222-2222-2222-2222-222222222222'
+  const WORKER_YAMAMOTO_ID = '33333333-3333-3333-3333-333333333333'
+
   const workers = await Promise.all([
     prisma.worker.upsert({
-      where: { id: 'worker-tanaka' },
+      where: { id: WORKER_TANAKA_ID },
       update: {},
       create: {
-        id: 'worker-tanaka',
+        id: WORKER_TANAKA_ID,
         name: '田中',
         nameEn: 'Tanaka',
         isActive: true,
       },
     }),
     prisma.worker.upsert({
-      where: { id: 'worker-suzuki' },
+      where: { id: WORKER_SUZUKI_ID },
       update: {},
       create: {
-        id: 'worker-suzuki',
+        id: WORKER_SUZUKI_ID,
         name: '鈴木',
         nameEn: 'Suzuki',
         isActive: true,
       },
     }),
     prisma.worker.upsert({
-      where: { id: 'worker-yamamoto' },
+      where: { id: WORKER_YAMAMOTO_ID },
       update: {},
       create: {
-        id: 'worker-yamamoto',
+        id: WORKER_YAMAMOTO_ID,
         name: '山本',
         nameEn: 'Yamamoto',
         isActive: true,
@@ -41,11 +47,13 @@ async function main() {
   console.log(`Created ${workers.length} workers`)
 
   // Create Service
+  const SERVICE_SHIATSU_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
   const service = await prisma.service.upsert({
-    where: { id: 'service-shiatsu' },
+    where: { id: SERVICE_SHIATSU_ID },
     update: {},
     create: {
-      id: 'service-shiatsu',
+      id: SERVICE_SHIATSU_ID,
       name: '指圧',
       nameEn: 'Shiatsu',
       description: '全身の指圧マッサージ',
@@ -57,30 +65,34 @@ async function main() {
   console.log(`Created service: ${service.name}`)
 
   // Create Resources (beds)
+  const RESOURCE_BED_1_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  const RESOURCE_BED_2_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+  const RESOURCE_BED_3_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+
   const resources = await Promise.all([
     prisma.resource.upsert({
-      where: { id: 'resource-bed-1' },
+      where: { id: RESOURCE_BED_1_ID },
       update: {},
       create: {
-        id: 'resource-bed-1',
+        id: RESOURCE_BED_1_ID,
         name: 'ベッド1',
         isActive: true,
       },
     }),
     prisma.resource.upsert({
-      where: { id: 'resource-bed-2' },
+      where: { id: RESOURCE_BED_2_ID },
       update: {},
       create: {
-        id: 'resource-bed-2',
+        id: RESOURCE_BED_2_ID,
         name: 'ベッド2',
         isActive: true,
       },
     }),
     prisma.resource.upsert({
-      where: { id: 'resource-bed-3' },
+      where: { id: RESOURCE_BED_3_ID },
       update: {},
       create: {
-        id: 'resource-bed-3',
+        id: RESOURCE_BED_3_ID,
         name: 'ベッド3',
         isActive: true,
       },

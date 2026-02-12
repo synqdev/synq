@@ -5,16 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 1: MVP
+**Current focus:** Phase 01.1: Post-MVP UI Enhancements
+**Phase 2 status:** Not started (intentionally deferred until Phase 01.1 completion)
 
 ## Current Position
 
-Phase: 1 of 3 (MVP)
-Plan: 14 of 14 (complete)
-Status: Phase complete
-Last activity: 2026-02-06 - Completed 01-14-PLAN.md (Frontend refactor with EmployeeTimeline)
+Phase: 01.1 of 4 (Post-MVP UI Enhancements)
+Plan: 0 of 1 (in progress)
+Status: Active execution
+Last activity: 2026-02-11 - Calendar prototype componentization and Storybook parity iteration
 
-Progress: [████████████] 100%
+Progress: [#####-----] 50%
 
 ## Performance Metrics
 
@@ -93,10 +94,22 @@ Recent decisions affecting current work:
 - Multi-page booking flow with URL param state management (01-14)
 - Mapper pattern for API-to-component data transformation (01-14)
 - Green (#d1fae5) for available slots, gray (#e5e7eb) for booked (01-14)
+- EmployeeTimeline name retained; TimelineCalendar reverted (2026-02-06)
+- Admin cancel confirmation handled in popover (no browser confirm/alert) (2026-02-06)
+- Admin timeline includes base available slot for day background (2026-02-06)
+- Jest unit runs ignore mobile and e2e tests (2026-02-06)
+- Zod validation allows non-UUID IDs for worker/booking tests (2026-02-06)
+- auth.signOut uses i18n messages (2026-02-06)
+- Booking calendar uses serviceDuration from API (no hardcoded 60) (2026-02-06)
+
+### Roadmap Evolution
+
+- Phase 1.1 inserted after Phase 1: Post-MVP UI enhancements — prototype calendar, data table, updated types and exports (URGENT)
+- Created executable plan `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
 
 ### Pending Todos
 
-None yet.
+- Warning: empty package-lock.json causes `Unexpected end of JSON input` during installs.
 
 ### Blockers/Concerns
 
@@ -104,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-06T00:11:25Z
-Stopped at: Completed 01-14-PLAN.md (Frontend refactor with EmployeeTimeline) - Phase 1 MVP complete
-Resume file: None (Phase 1 complete - ready for Phase 2 planning)
+Last session: 2026-02-11
+Stopped at: Aligning settings rail and timetable composition in prototype calendar
+Resume file: `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`

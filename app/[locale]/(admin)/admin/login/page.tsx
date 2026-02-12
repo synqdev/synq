@@ -20,15 +20,20 @@ export default function AdminLoginPage() {
   >(adminLogin, null)
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center">
+    <div className="min-h-[70vh] flex items-center justify-center" data-testid="admin-login-page">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <h1 className="text-xl font-semibold text-center">Admin Login</h1>
+          <h1 className="text-xl font-semibold text-center" data-testid="admin-login-heading">
+            Admin Login
+          </h1>
         </CardHeader>
         <form action={formAction}>
           <CardBody className="space-y-4">
             {state?.error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+              <div
+                className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded"
+                data-testid="admin-login-error"
+              >
                 {state.error}
               </div>
             )}
@@ -46,6 +51,7 @@ export default function AdminLoginPage() {
                 required
                 autoComplete="username"
                 disabled={isPending}
+                data-testid="admin-login-username"
               />
             </div>
             <div>
@@ -62,11 +68,17 @@ export default function AdminLoginPage() {
                 required
                 autoComplete="current-password"
                 disabled={isPending}
+                data-testid="admin-login-password"
               />
             </div>
           </CardBody>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isPending}
+              data-testid="admin-login-submit"
+            >
               {isPending ? 'Logging in...' : 'Login'}
             </Button>
           </CardFooter>

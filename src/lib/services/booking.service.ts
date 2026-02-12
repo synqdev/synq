@@ -16,6 +16,7 @@
 
 import { prisma } from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
+
 import * as Sentry from '@sentry/nextjs';
 import {
   createBookingSchema,
@@ -48,14 +49,13 @@ export type CancelResult =
   | { success: true }
   | { success: false; error: string };
 
+import { toZonedTime } from '@/lib/utils/time';
+
 /**
  * Converts date string (YYYY-MM-DD) and time string (HH:MM) to a Date object.
  */
 function toDateTime(date: string, time: string): Date {
-  // Normalize time to ensure HH:MM format (e.g., "9:00" -> "09:00")
-  const [hours, minutes] = time.split(':').map(Number);
-  const normalizedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  return new Date(`${date}T${normalizedTime}:00`);
+  return toZonedTime(date, time);
 }
 
 /**
@@ -221,6 +221,7 @@ export async function createBooking(
   }
 
   // Should not reach here, but TypeScript needs a return
+  /* istanbul ignore next */
   return { success: false, error: 'Max retries exceeded' };
 }
 

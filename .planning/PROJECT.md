@@ -185,6 +185,14 @@ Both checks run in a serializable transaction to prevent race conditions.
 | RLS on all tables | Security best practice, prevents data leakage | — Pending |
 | Jest for testing | Industry standard, good TypeScript support | — Pending |
 | SWR polling (5-10s) | Simple live updates without WebSocket complexity | — Pending |
+| EmployeeTimeline naming retained | Avoid confusion; matches user mental model | Adopted |
+| Admin cancel confirmation via popover only | Consistent UI; avoid double confirmations | Adopted |
+| Admin blocking stored as special bookings | Reuse booking pipeline and calendar rendering | Adopted |
+| Admin timeline base available slot background | Provide full-day visual context | Adopted |
+| Jest unit runs ignore mobile and e2e tests | Faster, avoids unrelated failures | Adopted |
+| Zod validation allows non-UUID IDs | Support system and test IDs | Adopted |
+| auth.signOut uses i18n messages | Remove hardcoded strings | Adopted |
+| Booking calendar uses serviceDuration from API | Support non-60-minute services | Adopted |
 
 ---
-*Last updated: 2025-02-04 after initialization*
+*Last updated: 2026-02-07 after session summary backfill*

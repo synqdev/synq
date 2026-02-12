@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getAdminSession } from '@/lib/auth/admin'
 import { prisma } from '@/lib/db/client'
 import { AdminDashboardClient } from './admin-dashboard-client'
 import { mapAdminBookingsToCalendar } from '@/lib/mappers/calendar'
+import { toZonedTime } from '@/lib/utils/time'
 import type { AdminBooking } from '@/lib/mappers/calendar'
 
 interface AdminDashboardPageProps {
@@ -22,6 +24,7 @@ export default async function AdminDashboardPage({
 }: AdminDashboardPageProps) {
   const { locale } = await params
   const { date: dateParam } = await searchParams
+  const t = await getTranslations('admin.dashboardPage')
 
   // Verify admin session (full JWT verification)
   const isAuthenticated = await getAdminSession()
@@ -29,14 +32,14 @@ export default async function AdminDashboardPage({
     redirect(`/${locale}/admin/login`)
   }
 
-  // Parse date from query or use today
-  const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date()
-  date.setHours(0, 0, 0, 0)
+  // Parse date from query or use today (in JST)
+  const dateStr = dateParam || new Date().toISOString().split('T')[0]
+  const date = new Date(dateStr + 'T00:00:00')
 
-  // Calculate start and end of day
-  const startOfDay = new Date(date)
-  const endOfDay = new Date(date)
-  endOfDay.setHours(23, 59, 59, 999)
+  // Calculate start and end of day in JST (same as availability API)
+  const startOfDay = toZonedTime(dateStr, '00:00')
+  const endOfDay = new Date(startOfDay)
+  endOfDay.setDate(endOfDay.getDate() + 1)
 
   // Fetch workers and bookings in parallel
   const [workers, bookings] = await Promise.all([
@@ -74,6 +77,7 @@ export default async function AdminDashboardPage({
     endsAt: booking.endsAt,
     customerName: booking.customer.name,
     status: booking.status,
+    serviceId: booking.serviceId,
   }))
 
   // Use mapper to transform for EmployeeTimeline
@@ -83,14 +87,13 @@ export default async function AdminDashboardPage({
   )
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">
-        {locale === 'ja' ? 'ダッシュボード' : 'Dashboard'}
+    <div data-testid="admin-dashboard-page">
+      <h2 className="text-2xl font-bold mb-6" data-testid="admin-dashboard-heading">
+        {t('title')}
       </h2>
       <AdminDashboardClient
         initialWorkers={timelineWorkers}
         date={date}
-        locale={locale}
       />
     </div>
   )

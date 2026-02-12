@@ -4,13 +4,13 @@
  * Pure functions for calculating booking availability based on the double-bottleneck constraint:
  * A slot is AVAILABLE if and only if:
  * 1. Worker Check: No existing booking for that worker overlaps the time range
- * 2. Resource Check: At least one resource (bed) has no overlapping booking
- *
+  * 2. Resource Check: At least one resource(bed) has no overlapping booking
+    *
  * These functions are intentionally isolated from the database layer for:
  * - Testability: Pure functions with no side effects
- * - Performance: Can be used for both real-time availability and bulk calculations
- * - Correctness: Business logic is separated from data access
- */
+  * - Performance: Can be used for both real - time availability and bulk calculations
+    * - Correctness: Business logic is separated from data access
+      */
 
 import { isOverlapping, generateTimeSlots, formatTime, parseTime } from '@/lib/utils/time';
 
@@ -83,7 +83,7 @@ export function checkWorkerAvailability(
   const workerBookings = existingBookings.filter(
     (booking) => booking.workerId === workerId
   );
-
+  console.log('----',workerId, startTime, endTime, existingBookings)
   // Check if any of the worker's bookings overlap with the requested time
   const hasOverlap = workerBookings.some((booking) =>
     isOverlapping(startTime, endTime, booking.startTime, booking.endTime)
@@ -134,6 +134,8 @@ export function checkResourceAvailability(
   // Resource is available if there's no overlap
   return !hasOverlap;
 }
+
+
 
 /**
  * Calculates the end time for a slot given start time and duration.

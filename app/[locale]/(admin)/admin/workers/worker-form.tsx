@@ -8,6 +8,7 @@
  */
 
 import { useActionState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createWorker, updateWorker } from '@/app/actions/workers'
@@ -19,18 +20,7 @@ interface Worker {
   isActive: boolean
 }
 
-interface Labels {
-  name: string
-  nameEn: string
-  status: string
-  active: string
-  inactive: string
-  save: string
-  cancel: string
-}
-
 interface WorkerFormProps {
-  labels: Labels
   mode: 'create' | 'edit'
   worker?: Worker
   onCancel?: () => void
@@ -59,7 +49,8 @@ async function updateWorkerAction(_prevState: FormState, formData: FormData): Pr
   }
 }
 
-export function WorkerForm({ labels, mode, worker, onCancel }: WorkerFormProps) {
+export function WorkerForm({ mode, worker, onCancel }: WorkerFormProps) {
+  const tCommon = useTranslations('common')
   const action = mode === 'create' ? createWorkerAction : updateWorkerAction
   const [state, formAction, isPending] = useActionState(action, { success: false, error: null })
 
@@ -82,7 +73,7 @@ export function WorkerForm({ labels, mode, worker, onCancel }: WorkerFormProps) 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           name="name"
-          label={labels.name}
+          label={tCommon('name')}
           defaultValue={worker?.name || ''}
           required
           placeholder="e.g., 田中"
@@ -90,7 +81,7 @@ export function WorkerForm({ labels, mode, worker, onCancel }: WorkerFormProps) 
 
         <Input
           name="nameEn"
-          label={labels.nameEn}
+          label={tCommon('nameEn')}
           defaultValue={worker?.nameEn || ''}
           placeholder="e.g., Tanaka"
         />
@@ -98,25 +89,25 @@ export function WorkerForm({ labels, mode, worker, onCancel }: WorkerFormProps) 
 
       <div>
         <label className="mb-1.5 block text-sm font-medium text-secondary-700">
-          {labels.status}
+          {tCommon('status')}
         </label>
         <select
           name="isActive"
           defaultValue={worker?.isActive !== false ? 'true' : 'false'}
           className="w-full rounded-lg border border-secondary-300 px-4 py-2 text-secondary-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-          <option value="true">{labels.active}</option>
-          <option value="false">{labels.inactive}</option>
+          <option value="true">{tCommon('active')}</option>
+          <option value="false">{tCommon('inactive')}</option>
         </select>
       </div>
 
       <div className="flex gap-2">
         <Button type="submit" loading={isPending}>
-          {labels.save}
+          {tCommon('save')}
         </Button>
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
-            {labels.cancel}
+            {tCommon('cancel')}
           </Button>
         )}
       </div>

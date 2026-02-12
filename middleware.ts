@@ -43,9 +43,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Match all pathnames except for:
+  // - api routes (no locale prefix needed)
   // - _next (Next.js internals)
   // - _vercel (Vercel internals)
   // - static files (images, favicon, etc.)
-  // Note: api routes ARE included for rate limiting
-  matcher: ['/((?!_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
 }

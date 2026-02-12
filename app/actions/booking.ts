@@ -14,6 +14,7 @@ import { prisma } from '@/lib/db/client'
 import { createBooking, type BookingResult } from '@/lib/services/booking.service'
 import { checkBookingRateLimit } from '@/lib/rate-limit'
 import { sendBookingConfirmation } from '@/lib/email/send'
+import { getLocaleDateTag } from '@/lib/i18n/locale'
 
 /**
  * Input for creating a booking via direct call.
@@ -104,7 +105,7 @@ export async function submitBookingForm(
   const date = formData.get('date') as string
   const time = formData.get('time') as string
   const resourceId = formData.get('resourceId') as string | null
-
+  console.log('formData date', date)
   // Validate required fields
   if (!workerId || !date || !time) {
     return { error: 'Missing required booking information' }
@@ -153,9 +154,11 @@ export async function submitBookingForm(
     if (booking) {
       // Format date for email (YYYY年MM月DD日 for ja, Month DD, YYYY for en)
       const bookingDate = new Date(date)
-      const formattedDate = locale === 'ja'
-        ? `${bookingDate.getFullYear()}年${bookingDate.getMonth() + 1}月${bookingDate.getDate()}日`
-        : bookingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      const formattedDate = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(bookingDate)
 
       // Send confirmation email (non-blocking - failures logged but don't prevent redirect)
       await sendBookingConfirmation({

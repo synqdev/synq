@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { getAvailableSlots, type Resource } from '@/lib/services/availability.service';
+import { toZonedTime } from '@/lib/utils/time';
+import { BUSINESS_TIMEZONE } from '@/lib/constants';
 
 /**
  * GET /api/availability?date=YYYY-MM-DD&serviceId=SERVICE_ID
@@ -30,15 +32,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Parse date string to start and end of day
-    const date = new Date(dateStr + 'T00:00:00');
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Parse date string to start and end of day in business timezone
+    // toZonedTime('2026-02-06', '00:00') returns 2026-02-06 00:00:00 JST (which is 2026-02-05 15:00:00 UTC)
+    const startOfDay = toZonedTime(dateStr, '00:00');
 
-    // Get day of week for schedule lookup (0=Sunday, 6=Saturday)
-    const dayOfWeek = date.getDay();
+    // Calculate end of day (start of day + 24 hours)
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    // Get day of week from the date string explicitly (YYYY-MM-DD parses as UTC)
+    const dayOfWeek = new Date(dateStr).getUTCDay();
 
     // Fetch service to get duration (required for availability calculation)
     const service = await prisma.service.findUnique({
@@ -71,29 +74,47 @@ export async function GET(request: NextRequest) {
             // Recurring schedule for this day of week
             { dayOfWeek, specificDate: null },
             // Specific date schedule (overrides recurring)
-            { specificDate: date },
+            // We need to match the specificDate stored in DB (UTC)
+            // Note: workerSchedule.specificDate is DateTime, so it stores a time component.
+            // Ideally it should be start of day matching.
+            // For now, let's assume specificDate was stored as start of day JST (?)
+            // Actually, prisma comparison with Date object works. 
+            // We want to find schedules specifically for this logic "day".
+            // Since specificDate is usually set to midnight of that day...
+            // Let's rely on gte/lt range if possible, but specificDate is just one field.
+            // If specificDate is 00:00 JST, then it equals startOfDay.
+            { specificDate: startOfDay },
           ],
         },
       }),
     ]);
-
+    console.log('----', startOfDay, endOfDay)
+    console.log('bookings--', bookings)
     // Convert resources to availability service format
     const resourceList: Resource[] = resources.map((r) => ({
       id: r.id,
       name: r.name,
     }));
 
+
+
+    // Helper to format Date to HH:MM in business timezone
+    const formatTimeInZone = (date: Date): string => {
+      return date.toLocaleTimeString('en-US', {
+        timeZone: BUSINESS_TIMEZONE,
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    };
+
     // Convert bookings to time slot format (HH:MM)
     const existingBookings = bookings.map((b) => {
-      const startHours = b.startsAt.getHours().toString().padStart(2, '0');
-      const startMins = b.startsAt.getMinutes().toString().padStart(2, '0');
-      const endHours = b.endsAt.getHours().toString().padStart(2, '0');
-      const endMins = b.endsAt.getMinutes().toString().padStart(2, '0');
       return {
         workerId: b.workerId,
         resourceId: b.resourceId,
-        startTime: `${startHours}:${startMins}`,
-        endTime: `${endHours}:${endMins}`,
+        startTime: formatTimeInZone(b.startsAt),
+        endTime: formatTimeInZone(b.endsAt),
       };
     });
 

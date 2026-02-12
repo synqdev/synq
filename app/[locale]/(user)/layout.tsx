@@ -1,16 +1,16 @@
+import { UserHeader } from './user-header'
+
 interface UserLayoutProps {
   children: React.ReactNode
+  params: Promise<{ locale: string }>
 }
 
-export default function UserLayout({ children }: UserLayoutProps) {
-  // TODO: Add auth check in Plan 07
+export default async function UserLayout({ children, params }: UserLayoutProps) {
+  const { locale } = await params
+
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-xl font-semibold text-gray-900">SYNQ</h1>
-        </div>
-      </header>
+      <UserHeader locale={locale} />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {children}
       </main>

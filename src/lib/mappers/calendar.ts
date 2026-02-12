@@ -7,6 +7,7 @@
 
 import type { AvailableSlot } from '@/lib/services/availability.service'
 import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employee-timeline'
+import { formatInTimeZone } from '@/lib/utils/time'
 
 // API response types
 export interface AvailabilityResponse {
@@ -29,79 +30,97 @@ export interface AdminBooking {
   endsAt: Date
   customerName: string
   status: string
+  serviceId: string // Added for blocking identification
 }
 
 /**
  * Maps availability API response to EmployeeTimeline format.
- * For user booking flow: shows available slots as clickable green blocks.
- *
- * @param response - Availability API response
- * @returns Workers with available slots in timeline format
+ * Transforms backend availability data into the structure required by the timeline component.
  */
-export function mapAvailabilityToCalendar(
-  response: AvailabilityResponse
-): TimelineWorker[] {
-  return response.workers.map(worker => ({
-    id: worker.id,
-    name: worker.name,
-    nameEn: worker.nameEn,
-    slots: worker.slots.map(slot => ({
-      startTime: slot.startTime,
-      duration: slot.duration,
-      type: 'available' as const,
-      data: {
-        resourceIds: slot.availableResourceIds,
-        endTime: slot.endTime,
-      },
-    })),
-  }))
+export function mapAvailabilityToCalendar(response: AvailabilityResponse): TimelineWorker[] {
+  return response.workers.map(worker => {
+    // Convert available slots to timeline format
+    const slots: TimelineSlot[] = worker.slots.map(slot => {
+      // Parse duration from slot or use default if needed
+      // Currently assuming slot has duration or we calculate it
+      // For now, let's assume the API returns slots with duration or end time
+      // If we need to calculate duration from start/end:
+      const startTime = new Date(`2000-01-01T${slot.startTime}`)
+      const endTime = new Date(`2000-01-01T${slot.endTime}`)
+      const duration = (endTime.getTime() - startTime.getTime()) / 60000 // minutes
+
+      return {
+        startTime: slot.startTime,
+        duration: duration,
+        type: 'available',
+        data: {
+          resourceIds: slot.availableResourceIds,
+          endTime: slot.endTime
+        }
+      }
+    })
+
+    return {
+      id: worker.id,
+      name: worker.name,
+      nameEn: worker.nameEn,
+      slots
+    }
+  })
 }
 
 /**
  * Maps admin bookings to EmployeeTimeline format.
- * For admin view: shows all bookings with cancel functionality.
- *
- * @param workers - List of workers
- * @param bookings - List of bookings to display
- * @returns Workers with bookings as timeline slots
+ * ...
  */
 export function mapAdminBookingsToCalendar(
   workers: Array<{ id: string; name: string; nameEn?: string }>,
   bookings: AdminBooking[]
 ): TimelineWorker[] {
-  return workers.map(worker => ({
-    id: worker.id,
-    name: worker.name,
-    nameEn: worker.nameEn,
-    slots: bookings
+  return workers.map(worker => {
+    // ... baseSlot code ...
+    const baseSlot: TimelineSlot = {
+      startTime: '10:00',
+      duration: 540,
+      type: 'available',
+      data: {}
+    }
+
+    const bookingSlots = bookings
       .filter(b => b.workerId === worker.id)
       .map(booking => {
-        const start = booking.startsAt.toTimeString().slice(0, 5) // "HH:MM"
+        // Convert UTC Date to JST time string
+        const { time: start } = formatInTimeZone(booking.startsAt)
         const duration = Math.floor(
           (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60000
         )
 
+        const isBlocked = booking.serviceId === 'block-service'
+
         return {
           startTime: start,
           duration,
-          type: 'booked' as const,
+          type: isBlocked ? 'blocked' : 'booked',
           data: {
             bookingId: booking.id,
             customer: booking.customerName,
             status: booking.status,
           },
-        }
-      }),
-  }))
+        } as TimelineSlot
+      })
+
+    return {
+      id: worker.id,
+      name: worker.name,
+      nameEn: worker.nameEn,
+      slots: [baseSlot, ...bookingSlots]
+    }
+  })
 }
 
 /**
  * Merges available slots with existing bookings.
- * For user view with context: shows what's booked (gray) and what's available (green).
- *
- * @param availabilityResponse - Available slots from API
- * @param bookings - Existing bookings to show as unavailable
- * @returns Workers with both available and booked slots
+ * ...
  */
 export function mapAvailabilityWithBookings(
   availabilityResponse: AvailabilityResponse,
@@ -116,12 +135,14 @@ export function mapAvailabilityWithBookings(
           (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60000
         )
 
+        const isBlocked = booking.serviceId === 'block-service'
+
         return {
           startTime: start,
           duration,
-          type: 'booked' as const,
+          type: isBlocked ? 'blocked' : 'booked',
           data: { customer: booking.customerName },
-        }
+        } as TimelineSlot
       })
 
     const availableSlots = worker.slots.map(slot => ({
@@ -144,3 +165,5 @@ export function mapAvailabilityWithBookings(
     }
   })
 }
+
+

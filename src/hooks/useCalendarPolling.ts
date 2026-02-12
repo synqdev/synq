@@ -53,6 +53,7 @@ interface AdminCalendarData {
     endsAt: string
     workerId: string
     resourceId: string
+    serviceId: string
     customerName: string
     customerEmail: string
     serviceName: string
@@ -172,6 +173,7 @@ export function useCalendarPolling({
         workerId: worker.id,
         resourceId: slot.availableResourceIds[0],
         isAvailable: slot.availableResourceIds.length > 0,
+        booking: null,
       }))
     )
 
@@ -199,6 +201,7 @@ export function useCalendarPolling({
     endsAt: new Date(b.endsAt),
     workerId: b.workerId,
     resourceId: b.resourceId,
+    serviceId: b.serviceId,
     customerName: b.customerName,
     serviceName: b.serviceName,
     status: b.status,
@@ -247,7 +250,7 @@ export function useAdaptivePolling(baseInterval: number = 10000): number {
   const [interval, setIntervalState] = useState(baseInterval)
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: ReturnType<typeof setTimeout>
 
     const handleActivity = () => {
       setIntervalState(baseInterval) // Fast polling on activity

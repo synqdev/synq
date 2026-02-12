@@ -13,13 +13,18 @@
   },
   "booking": {
     "title": "予約",
-    "selectTime": "時間を選択",
+    "selectTime": "時間を選択してください",
     "selectService": "サービスを選択",
     "selectWorker": "スタッフを選択",
-    "confirm": "確定",
+    "confirm": "予約する",
     "confirmed": "予約確定",
     "cancelled": "キャンセル済み",
-    "pending": "確認中"
+    "pending": "確認中",
+    "emailSent": "確認メールを送信しました",
+    "emailFailed": "確認メールの送信に失敗しました",
+    "noSlots": "この日は予約可能な枠がありません",
+    "selectedSlot": "選択中",
+    "bookingError": "予約に失敗しました。もう一度お試しください。"
   },
   "admin": {
     "title": "管理画面",
@@ -41,5 +46,29 @@
     "title": "SYNQへようこそ",
     "subtitle": "スマートな予約管理システム",
     "bookNow": "今すぐ予約"
+  },
+  "register": {
+    "title": "お客様登録",
+    "subtitle": "予約を開始するには、下記の情報をご入力ください",
+    "email": "メールアドレス",
+    "name": "お名前",
+    "phone": "電話番号（任意）",
+    "emailPlaceholder": "example@email.com",
+    "namePlaceholder": "山田 太郎",
+    "phonePlaceholder": "090-1234-5678",
+    "formError": "登録に失敗しました。もう一度お試しください。"
+  },
+  "confirmation": {
+    "title": "予約確定",
+    "subtitle": "ご予約ありがとうございます",
+    "bookingDetails": "予約詳細",
+    "service": "サービス",
+    "worker": "担当スタッフ",
+    "dateTime": "日時",
+    "status": "ステータス",
+    "bookAnother": "別の予約をする",
+    "backToHome": "ホームに戻る",
+    "notFound": "予約が見つかりませんでした",
+    "notFoundMessage": "予約IDが正しいかご確認ください"
   }
 }

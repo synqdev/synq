@@ -5,7 +5,7 @@ import { Spinner } from './spinner'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Visual style variant */
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'iso'
   /** Size variant */
   size?: 'sm' | 'md' | 'lg'
   /** Show loading spinner and disable button */
@@ -21,6 +21,8 @@ const variantClasses = {
     'border-2 border-primary-500 text-primary-500 hover:bg-primary-50 focus-visible:ring-primary-500 disabled:border-primary-300 disabled:text-primary-300',
   ghost:
     'text-secondary-700 hover:bg-secondary-100 focus-visible:ring-secondary-500 disabled:text-secondary-400',
+  iso:
+    'bg-white text-black border-2 border-black rounded-xl font-black hover:bg-gray-100 transition-colors h-12 px-6',
 } as const
 
 const sizeClasses = {

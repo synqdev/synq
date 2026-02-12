@@ -7,11 +7,18 @@ const intlMiddleware = createIntlMiddleware(routing)
 /**
  * Middleware for i18n routing and admin route protection.
  *
- * Admin routes (except login) require a valid session cookie.
- * If no session exists, redirect to admin login.
+ * Note: Rate limiting is handled in individual API routes (not middleware)
+ * because Next.js Edge Runtime middleware cannot use Node.js-specific packages
+ * like @upstash/redis.
+ *
+ * - Admin routes (except login) require a valid session cookie
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ==========================================================================
+  // ADMIN ROUTE PROTECTION
+  // ==========================================================================
 
   // Check if admin route (after locale prefix, excluding login)
   // Matches: /ja/admin/dashboard, /en/admin/dashboard, etc.
@@ -35,10 +42,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Match all pathnames except for
-  // - api routes
+  // Match all pathnames except for:
   // - _next (Next.js internals)
   // - _vercel (Vercel internals)
   // - static files (images, favicon, etc.)
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  // Note: api routes ARE included for rate limiting
+  matcher: ['/((?!_next|_vercel|.*\\..*).*)'],
 }

@@ -11,10 +11,12 @@
  * - Retry logic for P2034 (serialization failure) errors
  * - Zod validation before database operations
  * - Auto-assignment of resources when not specified
+ * - Sentry error tracking for production monitoring
  */
 
 import { prisma } from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
+import * as Sentry from '@sentry/nextjs';
 import {
   createBookingSchema,
   cancelBookingSchema,
@@ -193,6 +195,22 @@ export async function createBooking(
         continue;
       }
 
+      // Capture non-retryable errors in Sentry
+      Sentry.captureException(error, {
+        tags: {
+          service: 'booking',
+          operation: 'createBooking'
+        },
+        extra: {
+          customerId: validated.customerId,
+          workerId: validated.workerId,
+          serviceId: validated.serviceId,
+          startsAt: startsAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+          attempt,
+        },
+      });
+
       // Return error for non-retryable errors
       if (error instanceof Error) {
         return { success: false, error: error.message };
@@ -292,6 +310,17 @@ export async function cancelBooking(
 
     return { success: true };
   } catch (error) {
+    // Capture errors in Sentry
+    Sentry.captureException(error, {
+      tags: {
+        service: 'booking',
+        operation: 'cancelBooking'
+      },
+      extra: {
+        bookingId: validated.bookingId,
+      },
+    });
+
     if (error instanceof Error) {
       return { success: false, error: error.message };
     }

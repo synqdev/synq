@@ -13,13 +13,18 @@
   },
   "booking": {
     "title": "Booking",
-    "selectTime": "Select time",
+    "selectTime": "Please select a time slot",
     "selectService": "Select service",
     "selectWorker": "Select worker",
-    "confirm": "Confirm",
+    "confirm": "Book Now",
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
-    "pending": "Pending"
+    "pending": "Pending",
+    "emailSent": "Confirmation email sent",
+    "emailFailed": "Failed to send confirmation email",
+    "noSlots": "No available slots for this date",
+    "selectedSlot": "Selected",
+    "bookingError": "Booking failed. Please try again."
   },
   "admin": {
     "title": "Admin",
@@ -40,5 +45,29 @@
   "welcome": {
     "title": "Welcome to SYNQ",
     "subtitle": "Smart booking management system"
+  },
+  "register": {
+    "title": "Customer Registration",
+    "subtitle": "Enter your details to start booking",
+    "email": "Email",
+    "name": "Name",
+    "phone": "Phone (optional)",
+    "emailPlaceholder": "example@email.com",
+    "namePlaceholder": "John Smith",
+    "phonePlaceholder": "090-1234-5678",
+    "formError": "Registration failed. Please try again."
+  },
+  "confirmation": {
+    "title": "Booking Confirmed",
+    "subtitle": "Thank you for your booking",
+    "bookingDetails": "Booking Details",
+    "service": "Service",
+    "worker": "Staff",
+    "dateTime": "Date & Time",
+    "status": "Status",
+    "bookAnother": "Book Another",
+    "backToHome": "Back to Home",
+    "notFound": "Booking Not Found",
+    "notFoundMessage": "Please check the booking ID"
   }
 }

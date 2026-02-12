@@ -84,11 +84,12 @@ export async function updateBooking(formData: FormData) {
 /**
  * Block a worker's time slot.
  *
- * Creates a WorkerSchedule entry with isAvailable=false.
- * This prevents bookings during the blocked period.
+ * Creates a booking using system entities (SYSTEM_BLOCKER customer + BLOCK_SERVICE).
+ * This prevents user bookings during the blocked period through the double-bottleneck logic.
+ * Blocked time appears as bookings on the admin calendar.
  *
  * @param formData - Form data with workerId, date, startTime, endTime
- * @returns Success status with the created schedule ID
+ * @returns Success status with the created booking ID
  * @throws Error if not authenticated or validation fails
  */
 export async function blockWorkerTime(formData: FormData) {
@@ -98,33 +99,59 @@ export async function blockWorkerTime(formData: FormData) {
   const raw = Object.fromEntries(formData)
   const parsed = blockTimeSchema.parse(raw)
 
-  const schedule = await prisma.workerSchedule.create({
+  // Parse start and end times
+  const [startHours, startMins] = parsed.startTime.split(':').map(Number)
+  const [endHours, endMins] = parsed.endTime.split(':').map(Number)
+
+  const startsAt = new Date(parsed.date)
+  startsAt.setHours(startHours, startMins, 0, 0)
+
+  const endsAt = new Date(parsed.date)
+  endsAt.setHours(endHours, endMins, 0, 0)
+
+  // Create booking with system entities
+  const booking = await prisma.booking.create({
     data: {
+      customerId: '00000000-0000-0000-0000-000000000000', // SYSTEM_BLOCKER
+      serviceId: 'block-service', // BLOCK_SERVICE
       workerId: parsed.workerId,
-      specificDate: parsed.date,
-      startTime: parsed.startTime,
-      endTime: parsed.endTime,
-      isAvailable: false, // This marks blocked time
+      resourceId: null, // Block doesn't require specific resource
+      startsAt,
+      endsAt,
+      status: 'CONFIRMED',
     },
   })
 
   revalidatePath('/admin/dashboard')
-  return { success: true, scheduleId: schedule.id }
+  return { success: true, bookingId: booking.id }
 }
 
 /**
  * Remove a blocked time slot.
  *
- * @param scheduleId - UUID of the WorkerSchedule to delete
+ * Deletes the booking created by blockWorkerTime.
+ * Only works for system block bookings (BLOCK_SERVICE).
+ *
+ * @param bookingId - UUID of the booking to delete
  * @returns Success status
- * @throws Error if not authenticated or schedule not found
+ * @throws Error if not authenticated or booking not found
  */
-export async function removeBlockedTime(scheduleId: string) {
+export async function removeBlockedTime(bookingId: string) {
   const isAdmin = await getAdminSession()
   if (!isAdmin) throw new Error('Unauthorized')
 
-  await prisma.workerSchedule.delete({
-    where: { id: scheduleId },
+  // Verify this is a system block booking before deleting
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { serviceId: true },
+  })
+
+  if (booking?.serviceId !== 'block-service') {
+    throw new Error('Not a system block booking')
+  }
+
+  await prisma.booking.delete({
+    where: { id: bookingId },
   })
 
   revalidatePath('/admin/dashboard')

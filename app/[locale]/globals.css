@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Bahnschrift';
+  src: url('/fonts/BAHNSCHRIFT.TTF') format('truetype');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 /* Tailwind v4 theme configuration */
 @theme {
   /* Primary: Blue-ish for actions */
@@ -148,4 +156,8 @@ html {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.font-bahnschrift {
+  font-family: 'Bahnschrift', 'Arial Narrow', 'Franklin Gothic Medium', system-ui, sans-serif;
 }

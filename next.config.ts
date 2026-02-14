@@ -14,6 +14,20 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   // instrumentationHook is enabled by default in Next.js 15.5+
+  webpack: (config: { ignoreWarnings?: Array<RegExp | { module?: RegExp; message?: RegExp }> }) => {
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      {
+        module: /@opentelemetry\/instrumentation/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+      {
+        module: /@prisma\/instrumentation/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+    ]
+    return config
+  },
 }
 
 // Sentry configuration options

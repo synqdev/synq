@@ -43,7 +43,7 @@ export default async function ServicesPage({ params }: PageProps) {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8 font-bahnschrift">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-secondary-900">{t('title')}</h1>
       </div>

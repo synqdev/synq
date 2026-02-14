@@ -391,54 +391,16 @@ export function AdminDashboardPrototypeClient({
 
   const updateUrlTab = (id: string) => {
     const next = new URLSearchParams(searchParams.toString())
-<<<<<<< HEAD
-    next.set('date', activeDateStr)
-    next.set('tab', id)
-=======
     next.set('tab', id)
     if (id === 'calendar') {
       next.set('date', activeDateStr)
     } else {
       next.delete('date')
     }
->>>>>>> 499d98f (fix(ui): clean admin prototype panel tabs and scrolling)
     router.replace(`/${locale}/admin/dashboard/new?${next.toString()}`)
   }
 
   const panelContent = activeTabId === 'workers' ? (
-<<<<<<< HEAD
-    <div className="h-full overflow-auto p-4">
-      <div className="space-y-4">
-        <CrudPanelSection title="Add Worker">
-          <WorkerForm mode="create" />
-        </CrudPanelSection>
-        <CrudPanelSection title="Workers">
-          <WorkerTable workers={initialWorkerCrud} />
-        </CrudPanelSection>
-      </div>
-    </div>
-  ) : activeTabId === 'services' ? (
-    <div className="h-full overflow-auto p-4">
-      <div className="space-y-4">
-        <CrudPanelSection title="Add Service">
-          <ServiceForm mode="create" />
-        </CrudPanelSection>
-        <CrudPanelSection title="Services">
-          <ServiceTable services={initialServiceCrud} />
-        </CrudPanelSection>
-      </div>
-    </div>
-  ) : activeTabId === 'resources' ? (
-    <div className="h-full overflow-auto p-4">
-      <div className="space-y-4">
-        <CrudPanelSection title="Add Resource">
-          <ResourceForm mode="create" />
-        </CrudPanelSection>
-        <CrudPanelSection title="Resources">
-          <ResourceTable resources={initialResourceCrud} />
-        </CrudPanelSection>
-      </div>
-=======
     <div className="space-y-4">
       <CrudPanelSection title="Add Worker">
         <WorkerForm mode="create" />
@@ -448,7 +410,7 @@ export function AdminDashboardPrototypeClient({
       </CrudPanelSection>
     </div>
   ) : activeTabId === 'services' ? (
-    <div className="space-y-4">
+    <div className="space-y-4 font-bahnschrift">
       <CrudPanelSection title="Add Service">
         <ServiceForm mode="create" />
       </CrudPanelSection>
@@ -464,7 +426,6 @@ export function AdminDashboardPrototypeClient({
       <CrudPanelSection title="Resources">
         <ResourceTable resources={initialResourceCrud} />
       </CrudPanelSection>
->>>>>>> 499d98f (fix(ui): clean admin prototype panel tabs and scrolling)
     </div>
   ) : undefined
 

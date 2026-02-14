@@ -16,7 +16,6 @@
 
 import { prisma } from '@/lib/db/client';
 import { Prisma } from '@prisma/client';
-
 import * as Sentry from '@sentry/nextjs';
 import {
   createBookingSchema,
@@ -29,6 +28,11 @@ import {
  * Maximum number of retry attempts for serialization failures
  */
 const MAX_RETRIES = 3;
+
+function captureBookingError(error: unknown, context: Record<string, unknown>) {
+  Sentry.captureException(error);
+  console.error('[booking.service] operation failed', { error, ...context });
+}
 
 /**
  * Base delay in milliseconds between retries (multiplied by attempt number)
@@ -195,20 +199,15 @@ export async function createBooking(
         continue;
       }
 
-      // Capture non-retryable errors in Sentry
-      Sentry.captureException(error, {
-        tags: {
-          service: 'booking',
-          operation: 'createBooking'
-        },
-        extra: {
-          customerId: validated.customerId,
-          workerId: validated.workerId,
-          serviceId: validated.serviceId,
-          startsAt: startsAt.toISOString(),
-          endsAt: endsAt.toISOString(),
-          attempt,
-        },
+      captureBookingError(error, {
+        service: 'booking',
+        operation: 'createBooking',
+        customerId: validated.customerId,
+        workerId: validated.workerId,
+        serviceId: validated.serviceId,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        attempt,
       });
 
       // Return error for non-retryable errors
@@ -312,14 +311,10 @@ export async function cancelBooking(
     return { success: true };
   } catch (error) {
     // Capture errors in Sentry
-    Sentry.captureException(error, {
-      tags: {
-        service: 'booking',
-        operation: 'cancelBooking'
-      },
-      extra: {
-        bookingId: validated.bookingId,
-      },
+    captureBookingError(error, {
+      service: 'booking',
+      operation: 'cancelBooking',
+      bookingId: validated.bookingId,
     });
 
     if (error instanceof Error) {

@@ -50,6 +50,7 @@ function getSlotsForWorker(
       time,
       workerId,
       isAvailable: true,
+      booking: null,
     }
   })
 }

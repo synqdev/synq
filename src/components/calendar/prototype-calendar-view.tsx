@@ -191,7 +191,7 @@ export function TimetableWithTabs({
   }
 
   return (
-    <div className={`relative flex h-full items-start gap-[2px] ${className}`}>
+    <div className={`relative flex h-full min-h-0 items-start gap-[2px] ${className}`}>
       <SettingsRail
         items={sideActions}
         activeItemId={activeSideActionId}
@@ -216,7 +216,7 @@ export function TimetableWithTabs({
         snapMinutes={60}
         allowOverlap={false}
         showFrame={false}
-        className="h-full flex-1"
+        className="h-full min-h-0 flex-1"
       />
     </div>
   )

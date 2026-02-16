@@ -12,6 +12,32 @@ interface AdminDashboardPageProps {
   searchParams: Promise<{ date?: string }>
 }
 
+interface WorkerRow {
+  id: string
+  name: string
+  nameEn: string | null
+}
+
+interface BookingRow {
+  id: string
+  workerId: string
+  startsAt: Date
+  endsAt: Date
+  status: string
+  serviceId: string
+  customer: {
+    name: string
+    email: string
+  }
+  service: {
+    name: string
+    nameEn: string | null
+  }
+  worker: {
+    name: string
+  }
+}
+
 /**
  * Admin Dashboard Page
  *
@@ -70,7 +96,7 @@ export default async function AdminDashboardPage({
   ])
 
   // Transform to mapper format
-  const adminBookings: AdminBooking[] = bookings.map((booking) => ({
+  const adminBookings: AdminBooking[] = bookings.map((booking: BookingRow) => ({
     id: booking.id,
     workerId: booking.workerId,
     startsAt: booking.startsAt,
@@ -82,7 +108,7 @@ export default async function AdminDashboardPage({
 
   // Use mapper to transform for EmployeeTimeline
   const timelineWorkers = mapAdminBookingsToCalendar(
-    workers.map((w) => ({ id: w.id, name: w.name, nameEn: w.nameEn ?? undefined })),
+    workers.map((w: WorkerRow) => ({ id: w.id, name: w.name, nameEn: w.nameEn ?? undefined })),
     adminBookings
   )
 

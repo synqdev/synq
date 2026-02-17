@@ -17,11 +17,11 @@ datasource db {
 
 model Service {
   id          String    @id @default(uuid())
-  name        String    // Primary (Japanese) e.g., "指圧"
-  nameEn      String?   // Fallback (English) e.g., "Shiatsu"
+  name        String // Primary (Japanese) e.g., "指圧"
+  nameEn      String? // Fallback (English) e.g., "Shiatsu"
   description String?
-  duration    Int       // Minutes
-  price       Int       // Yen
+  duration    Int // Minutes
+  price       Int // Yen
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -29,24 +29,25 @@ model Service {
 }
 
 model Worker {
-  id        String           @id @default(uuid())
-  name      String           // e.g., "田中"
-  nameEn    String?          // e.g., "Tanaka" (English display)
-  isActive  Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  bookings  Booking[]
-  schedules WorkerSchedule[]
+  id                String           @id @default(uuid())
+  name              String // e.g., "田中"
+  nameEn            String? // e.g., "Tanaka" (English display)
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  bookings          Booking[]
+  schedules         WorkerSchedule[]
+  assignedCustomers Customer[]       @relation("CustomerAssignedStaff")
 }
 
 model WorkerSchedule {
   id           String    @id @default(uuid())
   workerId     String
   worker       Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
-  dayOfWeek    Int?      // 0=Sunday, 6=Saturday (recurring)
+  dayOfWeek    Int? // 0=Sunday, 6=Saturday (recurring)
   specificDate DateTime? // One-off block/availability (date only, time ignored)
-  startTime    String    // "09:00" format (HH:mm)
-  endTime      String    // "18:00" format (HH:mm)
+  startTime    String // "09:00" format (HH:mm)
+  endTime      String // "18:00" format (HH:mm)
   isAvailable  Boolean   @default(true) // false = blocked time
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -57,7 +58,7 @@ model WorkerSchedule {
 
 model Resource {
   id        String    @id @default(uuid())
-  name      String    // e.g., "Bed 1", "ベッド1"
+  name      String // e.g., "Bed 1", "ベッド1"
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -65,16 +66,23 @@ model Resource {
 }
 
 model Customer {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  phone         String?
-  name          String
-  locale        String    @default("ja") // "en" or "ja"
-  ticketBalance Int       @default(0)    // Multi-session tickets (回数券)
-  notes         String?   // Admin notes
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  bookings      Booking[]
+  id                String    @id @default(uuid())
+  email             String    @unique
+  phone             String?
+  name              String
+  locale            String    @default("ja") // "en" or "ja"
+  ticketBalance     Int       @default(0) // Multi-session tickets (回数券)
+  notes             String? // Admin notes
+  assignedStaffId   String?
+  visitCount        Int       @default(0)
+  lastVisitDate     DateTime?
+  outstandingAmount Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  bookings          Booking[]
+  assignedStaff     Worker?   @relation("CustomerAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+
+  @@index([assignedStaffId])
 }
 
 model Booking {
@@ -83,7 +91,7 @@ model Booking {
   updatedAt DateTime @updatedAt
   startsAt  DateTime
   endsAt    DateTime
-  status    String   // "CONFIRMED", "CANCELLED", "NOSHOW", "PENDING"
+  status    String // "CONFIRMED", "CANCELLED", "NOSHOW", "PENDING"
   version   Int      @default(0) // Optimistic locking for concurrency
 
   workerId   String

@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 01.1: Post-MVP UI Enhancements
-**Phase 2 status:** Not started (intentionally deferred until Phase 01.1 completion)
+**Current focus:** Phase 2: Parity
+**Phase 2 status:** In progress (started before finishing Phase 01.1 by explicit priority change)
 
 ## Current Position
 
-Phase: 01.1 of 4 (Post-MVP UI Enhancements)
-Plan: 0 of 1 (in progress)
+Phase: 2 of 4 (Parity)
+Plan: 2 of 8 (in progress: 02-02 customer list)
 Status: Active execution
-Last activity: 2026-02-11 - Calendar prototype componentization and Storybook parity iteration
+Last activity: 2026-02-17 - Completed 02-01 atomic schema PR prep; moving to 02-02
 
-Progress: [#####-----] 50%
+Progress: [#######---] 65%
 
 ## Performance Metrics
 
@@ -106,6 +106,8 @@ Recent decisions affecting current work:
 
 - Phase 1.1 inserted after Phase 1: Post-MVP UI enhancements — prototype calendar, data table, updated types and exports (URGENT)
 - Created executable plan `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
+- Priority updated on 2026-02-17: Start Phase 2 before completing Phase 01.1
+- Delivery workflow updated on 2026-02-17: one task per branch + one PR per task for automated review
 
 ### Pending Todos
 
@@ -117,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Aligning settings rail and timetable composition in prototype calendar
-Resume file: `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
+Last session: 2026-02-17
+Stopped at: Phase 2 plan 02-01 atomic schema branch setup
+Resume file: `.planning/phases/02-parity/02-01-PLAN.md`

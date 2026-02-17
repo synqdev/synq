@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 2 of 4 (Parity)
-Plan: 2 of 8 (in progress: 02-02 customer list)
+Plan: 3 of 8 (in progress: 02-03 customer detail)
 Status: Active execution
-Last activity: 2026-02-17 - Completed 02-01 atomic schema PR prep; moving to 02-02
+Last activity: 2026-02-17 - Completed 02-02 customer list (DataTable-based) and API route
 
-Progress: [#######---] 65%
+Progress: [########--] 70%
 
 ## Performance Metrics
 
@@ -101,6 +101,7 @@ Recent decisions affecting current work:
 - Zod validation allows non-UUID IDs for worker/booking tests (2026-02-06)
 - auth.signOut uses i18n messages (2026-02-06)
 - Booking calendar uses serviceDuration from API (no hardcoded 60) (2026-02-06)
+- Admin CRM list uses shared Storybook DataTable component for sortable table UI (2026-02-17)
 
 ### Roadmap Evolution
 
@@ -120,5 +121,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 2 plan 02-01 atomic schema branch setup
-Resume file: `.planning/phases/02-parity/02-01-PLAN.md`
+Stopped at: Phase 2 plan 02-02 completed, preparing 02-03
+Resume file: `.planning/phases/02-parity/02-03-PLAN.md`

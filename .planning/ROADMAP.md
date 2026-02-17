@@ -92,7 +92,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Atomic CRM schema: customer ownership + metrics fields (Wave 1)
-- [ ] 02-02-PLAN.md — Customer list with search, filter, pagination (Wave 2)
+- [x] 02-02-PLAN.md — Customer list with search, filter, pagination (Wave 2)
 - [ ] 02-05-PLAN.md — Sales reporting dashboard (revenue + worker metrics) (Wave 2)
 - [ ] 02-03-PLAN.md — Customer detail with booking history and notes (Wave 3)
 - [ ] 02-04-PLAN.md — Intake form upload (Supabase Storage) (Wave 3)
@@ -126,5 +126,5 @@ Current priority order: 1 -> 2 -> 01.1 -> 3 (01.1 temporarily deferred)
 |-------|----------------|--------|-----------|
 | 1. MVP | 14/14 | Complete | 2026-02-05 |
 | 01.1 Post-MVP UI Enhancements | 0/1 | Deferred | - |
-| 2. Parity | 1/8 | In Progress | - |
+| 2. Parity | 2/8 | In Progress | - |
 | 3. Differentiation | 0/? | Not started | - |

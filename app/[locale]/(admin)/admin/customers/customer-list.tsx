@@ -73,6 +73,8 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [assignedStaffId, setAssignedStaffId] = useState('')
   const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -84,7 +86,14 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
 
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, assignedStaffId])
+  }, [debouncedSearch, assignedStaffId, sortBy, sortOrder])
+
+  const handleSortChange = (newSortState: { key: string; direction: 'asc' | 'desc' } | null) => {
+    if (newSortState) {
+      setSortBy(newSortState.key)
+      setSortOrder(newSortState.direction)
+    }
+  }
 
   const queryString = useMemo(() => {
     const query = new URLSearchParams()
@@ -92,10 +101,10 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
     if (assignedStaffId) query.set('assignedStaffId', assignedStaffId)
     query.set('page', String(page))
     query.set('pageSize', '25')
-    query.set('sortBy', 'createdAt')
-    query.set('sortOrder', 'desc')
+    query.set('sortBy', sortBy)
+    query.set('sortOrder', sortOrder)
     return query.toString()
-  }, [assignedStaffId, debouncedSearch, page])
+  }, [assignedStaffId, debouncedSearch, page, sortBy, sortOrder])
 
   const { data, error, isLoading } = useSWR<CustomerListResponse>(
     `/api/admin/customers?${queryString}`,
@@ -243,7 +252,8 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
             data={customers}
             columns={columns}
             caption={t('title')}
-            defaultSort={{ key: 'createdAt', direction: 'desc' }}
+            sortState={{ key: sortBy, direction: sortOrder }}
+            onSortChange={handleSortChange}
             className="border-secondary-200"
           />
 

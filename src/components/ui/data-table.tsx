@@ -21,6 +21,11 @@ export interface DataTableProps<T> {
     key: string
     direction?: SortDirection
   }
+  sortState?: {
+    key: string
+    direction: SortDirection
+  } | null
+  onSortChange?: (sortState: { key: string; direction: SortDirection } | null) => void
   caption?: string
   className?: string
   rowClassName?: (row: T, index: number) => string
@@ -30,19 +35,25 @@ export interface DataTableProps<T> {
 /**
  * Generic data table with optional sortable headers.
  * Sorting toggles asc -> desc when a header is clicked repeatedly.
+ * Can be used in controlled mode (sortState + onSortChange) or uncontrolled mode (defaultSort).
  */
 export function DataTable<T>({
   data,
   columns,
   defaultSort,
+  sortState: controlledSortState,
+  onSortChange,
   caption,
   className = '',
   rowClassName,
   striped = true,
 }: DataTableProps<T>) {
-  const [sortState, setSortState] = useState<{ key: string; direction: SortDirection } | null>(
+  const [internalSortState, setInternalSortState] = useState<{ key: string; direction: SortDirection } | null>(
     defaultSort ? { key: defaultSort.key, direction: defaultSort.direction ?? 'asc' } : null
   )
+
+  // Use controlled state if provided, otherwise use internal state
+  const sortState = controlledSortState !== undefined ? controlledSortState : internalSortState
 
   const sortedRows = useMemo(() => {
     if (!sortState) return data
@@ -80,16 +91,24 @@ export function DataTable<T>({
   const toggleSort = (column: DataTableColumn<T>) => {
     if (!column.sortable) return
 
-    setSortState((current) => {
-      if (!current || current.key !== column.key) {
-        return { key: column.key, direction: 'asc' }
+    const newSortState = (() => {
+      if (!sortState || sortState.key !== column.key) {
+        return { key: column.key, direction: 'asc' as SortDirection }
       }
 
       return {
         key: column.key,
-        direction: current.direction === 'asc' ? 'desc' : 'asc',
+        direction: (sortState.direction === 'asc' ? 'desc' : 'asc') as SortDirection,
       }
-    })
+    })()
+
+    if (onSortChange) {
+      // Controlled mode: notify parent
+      onSortChange(newSortState)
+    } else {
+      // Uncontrolled mode: update internal state
+      setInternalSortState(newSortState)
+    }
   }
 
   const alignmentClasses: Record<NonNullable<DataTableColumn<T>['align']>, string> = {

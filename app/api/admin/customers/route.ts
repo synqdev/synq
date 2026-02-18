@@ -35,6 +35,14 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const result = await getCustomerList(parsed.data)
-  return NextResponse.json(result)
+  try {
+    const result = await getCustomerList(parsed.data)
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error('Failed to fetch customer list:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch customers' },
+      { status: 500 }
+    )
+  }
 }

@@ -9,23 +9,11 @@ import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
+import type { CustomerListItem } from '@/lib/services/customer.service'
 
 interface WorkerOption {
   id: string
   name: string
-}
-
-interface CustomerListItem {
-  id: string
-  name: string
-  email: string
-  phone: string | null
-  assignedStaffName: string | null
-  visitCount: number
-  lastVisitDate: string | null
-  nextBookingDate: string | null
-  createdAt: string
-  outstandingAmount: number
 }
 
 interface CustomerListResponse {
@@ -78,6 +66,7 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
+      setPage(1)
       setDebouncedSearch(search.trim())
     }, 300)
 
@@ -86,7 +75,7 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
 
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, assignedStaffId, sortBy, sortOrder])
+  }, [assignedStaffId, sortBy, sortOrder])
 
   const handleSortChange = (newSortState: { key: string; direction: 'asc' | 'desc' } | null) => {
     if (newSortState) {
@@ -252,7 +241,8 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
             data={customers}
             columns={columns}
             caption={t('title')}
-            defaultSort={{ key: 'createdAt', direction: 'desc' }}
+            sortState={{ key: sortBy, direction: sortOrder }}
+            onSortChange={handleSortChange}
             className="border-secondary-200 !overflow-visible"
           />
 

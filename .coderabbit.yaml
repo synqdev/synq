@@ -1,4 +1,6 @@
 reviews:
-  base_branches:
-    - main
-    - phase2
+  auto_review:
+    enabled: true
+    base_branches:
+      - main
+      - phase2

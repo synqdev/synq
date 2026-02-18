@@ -72,6 +72,7 @@
     "settings": "設定",
     "nav": {
       "dashboard": "ダッシュボード",
+      "customers": "顧客管理",
       "workers": "スタッフ",
       "services": "サービス",
       "resources": "ベッド"
@@ -134,6 +135,20 @@
       "add": "新規ベッド追加",
       "notFound": "ベッドがありません",
       "confirmDelete": "このベッドを削除しますか？"
+    },
+    "customersPage": {
+      "title": "顧客管理",
+      "searchPlaceholder": "名前・メール・電話番号で検索",
+      "assignedStaff": "担当者",
+      "allStaff": "全員",
+      "visitCount": "来店回数",
+      "lastVisit": "最終来店日",
+      "registeredAt": "登録日",
+      "outstandingAmount": "未収金額",
+      "noCustomers": "顧客が見つかりません",
+      "previous": "前へ",
+      "next": "次へ",
+      "pageStatus": "ページ {page} / {totalPages}（合計 {total} 件）"
     }
   },
   "auth": {

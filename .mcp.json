@@ -21,6 +21,13 @@
       "env": {
         "FIGMA_API_KEY": "${FIGMA_API_KEY}"
       }
+    },
+    "vercel": {
+      "command": "npx",
+      "args": ["-y", "vercel-mcp@latest"],
+      "env": {
+        "VERCEL_API_TOKEN": "${VERCEL_API_TOKEN}"
+      }
     }
   }
 }

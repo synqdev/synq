@@ -252,9 +252,8 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
             data={customers}
             columns={columns}
             caption={t('title')}
-            sortState={{ key: sortBy, direction: sortOrder }}
-            onSortChange={handleSortChange}
-            className="border-secondary-200"
+            defaultSort={{ key: 'createdAt', direction: 'desc' }}
+            className="border-secondary-200 !overflow-visible"
           />
 
           <div className="flex items-center justify-between gap-4">

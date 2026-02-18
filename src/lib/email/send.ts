@@ -8,8 +8,11 @@
 import { Resend } from 'resend'
 import BookingConfirmation, { getSubject } from '@/emails/booking-confirmation'
 
-// Initialize Resend client (lazy - only when API key is available)
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 export interface SendBookingConfirmationParams {
   to: string
@@ -60,7 +63,7 @@ export async function sendBookingConfirmation(
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: process.env.EMAIL_FROM || 'SYNQ <onboarding@resend.dev>',
       to: recipientEmail,
       subject: getSubject(locale),

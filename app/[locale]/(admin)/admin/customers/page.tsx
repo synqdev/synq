@@ -33,7 +33,7 @@ export default async function CustomersPage({ params }: PageProps) {
         <h1 className="text-2xl font-bold text-secondary-900">{t('title')}</h1>
       </div>
 
-      <Card title={t('title')}>
+      <Card className="!overflow-visible">
         <CustomerList locale={locale} workers={workers} />
       </Card>
     </div>

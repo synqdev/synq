@@ -23,7 +23,17 @@ export const registerCustomerSchema = z.object({
   locale: z.enum(['ja', 'en']).default('ja'),
 });
 
+export const customerListQuerySchema = z.object({
+  search: z.string().trim().max(100).optional(),
+  assignedStaffId: z.string().trim().min(1).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(['name', 'visitCount', 'lastVisitDate', 'createdAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 /**
  * Type inferred from registerCustomerSchema
  */
 export type RegisterCustomerInput = z.infer<typeof registerCustomerSchema>;
+export type CustomerListQueryInput = z.infer<typeof customerListQuerySchema>;

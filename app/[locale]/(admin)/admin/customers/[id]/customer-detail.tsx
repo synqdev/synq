@@ -120,16 +120,20 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
   }
 
   const handleSaveNotes = useCallback(async () => {
+    const savedNotes = notes
     setSaving(true)
     setSaveMessage(null)
     try {
       const res = await fetch(`/api/admin/customers/${customerId}/notes`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes }),
+        body: JSON.stringify({ notes: savedNotes }),
       })
       if (!res.ok) throw new Error('Save failed')
-      setNotesChanged(false)
+      // Only clear notesChanged if the notes haven't been modified since save started
+      if (notes === savedNotes) {
+        setNotesChanged(false)
+      }
       setSaveMessage(t('saved'))
       mutate()
     } catch {
@@ -243,7 +247,8 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
           onChange={(e) => handleNotesChange(e.target.value)}
           rows={4}
           maxLength={5000}
-          className="w-full rounded-lg border border-secondary-300 px-4 py-2 text-secondary-900 placeholder:text-secondary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          disabled={saving}
+          className="w-full rounded-lg border border-secondary-300 px-4 py-2 text-secondary-900 placeholder:text-secondary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder={t('notesPlaceholder')}
         />
         <div className="mt-2 flex items-center gap-3">
@@ -251,7 +256,7 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
             size="sm"
             onClick={handleSaveNotes}
             loading={saving}
-            disabled={!notesChanged}
+            disabled={!notesChanged || saving}
           >
             {tCommon('save')}
           </Button>

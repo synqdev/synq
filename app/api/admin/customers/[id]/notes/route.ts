@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { updateCustomerNotes, updateCustomerAssignedStaff } from '@/lib/services/customer.service'
+import { findCustomerById, updateCustomerNotes, updateCustomerAssignedStaff } from '@/lib/services/customer.service'
 import { updateCustomerNotesSchema } from '@/lib/validations/customer'
 
 export async function PUT(
@@ -13,6 +13,13 @@ export async function PUT(
   }
 
   const { id } = await params
+
+  // Pre-check customer exists before attempting updates
+  const existing = await findCustomerById(id)
+  if (!existing) {
+    return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+  }
+
   const body = await request.json()
   const parsed = updateCustomerNotesSchema.safeParse(body)
 

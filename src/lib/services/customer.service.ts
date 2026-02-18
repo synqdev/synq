@@ -114,14 +114,23 @@ export async function getCustomerDetail(id: string) {
 
   if (!customer) return null;
 
-  const confirmedBookings = customer.bookings.filter((b) => b.status === 'CONFIRMED');
-  const visitCount = confirmedBookings.length;
-  const pastBookings = confirmedBookings.filter((b) => b.startsAt <= new Date());
-  const lastVisitDate = pastBookings.length > 0 ? pastBookings[0].startsAt.toISOString() : null;
-  const upcomingBookings = confirmedBookings.filter((b) => b.startsAt > new Date());
-  const nextBookingDate = upcomingBookings.length > 0
-    ? upcomingBookings[upcomingBookings.length - 1].startsAt.toISOString()
-    : null;
+  // Compute metrics from full booking set, not the truncated 50-item display array
+  const now = new Date();
+  const [visitCount, lastVisit, nextBooking] = await Promise.all([
+    prisma.booking.count({ where: { customerId: id, status: 'CONFIRMED' } }),
+    prisma.booking.findFirst({
+      where: { customerId: id, status: 'CONFIRMED', startsAt: { lte: now } },
+      orderBy: { startsAt: 'desc' },
+      select: { startsAt: true },
+    }),
+    prisma.booking.findFirst({
+      where: { customerId: id, status: 'CONFIRMED', startsAt: { gt: now } },
+      orderBy: { startsAt: 'asc' },
+      select: { startsAt: true },
+    }),
+  ]);
+  const lastVisitDate = lastVisit?.startsAt ? lastVisit.startsAt.toISOString() : null;
+  const nextBookingDate = nextBooking?.startsAt ? nextBooking.startsAt.toISOString() : null;
 
   return {
     id: customer.id,

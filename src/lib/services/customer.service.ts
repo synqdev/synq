@@ -88,6 +88,89 @@ export async function findCustomerById(customerId: string) {
  * - lastVisitDate: max(startsAt) of CONFIRMED bookings
  * - nextBookingDate: nearest future CONFIRMED booking
  */
+/**
+ * Returns full customer detail with booking history for admin CRM view.
+ */
+export async function getCustomerDetail(id: string) {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      assignedStaff: { select: { id: true, name: true } },
+      bookings: {
+        orderBy: { startsAt: 'desc' },
+        take: 50,
+        select: {
+          id: true,
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          service: { select: { name: true, price: true } },
+          worker: { select: { name: true } },
+          resource: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  if (!customer) return null;
+
+  const confirmedBookings = customer.bookings.filter((b) => b.status === 'CONFIRMED');
+  const visitCount = confirmedBookings.length;
+  const pastBookings = confirmedBookings.filter((b) => b.startsAt <= new Date());
+  const lastVisitDate = pastBookings.length > 0 ? pastBookings[0].startsAt.toISOString() : null;
+  const upcomingBookings = confirmedBookings.filter((b) => b.startsAt > new Date());
+  const nextBookingDate = upcomingBookings.length > 0
+    ? upcomingBookings[upcomingBookings.length - 1].startsAt.toISOString()
+    : null;
+
+  return {
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    locale: customer.locale,
+    notes: customer.notes,
+    ticketBalance: customer.ticketBalance,
+    outstandingAmount: customer.outstandingAmount,
+    assignedStaff: customer.assignedStaff,
+    visitCount,
+    lastVisitDate,
+    nextBookingDate,
+    createdAt: customer.createdAt.toISOString(),
+    updatedAt: customer.updatedAt.toISOString(),
+    bookings: customer.bookings.map((b) => ({
+      id: b.id,
+      startsAt: b.startsAt.toISOString(),
+      endsAt: b.endsAt.toISOString(),
+      status: b.status,
+      serviceName: b.service.name,
+      servicePrice: b.service.price,
+      workerName: b.worker.name,
+      resourceName: b.resource.name,
+    })),
+  };
+}
+
+/**
+ * Updates customer notes.
+ */
+export async function updateCustomerNotes(id: string, notes: string) {
+  return prisma.customer.update({
+    where: { id },
+    data: { notes },
+  });
+}
+
+/**
+ * Updates customer assigned staff.
+ */
+export async function updateCustomerAssignedStaff(id: string, assignedStaffId: string | null) {
+  return prisma.customer.update({
+    where: { id },
+    data: { assignedStaffId },
+  });
+}
+
 export async function getCustomerList(params: GetCustomerListParams = {}) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 25));

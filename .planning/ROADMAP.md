@@ -91,7 +91,7 @@ Plans:
 **Plans:** 8 plans in 4 waves
 
 Plans:
-- [ ] 02-01-PLAN.md — Database schema migration (new tables + field extensions) (Wave 1)
+- [x] 02-01-PLAN.md — Atomic CRM schema: customer ownership + metrics fields (Wave 1)
 - [ ] 02-02-PLAN.md — Customer list with search, filter, pagination (Wave 2)
 - [ ] 02-05-PLAN.md — Sales reporting dashboard (revenue + worker metrics) (Wave 2)
 - [ ] 02-03-PLAN.md — Customer detail with booking history and notes (Wave 3)
@@ -120,11 +120,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 01.1 -> 2 -> 3
+Current priority order: 1 -> 2 -> 01.1 -> 3 (01.1 temporarily deferred)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. MVP | 14/14 | Complete | 2026-02-05 |
-| 01.1 Post-MVP UI Enhancements | 0/1 | In Progress | - |
-| 2. Parity | 0/8 | Not started | - |
+| 01.1 Post-MVP UI Enhancements | 0/1 | Deferred | - |
+| 2. Parity | 1/8 | In Progress | - |
 | 3. Differentiation | 0/? | Not started | - |

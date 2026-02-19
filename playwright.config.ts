@@ -7,6 +7,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './__tests__/e2e',
+  globalTeardown: './__tests__/e2e/global-teardown.ts',
 
   /* Run tests in files in parallel */
   fullyParallel: true,

@@ -18,6 +18,7 @@ jest.mock('@/lib/storage/supabase-storage', () => ({
   deleteIntakeForm: jest.fn(),
 }));
 
+import { MedicalRecordContentType } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { getSignedUrl, deleteIntakeForm } from '@/lib/storage/supabase-storage';
 import {
@@ -40,7 +41,7 @@ describe('Medical Record Service', () => {
         itemId: 'item-1',
         imageUrl: 'cust-1/123-file.pdf',
         enteredBy: 'admin',
-        item: { id: 'item-1', title: 'Intake Form', contentType: 'image' },
+        item: { id: 'item-1', title: 'Intake Form', contentType: MedicalRecordContentType.IMAGE },
       };
       (prisma.medicalRecord.create as jest.Mock).mockResolvedValueOnce(mockRecord);
 
@@ -125,7 +126,7 @@ describe('Medical Record Service', () => {
           imageUrl: 'cust-1/file.pdf',
           enteredBy: 'admin',
           enteredAt: new Date('2024-06-01'),
-          item: { id: 'item-1', title: 'Intake', contentType: 'image' },
+          item: { id: 'item-1', title: 'Intake', contentType: MedicalRecordContentType.IMAGE },
         },
         {
           id: 'rec-2',
@@ -134,7 +135,7 @@ describe('Medical Record Service', () => {
           imageUrl: null,
           enteredBy: 'admin',
           enteredAt: new Date('2024-06-02'),
-          item: { id: 'item-2', title: 'Notes', contentType: 'text' },
+          item: { id: 'item-2', title: 'Notes', contentType: MedicalRecordContentType.TEXT },
         },
       ];
       (prisma.medicalRecord.findMany as jest.Mock).mockResolvedValueOnce(records);
@@ -157,7 +158,7 @@ describe('Medical Record Service', () => {
           imageUrl: 'cust-1/file.pdf',
           enteredBy: 'admin',
           enteredAt: new Date('2024-06-01'),
-          item: { id: 'item-1', title: 'Intake', contentType: 'image' },
+          item: { id: 'item-1', title: 'Intake', contentType: MedicalRecordContentType.IMAGE },
         },
       ];
       (prisma.medicalRecord.findMany as jest.Mock).mockResolvedValueOnce(records);

@@ -5,7 +5,7 @@ const BOM = '\uFEFF'
 
 export function generateCSV(headers: string[], rows: string[][]): string {
   const escape = (val: string) => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+    if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
       return `"${val.replace(/"/g, '""')}"`
     }
     return val

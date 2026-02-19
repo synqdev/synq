@@ -35,11 +35,15 @@ export function RankingsSection({ startDate, endDate }: RankingsSectionProps) {
   const t = useTranslations('admin.reportsPage')
   const url = `/api/admin/reports/rankings?startDate=${startDate}&endDate=${endDate}`
 
-  const { data, isLoading } = useSWR<{ rankings: WorkerRanking[] }>(url, fetcher)
+  const { data, isLoading, error } = useSWR<{ rankings: WorkerRanking[] }>(url, fetcher)
   const rankings = data?.rankings ?? []
 
   if (isLoading) {
     return <div className="py-4 text-center text-sm text-gray-500">{t('loading')}</div>
+  }
+
+  if (error) {
+    return <div className="py-4 text-center text-sm text-red-500">{t('error')}</div>
   }
 
   if (rankings.length === 0) {
@@ -80,7 +84,7 @@ export function RankingsSection({ startDate, endDate }: RankingsSectionProps) {
                 {w.rank === 1 ? (
                   <span className="text-gray-400">---</span>
                 ) : (
-                  <span className="text-red-500">{formatJPY(w.differenceFromFirst)}</span>
+                  <span className="text-red-500">-{formatJPY(Math.abs(w.differenceFromFirst))}</span>
                 )}
               </td>
             </tr>

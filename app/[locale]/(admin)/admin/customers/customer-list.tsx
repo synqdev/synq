@@ -116,6 +116,33 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
     [t, workers]
   )
 
+  const [downloading, setDownloading] = useState(false)
+
+  const handleExportCSV = useCallback(async () => {
+    const params = new URLSearchParams()
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    if (assignedStaffId) params.set('assignedStaffId', assignedStaffId)
+    setDownloading(true)
+    let url: string | null = null
+    try {
+      const res = await fetch(`/api/admin/export/customers?${params}`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') ?? 'customers.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      if (url) URL.revokeObjectURL(url)
+      setDownloading(false)
+    }
+  }, [debouncedSearch, assignedStaffId])
+
   const columns = useMemo<DataTableColumn<CustomerListItem>[]>(
     () => [
       {
@@ -217,27 +244,6 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
     )
   }
 
-  const handleExportCSV = useCallback(async () => {
-    const params = new URLSearchParams()
-    if (debouncedSearch) params.set('search', debouncedSearch)
-    if (assignedStaffId) params.set('assignedStaffId', assignedStaffId)
-    try {
-      const res = await fetch(`/api/admin/export/customers?${params}`)
-      if (!res.ok) return
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') ?? 'customers.csv'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Export failed:', error)
-    }
-  }, [debouncedSearch, assignedStaffId])
-
   return (
     <div className="space-y-4">
       <div className="flex items-end gap-3">
@@ -254,7 +260,7 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
             placeholder={t('assignedStaff')}
           />
         </div>
-        <Button variant="outline" size="sm" onClick={handleExportCSV}>
+        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={downloading} loading={downloading}>
           {t('exportCsv')}
         </Button>
       </div>

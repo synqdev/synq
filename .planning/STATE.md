@@ -18,6 +18,7 @@ Last activity: 2026-02-18 - Completed 02-03 (customer detail) and 02-04 (intake 
 Progress: [#####---] 50%
 
 ### Open PRs (targeting phase2)
+
 | # | Branch | Feature | Tests |
 |---|--------|---------|-------|
 | 26 | codex/phase2-02-03-customer-detail | Customer detail page | - |

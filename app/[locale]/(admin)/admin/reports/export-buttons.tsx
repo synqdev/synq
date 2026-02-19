@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Button } from '@/components/ui/button'
 
 interface ExportButtonsProps {
   startDate: string
@@ -39,20 +40,24 @@ export function ExportButtons({ startDate, endDate, groupBy }: ExportButtonsProp
 
   return (
     <div className="flex gap-2">
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => handleDownload('revenue')}
         disabled={downloading !== null}
-        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        loading={downloading === 'revenue'}
       >
         {downloading === 'revenue' ? t('exporting') : t('exportRevenue')}
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => handleDownload('bookings')}
         disabled={downloading !== null}
-        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        loading={downloading === 'bookings'}
       >
         {downloading === 'bookings' ? t('exporting') : t('exportBookings')}
-      </button>
+      </Button>
     </div>
   )
 }

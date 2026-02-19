@@ -23,8 +23,8 @@ import {
   getDashboardTotals,
   getWorkerMetrics,
 } from '@/lib/services/reporting.service';
-import { GET as revenueGET } from '../../app/api/admin/reports/revenue/route';
-import { GET as workersGET } from '../../app/api/admin/reports/workers/route';
+import { GET as revenueGET } from '@/app/api/admin/reports/revenue/route';
+import { GET as workersGET } from '@/app/api/admin/reports/workers/route';
 
 describe('Reports API Routes', () => {
   beforeEach(() => {

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const retention = await getRepeatCustomerRate(parsed.data)
-    return NextResponse.json(retention)
+    return NextResponse.json({ retention })
   } catch (error) {
     console.error('Failed to fetch retention data:', error)
     return NextResponse.json({ error: 'Failed to fetch retention data' }, { status: 500 })

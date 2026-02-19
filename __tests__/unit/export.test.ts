@@ -134,7 +134,11 @@ describe('Export Service', () => {
       const lines = csv.split('\n');
       const dataLine = lines[1];
       expect(dataLine).toContain('test@test.com');
-      // Should not throw
+      // Verify empty columns for null phone and missing staff
+      const columns = dataLine.split(',');
+      expect(columns[3]).toBe(''); // phone
+      expect(columns[4]).toBe(''); // assigned staff
+      expect(columns[6]).toBe(''); // lastVisit
     });
   });
 

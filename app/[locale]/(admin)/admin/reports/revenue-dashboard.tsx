@@ -18,7 +18,7 @@ const fetcher = async (url: string) => {
 }
 
 function formatJPY(amount: number): string {
-  return `\u00A5${amount.toLocaleString()}`
+  return `\u00A5${amount.toLocaleString('ja-JP')}`
 }
 
 function toDateString(d: Date): string {
@@ -36,7 +36,8 @@ function getPresetRange(preset: string): { start: Date; end: Date } {
       return { start: today, end }
     }
     case 'thisWeek': {
-      const dayOfWeek = today.getDay()
+      // Use Monday as week start (Japanese business convention)
+      const dayOfWeek = (today.getDay() + 6) % 7 // 0=Mon, 1=Tue, ..., 6=Sun
       const start = new Date(today)
       start.setDate(start.getDate() - dayOfWeek)
       const end = new Date(start)
@@ -103,10 +104,12 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
   }>(workersUrl, fetcher)
 
   const { data: retentionData, isLoading: retentionLoading, error: retentionError } = useSWR<{
-    totalCustomers: number
-    repeatCustomers: number
-    repeatRate: number
-    newCustomers: number
+    retention: {
+      totalCustomers: number
+      repeatCustomers: number
+      repeatRate: number
+      newCustomers: number
+    }
   }>(retentionUrl, fetcher)
 
   const totals = revenueData?.totals
@@ -201,8 +204,8 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
             <SummaryCard label={t('avgPerBooking')} value={formatJPY(totals?.averageRevenuePerBooking ?? 0)} />
             <SummaryCard
               label={t('repeatRate')}
-              value={`${retentionData?.repeatRate ?? 0}%`}
-              subtitle={retentionData ? `${retentionData.repeatCustomers} / ${retentionData.totalCustomers}` : undefined}
+              value={`${retentionData?.retention?.repeatRate ?? 0}%`}
+              subtitle={retentionData?.retention ? `${retentionData.retention.repeatCustomers} / ${retentionData.retention.totalCustomers}` : undefined}
             />
           </div>
 

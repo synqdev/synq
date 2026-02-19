@@ -1,5 +1,6 @@
 import type { FullConfig } from '@playwright/test'
 import { PrismaClient } from '@prisma/client'
+import { E2E_EMAIL_PREFIX, E2E_EMAIL_DOMAIN } from './helpers'
 
 const prisma = new PrismaClient()
 
@@ -10,14 +11,14 @@ const prisma = new PrismaClient()
  * We remove dependent rows first, then customer rows.
  */
 export default async function globalTeardown(_config: FullConfig) {
-  const emailPattern = 'e2e-%@test.example.com'
+  const emailPattern = `${E2E_EMAIL_PREFIX}%${E2E_EMAIL_DOMAIN}`
 
   try {
     const customers = await prisma.customer.findMany({
       where: {
         email: {
-          startsWith: 'e2e-',
-          endsWith: '@test.example.com',
+          startsWith: E2E_EMAIL_PREFIX,
+          endsWith: E2E_EMAIL_DOMAIN,
         },
       },
       select: { id: true },
@@ -31,7 +32,6 @@ export default async function globalTeardown(_config: FullConfig) {
     const customerIds = customers.map((c) => c.id)
 
     await prisma.$transaction([
-      prisma.medicalRecord.deleteMany({ where: { customerId: { in: customerIds } } }),
       prisma.booking.deleteMany({ where: { customerId: { in: customerIds } } }),
       prisma.customer.deleteMany({ where: { id: { in: customerIds } } }),
     ])

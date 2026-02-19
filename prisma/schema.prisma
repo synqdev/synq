@@ -112,9 +112,9 @@ model MedicalRecordItem {
 model MedicalRecord {
   id         String            @id @default(uuid())
   customerId String
-  customer   Customer          @relation(fields: [customerId], references: [id])
+  customer   Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
   itemId     String
-  item       MedicalRecordItem @relation(fields: [itemId], references: [id])
+  item       MedicalRecordItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
   content    String?
   imageUrl   String? // Storage path for uploaded files
   enteredBy  String // Staff identifier

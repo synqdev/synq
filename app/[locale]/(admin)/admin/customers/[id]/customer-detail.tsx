@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { IntakeUpload } from './intake-upload'
 
 interface WorkerOption {
   id: string
@@ -312,11 +313,10 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         )}
       </section>
 
-      {/* Medical Records placeholder */}
+      {/* Medical Records / Intake Forms */}
       <section className="rounded-lg border border-secondary-200 p-4">
-        <h3 className="text-lg font-semibold text-secondary-900">
-          {t('medicalRecords')} <span className="text-sm font-normal text-secondary-400">({t('comingSoon')})</span>
-        </h3>
+        <h3 className="mb-3 text-lg font-semibold text-secondary-900">{t('medicalRecords')}</h3>
+        <IntakeUpload customerId={customerId} locale={locale} />
       </section>
     </div>
   )

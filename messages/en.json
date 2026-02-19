@@ -149,6 +149,13 @@
       "previous": "Previous",
       "next": "Next",
       "pageStatus": "Page {page} / {totalPages} ({total} total)"
+    },
+    "customerDetail": {
+      "intake": {
+        "dropzone": "Drop files here or click to upload (PDF, JPG, PNG, WEBP, max 10MB)",
+        "uploading": "Uploading...",
+        "noFiles": "No intake forms uploaded yet"
+      }
     }
   },
   "auth": {

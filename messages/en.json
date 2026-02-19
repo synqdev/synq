@@ -149,6 +149,30 @@
       "previous": "Previous",
       "next": "Next",
       "pageStatus": "Page {page} / {totalPages} ({total} total)"
+    },
+    "customerDetail": {
+      "title": "Customer Detail",
+      "backToList": "Back to Customer List",
+      "registeredAt": "Registered",
+      "visitCount": "Visits",
+      "lastVisit": "Last Visit",
+      "nextBooking": "Next Booking",
+      "outstandingAmount": "Outstanding",
+      "assignedStaff": "Assigned Staff",
+      "noStaff": "None",
+      "notes": "Notes",
+      "notesPlaceholder": "Add notes about this customer...",
+      "saved": "Saved",
+      "saveFailed": "Failed to save",
+      "bookingHistory": "Booking History",
+      "noBookings": "No bookings yet",
+      "time": "Time",
+      "service": "Service",
+      "worker": "Worker",
+      "price": "Price",
+      "medicalRecords": "Medical Records",
+      "comingSoon": "Coming soon",
+      "notFound": "Customer not found"
     }
   },
   "auth": {

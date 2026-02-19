@@ -32,8 +32,14 @@ export const customerListQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+export const updateCustomerNotesSchema = z.object({
+  notes: z.string().max(5000).optional(),
+  assignedStaffId: z.string().nullable().optional(),
+});
+
 /**
  * Type inferred from registerCustomerSchema
  */
 export type RegisterCustomerInput = z.infer<typeof registerCustomerSchema>;
 export type CustomerListQueryInput = z.infer<typeof customerListQuerySchema>;
+export type UpdateCustomerNotesInput = z.infer<typeof updateCustomerNotesSchema>;

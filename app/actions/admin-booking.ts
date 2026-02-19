@@ -195,7 +195,6 @@ export async function sendBooking(input: SendBookingInput) {
   })
 
   revalidatePath('/admin/dashboard')
-  revalidatePath('/admin/dashboard/new')
   return { success: true }
 }
 
@@ -219,6 +218,5 @@ export async function createAdminBooking(input: CreateAdminBookingInput) {
   }
 
   revalidatePath('/admin/dashboard')
-  revalidatePath('/admin/dashboard/new')
   return { success: true, bookingId: result.booking.id }
 }

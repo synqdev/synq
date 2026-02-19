@@ -24,6 +24,7 @@ npm run test:e2e:report
 ## Test Structure
 
 - `auth.setup.ts` - Authenticates as admin before tests run
+- `global-teardown.ts` - Cleans up E2E-generated customer/booking data after test run
 - `admin-calendar.spec.ts` - Tests admin calendar functionality
 - `booking-flow.spec.ts` - Tests user booking journey
 

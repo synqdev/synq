@@ -5,6 +5,9 @@ import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
 import { RankingsSection } from './rankings-section'
 import { ExportButtons } from './export-buttons'
+
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table'
+
 import type { RevenuePeriod, DashboardTotals, WorkerMetric } from '@/lib/types/reporting'
 
 interface RevenueDashboardProps {
@@ -18,7 +21,7 @@ const fetcher = async (url: string) => {
 }
 
 function formatJPY(amount: number): string {
-  return `\u00A5${amount.toLocaleString('ja-JP')}`
+  return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(amount)
 }
 
 function toDateString(d: Date): string {
@@ -137,6 +140,95 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
 
   const isLoading = revenueLoading || workersLoading || retentionLoading
 
+  const revenueColumns = useMemo<DataTableColumn<RevenuePeriod>[]>(
+    () => [
+      {
+        key: 'period',
+        header: t('period'),
+        cell: (row) => formatPeriodLabel(row.period, groupBy, locale),
+        align: 'left',
+        widthClassName: 'min-w-[160px]',
+      },
+      {
+        key: 'totalRevenue',
+        header: t('revenue'),
+        cell: (row) => formatJPY(row.totalRevenue),
+        align: 'right',
+        widthClassName: 'min-w-[120px]',
+      },
+      {
+        key: 'bookingCount',
+        header: t('bookings'),
+        cell: (row) => String(row.bookingCount),
+        align: 'right',
+        widthClassName: 'min-w-[100px]',
+      },
+      {
+        key: 'newCustomerCount',
+        header: t('newCustomers'),
+        cell: (row) => String(row.newCustomerCount),
+        align: 'right',
+        widthClassName: 'min-w-[120px]',
+      },
+      {
+        key: 'existingCustomerCount',
+        header: t('existingCustomers'),
+        cell: (row) => String(row.existingCustomerCount),
+        align: 'right',
+        widthClassName: 'min-w-[140px]',
+      },
+    ],
+    [groupBy, locale, t]
+  )
+
+  const workersWithRank = useMemo(
+    () => workers.map((w, i) => ({ ...w, rank: i + 1 })),
+    [workers]
+  )
+
+  type WorkerMetricWithRank = WorkerMetric & { rank: number }
+
+  const workerColumns = useMemo<DataTableColumn<WorkerMetricWithRank>[]>(
+    () => [
+      {
+        key: 'rank',
+        header: '#',
+        cell: (row) => String(row.rank),
+        align: 'center',
+        widthClassName: 'min-w-[60px]',
+      },
+      {
+        key: 'workerName',
+        header: t('workerName'),
+        cell: (row) => row.workerName,
+        align: 'left',
+        widthClassName: 'min-w-[160px]',
+      },
+      {
+        key: 'totalRevenue',
+        header: t('revenue'),
+        cell: (row) => formatJPY(row.totalRevenue),
+        align: 'right',
+        widthClassName: 'min-w-[120px]',
+      },
+      {
+        key: 'bookingCount',
+        header: t('bookings'),
+        cell: (row) => String(row.bookingCount),
+        align: 'right',
+        widthClassName: 'min-w-[100px]',
+      },
+      {
+        key: 'averagePerBooking',
+        header: t('avgPerBooking'),
+        cell: (row) => formatJPY(row.averagePerBooking),
+        align: 'right',
+        widthClassName: 'min-w-[140px]',
+      },
+    ],
+    [t]
+  )
+
   return (
     <div className="space-y-6">
       {/* Date Range Controls */}
@@ -212,47 +304,20 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
           {/* Revenue Table */}
           <div>
             <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('revenueBreakdown')}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="pb-2 pr-4 font-medium">{t('period')}</th>
-                    <th className="pb-2 pr-4 text-right font-medium">{t('revenue')}</th>
-                    <th className="pb-2 pr-4 text-right font-medium">{t('bookings')}</th>
-                    <th className="pb-2 pr-4 text-right font-medium">{t('newCustomers')}</th>
-                    <th className="pb-2 text-right font-medium">{t('existingCustomers')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-4 text-center text-gray-400">
-                        {t('noData')}
-                      </td>
-                    </tr>
-                  ) : (
-                    <>
-                      {summary.map((row) => (
-                        <tr key={row.period} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-2 pr-4">{formatPeriodLabel(row.period, groupBy, locale)}</td>
-                          <td className="py-2 pr-4 text-right font-medium">{formatJPY(row.totalRevenue)}</td>
-                          <td className="py-2 pr-4 text-right">{row.bookingCount}</td>
-                          <td className="py-2 pr-4 text-right">{row.newCustomerCount}</td>
-                          <td className="py-2 text-right">{row.existingCustomerCount}</td>
-                        </tr>
-                      ))}
-                      <tr className="border-t-2 border-gray-300 font-semibold">
-                        <td className="py-2 pr-4">{t('total')}</td>
-                        <td className="py-2 pr-4 text-right">{formatJPY(summaryTotals.totalRevenue)}</td>
-                        <td className="py-2 pr-4 text-right">{summaryTotals.bookingCount}</td>
-                        <td className="py-2 pr-4 text-right">{summaryTotals.newCustomerCount}</td>
-                        <td className="py-2 text-right">{summaryTotals.existingCustomerCount}</td>
-                      </tr>
-                    </>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {summary.length === 0 ? (
+              <p className="py-4 text-center text-sm text-gray-400">{t('noData')}</p>
+            ) : (
+              <>
+                <DataTable data={summary} columns={revenueColumns} striped />
+                <div className="grid grid-cols-5 border-t-2 border-gray-300 bg-white px-4 py-2 text-sm font-semibold">
+                  <div>{t('total')}</div>
+                  <div className="text-right">{formatJPY(summaryTotals.totalRevenue)}</div>
+                  <div className="text-right">{summaryTotals.bookingCount}</div>
+                  <div className="text-right">{summaryTotals.newCustomerCount}</div>
+                  <div className="text-right">{summaryTotals.existingCustomerCount}</div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Worker Rankings */}
@@ -264,38 +329,11 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
           {/* Worker Performance Table */}
           <div>
             <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('workerPerformance')}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="pb-2 pr-4 font-medium">#</th>
-                    <th className="pb-2 pr-4 font-medium">{t('workerName')}</th>
-                    <th className="pb-2 pr-4 text-right font-medium">{t('revenue')}</th>
-                    <th className="pb-2 pr-4 text-right font-medium">{t('bookings')}</th>
-                    <th className="pb-2 text-right font-medium">{t('avgPerBooking')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workers.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-4 text-center text-gray-400">
-                        {t('noData')}
-                      </td>
-                    </tr>
-                  ) : (
-                    workers.map((w, i) => (
-                      <tr key={w.workerId} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-2 pr-4 text-gray-400">{i + 1}</td>
-                        <td className="py-2 pr-4 font-medium">{w.workerName}</td>
-                        <td className="py-2 pr-4 text-right">{formatJPY(w.totalRevenue)}</td>
-                        <td className="py-2 pr-4 text-right">{w.bookingCount}</td>
-                        <td className="py-2 text-right">{formatJPY(w.averagePerBooking)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {workers.length === 0 ? (
+              <p className="py-4 text-center text-sm text-gray-400">{t('noData')}</p>
+            ) : (
+              <DataTable data={workersWithRank} columns={workerColumns} striped />
+            )}
           </div>
         </>
       )}

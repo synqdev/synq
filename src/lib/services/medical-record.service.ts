@@ -8,6 +8,10 @@ export async function createMedicalRecord(data: {
   imageUrl?: string
   enteredBy: string
 }) {
+  if (!data.content && !data.imageUrl) {
+    throw new Error('At least one of content or imageUrl must be provided')
+  }
+
   return prisma.medicalRecord.create({
     data: {
       customerId: data.customerId,

@@ -64,6 +64,18 @@ describe('Medical Record Service', () => {
       expect(result).toEqual(mockRecord);
     });
 
+    it('throws when neither content nor imageUrl is provided', async () => {
+      await expect(
+        createMedicalRecord({
+          customerId: 'cust-1',
+          itemId: 'item-1',
+          enteredBy: 'admin',
+        })
+      ).rejects.toThrow('At least one of content or imageUrl must be provided');
+
+      expect(prisma.medicalRecord.create).not.toHaveBeenCalled();
+    });
+
     it('creates a record with text content', async () => {
       (prisma.medicalRecord.create as jest.Mock).mockResolvedValueOnce({ id: 'rec-2' });
 

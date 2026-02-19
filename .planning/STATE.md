@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 2 of 4 (Parity)
-Plan: 5 of 8 (next: 02-05 sales reporting dashboard)
+Plan: 7 of 8 (next: 02-08)
 Status: Active execution
-Last activity: 2026-02-18 - Completed 02-03 (customer detail) and 02-04 (intake upload)
+Last activity: 2026-02-19 - Completed 02-05 (reporting dashboard), 02-06 (worker rankings, repeat rate), 02-07 (CSV export)
 
 Progress: [#####---] 50%
 
@@ -25,6 +25,7 @@ Progress: [#####---] 50%
 | 27 | test/customer-service-unit | Customer service unit tests | 28 |
 | 28 | test/customer-api-route | Customer API route tests | 4 |
 | 29 | codex/phase2-02-04-intake-upload | Intake form upload | 19 |
+| 32 | codex/phase2-02-07-csv-export | CSV export (customers, bookings, revenue) | 24 |
 
 ## Performance Metrics
 
@@ -129,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: Phase 2 plans 02-03 and 02-04 completed (PRs #26-29 open)
-Resume file: `.planning/phases/02-parity/02-05-PLAN.md`
+Last session: 2026-02-19
+Stopped at: Phase 2 plans 02-05, 02-06, 02-07 completed (PRs #26-29, #32 open)
+Resume file: `.planning/phases/02-parity/02-08-PLAN.md`

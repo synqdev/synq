@@ -5,10 +5,12 @@ const BOM = '\uFEFF'
 
 export function generateCSV(headers: string[], rows: string[][]): string {
   const escape = (val: string) => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
-      return `"${val.replace(/"/g, '""')}"`
+    // Neutralize Excel formula injection: prefix with ' any field starting with =, +, -, @
+    const safe = /^[=+\-@]/.test(val) ? `'${val}` : val
+    if (safe.includes(',') || safe.includes('"') || safe.includes('\n') || safe.includes('\r')) {
+      return `"${safe.replace(/"/g, '""')}"`
     }
-    return val
+    return safe
   }
   const headerLine = headers.map(escape).join(',')
   const dataLines = rows.map((row) => row.map(escape).join(','))

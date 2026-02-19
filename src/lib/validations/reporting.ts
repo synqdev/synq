@@ -15,8 +15,17 @@ export const revenueQuerySchema = dateRangeBase
     path: ['endDate'],
   })
   .refine((data) => {
-    const diffMs = data.endDate.getTime() - data.startDate.getTime()
-    const diffDays = diffMs / (1000 * 60 * 60 * 24)
+    const startUtc = Date.UTC(
+      data.startDate.getUTCFullYear(),
+      data.startDate.getUTCMonth(),
+      data.startDate.getUTCDate()
+    )
+    const endUtc = Date.UTC(
+      data.endDate.getUTCFullYear(),
+      data.endDate.getUTCMonth(),
+      data.endDate.getUTCDate()
+    )
+    const diffDays = (endUtc - startUtc) / (1000 * 60 * 60 * 24)
     return diffDays <= 366
   }, {
     message: 'Date range must not exceed 1 year',

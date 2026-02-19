@@ -15,8 +15,14 @@ const fetcher = async (url: string) => {
   return res.json()
 }
 
+const jpyFormatter = new Intl.NumberFormat('ja-JP', {
+  style: 'currency',
+  currency: 'JPY',
+  maximumFractionDigits: 0,
+})
+
 function formatJPY(amount: number): string {
-  return `\u00A5${amount.toLocaleString()}`
+  return jpyFormatter.format(amount)
 }
 
 const rankStyles: Record<number, string> = {

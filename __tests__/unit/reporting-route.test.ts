@@ -88,6 +88,16 @@ describe('Reports API Routes', () => {
         expect.objectContaining({ groupBy: 'day' })
       );
     });
+
+    it('returns 500 when getRevenueSummary throws', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (getRevenueSummary as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+
+      const req = new NextRequest('http://localhost/api/admin/reports/revenue?startDate=2026-01-01&endDate=2026-02-01');
+      const res = await revenueGET(req);
+
+      expect(res.status).toBe(500);
+    });
   });
 
   describe('GET /api/admin/reports/workers', () => {

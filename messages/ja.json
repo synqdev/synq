@@ -179,7 +179,11 @@
       "existingCustomers": "既存顧客",
       "total": "合計",
       "workerPerformance": "スタッフ実績",
+      "workerRankings": "スタッフランキング",
       "workerName": "スタッフ",
+      "rank": "順位",
+      "diffFromFirst": "1位との差",
+      "repeatRate": "リピート率",
       "noData": "この期間のデータはありません"
     },
     "customerDetail": {

@@ -24,6 +24,22 @@ export interface DashboardTotals {
   averageRevenuePerBooking: number
 }
 
+export interface WorkerRanking {
+  rank: number
+  workerId: string
+  workerName: string
+  totalRevenue: number
+  bookingCount: number
+  differenceFromFirst: number
+}
+
+export interface RetentionMetrics {
+  totalCustomers: number
+  repeatCustomers: number
+  repeatRate: number
+  newCustomers: number
+}
+
 type GroupBy = 'day' | 'week' | 'month'
 
 export async function getRevenueSummary(params: {
@@ -178,4 +194,60 @@ export async function getDashboardTotals(params: {
     uniqueCustomers,
     averageRevenuePerBooking: totalBookings > 0 ? Math.round(totalRevenue / totalBookings) : 0,
   }
+}
+
+export async function getWorkerRankings(params: {
+  startDate: Date
+  endDate: Date
+}): Promise<WorkerRanking[]> {
+  const metrics = await getWorkerMetrics(params)
+  const firstRevenue = metrics.length > 0 ? metrics[0].totalRevenue : 0
+
+  return metrics.map((m, i) => ({
+    rank: i + 1,
+    workerId: m.workerId,
+    workerName: m.workerName,
+    totalRevenue: m.totalRevenue,
+    bookingCount: m.bookingCount,
+    differenceFromFirst: m.totalRevenue - firstRevenue,
+  }))
+}
+
+export async function getRepeatCustomerRate(params: {
+  startDate: Date
+  endDate: Date
+}): Promise<RetentionMetrics> {
+  const { startDate, endDate } = params
+
+  // Get customers who booked in the date range and whether they had prior bookings
+  const rows = await prisma.$queryRaw<
+    { customer_id: string; has_prior: boolean }[]
+  >(
+    Prisma.sql`
+      WITH range_customers AS (
+        SELECT DISTINCT "customerId" as customer_id
+        FROM "Booking"
+        WHERE "startsAt" >= ${startDate}
+          AND "startsAt" < ${endDate}
+          AND status = 'CONFIRMED'
+      )
+      SELECT rc.customer_id,
+             EXISTS (
+               SELECT 1 FROM "Booking" b
+               WHERE b."customerId" = rc.customer_id
+                 AND b."startsAt" < ${startDate}
+                 AND b.status = 'CONFIRMED'
+             ) as has_prior
+      FROM range_customers rc
+    `
+  )
+
+  const totalCustomers = rows.length
+  const repeatCustomers = rows.filter((r) => r.has_prior).length
+  const newCustomers = totalCustomers - repeatCustomers
+  const repeatRate = totalCustomers > 0
+    ? Math.round((repeatCustomers / totalCustomers) * 1000) / 10
+    : 0
+
+  return { totalCustomers, repeatCustomers, repeatRate, newCustomers }
 }

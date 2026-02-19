@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
+import { RankingsSection } from './rankings-section'
 
 interface RevenueDashboardProps {
   locale: string
@@ -107,6 +108,7 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
 
   const revenueUrl = `/api/admin/reports/revenue?startDate=${startDate}&endDate=${endDate}&groupBy=${groupBy}`
   const workersUrl = `/api/admin/reports/workers?startDate=${startDate}&endDate=${endDate}`
+  const retentionUrl = `/api/admin/reports/retention?startDate=${startDate}&endDate=${endDate}`
 
   const { data: revenueData, isLoading: revenueLoading } = useSWR<{
     summary: RevenuePeriod[]
@@ -116,6 +118,13 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
   const { data: workersData, isLoading: workersLoading } = useSWR<{
     workers: WorkerMetric[]
   }>(workersUrl, fetcher)
+
+  const { data: retentionData } = useSWR<{
+    totalCustomers: number
+    repeatCustomers: number
+    repeatRate: number
+    newCustomers: number
+  }>(retentionUrl, fetcher)
 
   const totals = revenueData?.totals
   const summary = revenueData?.summary ?? []
@@ -198,11 +207,16 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
         <div className="py-8 text-center text-gray-500">{t('loading')}</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             <SummaryCard label={t('totalRevenue')} value={formatJPY(totals?.totalRevenue ?? 0)} />
             <SummaryCard label={t('totalBookings')} value={String(totals?.totalBookings ?? 0)} />
             <SummaryCard label={t('uniqueCustomers')} value={String(totals?.uniqueCustomers ?? 0)} />
             <SummaryCard label={t('avgPerBooking')} value={formatJPY(totals?.averageRevenuePerBooking ?? 0)} />
+            <SummaryCard
+              label={t('repeatRate')}
+              value={`${retentionData?.repeatRate ?? 0}%`}
+              subtitle={retentionData ? `${retentionData.repeatCustomers} / ${retentionData.totalCustomers}` : undefined}
+            />
           </div>
 
           {/* Revenue Table */}
@@ -251,6 +265,12 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
             </div>
           </div>
 
+          {/* Worker Rankings */}
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('workerRankings')}</h3>
+            <RankingsSection startDate={startDate} endDate={endDate} />
+          </div>
+
           {/* Worker Performance Table */}
           <div>
             <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('workerPerformance')}</h3>
@@ -293,11 +313,12 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({ label, value, subtitle }: { label: string; value: string; subtitle?: string }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium text-gray-500">{label}</p>
       <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+      {subtitle && <p className="mt-0.5 text-xs text-gray-400">{subtitle}</p>}
     </div>
   )
 }

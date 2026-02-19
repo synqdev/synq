@@ -179,7 +179,11 @@
       "existingCustomers": "Existing Customers",
       "total": "Total",
       "workerPerformance": "Worker Performance",
+      "workerRankings": "Worker Rankings",
       "workerName": "Worker",
+      "rank": "Rank",
+      "diffFromFirst": "vs #1",
+      "repeatRate": "Repeat Rate",
       "noData": "No data for this period"
     },
     "customerDetail": {

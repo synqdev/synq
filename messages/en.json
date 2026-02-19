@@ -149,7 +149,8 @@
       "noCustomers": "No customers found",
       "previous": "Previous",
       "next": "Next",
-      "pageStatus": "Page {page} / {totalPages} ({total} total)"
+      "pageStatus": "Page {page} / {totalPages} ({total} total)",
+      "exportCsv": "Export CSV"
     },
     "reportsPage": {
       "title": "Sales Reports",
@@ -185,7 +186,10 @@
       "rank": "Rank",
       "diffFromFirst": "vs #1",
       "repeatRate": "Repeat Rate",
-      "noData": "No data for this period"
+      "noData": "No data for this period",
+      "exportRevenue": "Export Revenue CSV",
+      "exportBookings": "Export Bookings CSV",
+      "exporting": "Exporting..."
     },
     "customerDetail": {
       "title": "Customer Detail",

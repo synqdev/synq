@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
 import { RankingsSection } from './rankings-section'
+import { ExportButtons } from './export-buttons'
 import type { RevenuePeriod, DashboardTotals, WorkerMetric } from '@/lib/types/reporting'
 
 interface RevenueDashboardProps {
@@ -183,6 +184,7 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
             </button>
           ))}
         </div>
+        <ExportButtons startDate={startDate} endDate={endDate} groupBy={groupBy} />
       </div>
 
       {/* Summary Cards */}

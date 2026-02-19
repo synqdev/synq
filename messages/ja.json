@@ -149,7 +149,8 @@
       "noCustomers": "顧客が見つかりません",
       "previous": "前へ",
       "next": "次へ",
-      "pageStatus": "ページ {page} / {totalPages}（合計 {total} 件）"
+      "pageStatus": "ページ {page} / {totalPages}（合計 {total} 件）",
+      "exportCsv": "CSV出力"
     },
     "reportsPage": {
       "title": "売上レポート",
@@ -185,7 +186,10 @@
       "rank": "順位",
       "diffFromFirst": "1位との差",
       "repeatRate": "リピート率",
-      "noData": "この期間のデータはありません"
+      "noData": "この期間のデータはありません",
+      "exportRevenue": "売上CSV出力",
+      "exportBookings": "予約CSV出力",
+      "exporting": "出力中..."
     },
     "customerDetail": {
       "title": "顧客詳細",

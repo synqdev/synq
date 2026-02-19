@@ -73,6 +73,7 @@
     "nav": {
       "dashboard": "ダッシュボード",
       "customers": "顧客管理",
+      "reports": "売上レポート",
       "workers": "スタッフ",
       "services": "サービス",
       "resources": "ベッド"
@@ -149,6 +150,37 @@
       "previous": "前へ",
       "next": "次へ",
       "pageStatus": "ページ {page} / {totalPages}（合計 {total} 件）"
+    },
+    "reportsPage": {
+      "title": "売上レポート",
+      "loading": "読み込み中...",
+      "preset": {
+        "today": "今日",
+        "thisWeek": "今週",
+        "thisMonth": "今月",
+        "last30": "過去30日"
+      },
+      "startDate": "開始",
+      "endDate": "終了",
+      "groupBy": {
+        "day": "日別",
+        "week": "週別",
+        "month": "月別"
+      },
+      "totalRevenue": "合計売上",
+      "totalBookings": "予約件数",
+      "uniqueCustomers": "顧客数",
+      "avgPerBooking": "平均単価",
+      "revenueBreakdown": "売上内訳",
+      "period": "期間",
+      "revenue": "売上",
+      "bookings": "予約数",
+      "newCustomers": "新規顧客",
+      "existingCustomers": "既存顧客",
+      "total": "合計",
+      "workerPerformance": "スタッフ実績",
+      "workerName": "スタッフ",
+      "noData": "この期間のデータはありません"
     },
     "customerDetail": {
       "title": "顧客詳細",

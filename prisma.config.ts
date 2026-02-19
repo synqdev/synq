@@ -15,5 +15,6 @@ export default defineConfig({
   datasource: {
     // Allow prisma generate during install/build even when DATABASE_URL is not injected yet (e.g. Vercel install step).
     url: process.env.DATABASE_URL ?? fallbackDatabaseUrl,
+    directUrl: process.env.DIRECT_URL,
   },
 });

@@ -151,28 +151,11 @@
       "pageStatus": "ページ {page} / {totalPages}（合計 {total} 件）"
     },
     "customerDetail": {
-      "title": "顧客詳細",
-      "backToList": "顧客一覧に戻る",
-      "registeredAt": "登録日",
-      "visitCount": "来店回数",
-      "lastVisit": "最終来店日",
-      "nextBooking": "次回予約",
-      "outstandingAmount": "未収金額",
-      "assignedStaff": "担当者",
-      "noStaff": "なし",
-      "notes": "メモ",
-      "notesPlaceholder": "顧客に関するメモを入力...",
-      "saved": "保存しました",
-      "saveFailed": "保存に失敗しました",
-      "bookingHistory": "予約履歴",
-      "noBookings": "予約がありません",
-      "time": "時間",
-      "service": "サービス",
-      "worker": "担当",
-      "price": "料金",
-      "medicalRecords": "カルテ",
-      "comingSoon": "準備中",
-      "notFound": "顧客が見つかりません"
+      "intake": {
+        "dropzone": "ファイルをドロップまたはクリックしてアップロード（PDF, JPG, PNG, WEBP, 最大10MB）",
+        "uploading": "アップロード中...",
+        "noFiles": "問診票がまだアップロードされていません"
+      }
     }
   },
   "auth": {

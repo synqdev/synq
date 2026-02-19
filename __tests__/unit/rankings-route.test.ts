@@ -111,7 +111,7 @@ describe('Rankings & Retention API Routes', () => {
       const body = await res.json();
 
       expect(res.status).toBe(200);
-      expect(body).toEqual(mockRetention);
+      expect(body.retention).toEqual(mockRetention);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { uploadIntakeForm } from '@/lib/storage/supabase-storage'
+import { uploadIntakeForm, deleteIntakeForm } from '@/lib/storage/supabase-storage'
 import {
   createMedicalRecord,
   getMedicalRecordsWithSignedUrls,
@@ -12,23 +12,16 @@ const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
 async function getOrCreateIntakeItem() {
-  let item = await prisma.medicalRecordItem.findFirst({
-    where: { contentType: 'image', isActive: true },
-    orderBy: { displayOrder: 'asc' },
+  return prisma.medicalRecordItem.upsert({
+    where: { title: 'Intake Form' },
+    update: {},
+    create: {
+      title: 'Intake Form',
+      contentType: 'IMAGE',
+      isPublic: false,
+      displayOrder: 0,
+    },
   })
-
-  if (!item) {
-    item = await prisma.medicalRecordItem.create({
-      data: {
-        title: 'Intake Form',
-        contentType: 'image',
-        isPublic: false,
-        displayOrder: 0,
-      },
-    })
-  }
-
-  return item
 }
 
 export async function GET(
@@ -81,14 +74,18 @@ export async function POST(
   const item = await getOrCreateIntakeItem()
   const { path } = await uploadIntakeForm(customerId, file)
 
-  const record = await createMedicalRecord({
-    customerId,
-    itemId: item.id,
-    imageUrl: path,
-    enteredBy: 'admin',
-  })
-
-  return NextResponse.json({ record }, { status: 201 })
+  try {
+    const record = await createMedicalRecord({
+      customerId,
+      itemId: item.id,
+      imageUrl: path,
+      enteredBy: 'admin',
+    })
+    return NextResponse.json({ record }, { status: 201 })
+  } catch {
+    await deleteIntakeForm(path).catch(() => undefined)
+    return NextResponse.json({ error: 'Failed to create record' }, { status: 500 })
+  }
 }
 
 export async function DELETE(
@@ -100,11 +97,21 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id: customerId } = await params
   const { searchParams } = request.nextUrl
   const recordId = searchParams.get('recordId')
 
   if (!recordId) {
     return NextResponse.json({ error: 'recordId is required' }, { status: 400 })
+  }
+
+  const record = await prisma.medicalRecord.findUnique({
+    where: { id: recordId },
+    select: { customerId: true },
+  })
+
+  if (!record || record.customerId !== customerId) {
+    return NextResponse.json({ error: 'Record not found' }, { status: 404 })
   }
 
   try {

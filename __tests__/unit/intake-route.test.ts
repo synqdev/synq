@@ -26,16 +26,18 @@ jest.mock('@/lib/services/medical-record.service', () => ({
 
 jest.mock('@/lib/db/client', () => ({
   prisma: {
+    medicalRecord: {
+      findUnique: jest.fn(),
+    },
     medicalRecordItem: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
+      upsert: jest.fn(),
     },
   },
 }));
 
 import { NextRequest } from 'next/server';
 import { getAdminSession } from '@/lib/auth/admin';
-import { uploadIntakeForm } from '@/lib/storage/supabase-storage';
+import { uploadIntakeForm, deleteIntakeForm } from '@/lib/storage/supabase-storage';
 import {
   createMedicalRecord,
   getMedicalRecordsWithSignedUrls,
@@ -127,10 +129,10 @@ describe('Intake Form Routes', () => {
 
     it('uploads file and creates record on valid request', async () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
-      (prisma.medicalRecordItem.findFirst as jest.Mock).mockResolvedValueOnce({
+      (prisma.medicalRecordItem.upsert as jest.Mock).mockResolvedValueOnce({
         id: 'item-1',
         title: 'Intake Form',
-        contentType: 'image',
+        contentType: 'IMAGE',
       });
       (uploadIntakeForm as jest.Mock).mockResolvedValueOnce({ path: 'cust-1/123-test.pdf' });
       const mockRecord = { id: 'rec-1', imageUrl: 'cust-1/123-test.pdf' };
@@ -158,13 +160,12 @@ describe('Intake Form Routes', () => {
       });
     });
 
-    it('auto-creates intake item when none exists', async () => {
+    it('uses upsert to atomically get or create intake item', async () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
-      (prisma.medicalRecordItem.findFirst as jest.Mock).mockResolvedValueOnce(null);
-      (prisma.medicalRecordItem.create as jest.Mock).mockResolvedValueOnce({
+      (prisma.medicalRecordItem.upsert as jest.Mock).mockResolvedValueOnce({
         id: 'new-item',
         title: 'Intake Form',
-        contentType: 'image',
+        contentType: 'IMAGE',
       });
       (uploadIntakeForm as jest.Mock).mockResolvedValueOnce({ path: 'cust-1/file.jpg' });
       (createMedicalRecord as jest.Mock).mockResolvedValueOnce({ id: 'rec-1' });
@@ -180,10 +181,36 @@ describe('Intake Form Routes', () => {
       const res = await POST(req, { params: makeParams('cust-1') });
 
       expect(res.status).toBe(201);
-      expect(prisma.medicalRecordItem.create).toHaveBeenCalled();
+      expect(prisma.medicalRecordItem.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { title: 'Intake Form' } })
+      );
       expect(createMedicalRecord).toHaveBeenCalledWith(
         expect.objectContaining({ itemId: 'new-item' })
       );
+    });
+
+    it('cleans up uploaded file when record creation fails', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (prisma.medicalRecordItem.upsert as jest.Mock).mockResolvedValueOnce({
+        id: 'item-1',
+        title: 'Intake Form',
+      });
+      (uploadIntakeForm as jest.Mock).mockResolvedValueOnce({ path: 'cust-1/failed.pdf' });
+      (createMedicalRecord as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+      (deleteIntakeForm as jest.Mock).mockResolvedValueOnce(undefined);
+
+      const file = new File(['pdf'], 'test.pdf', { type: 'application/pdf' });
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const req = new NextRequest('http://localhost/api/admin/customers/cust-1/intake', {
+        method: 'POST',
+        body: formData,
+      });
+      const res = await POST(req, { params: makeParams('cust-1') });
+
+      expect(res.status).toBe(500);
+      expect(deleteIntakeForm).toHaveBeenCalledWith('cust-1/failed.pdf');
     });
   });
 
@@ -214,8 +241,43 @@ describe('Intake Form Routes', () => {
       expect(body.error).toBe('recordId is required');
     });
 
+    it('returns 404 when record not found', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (prisma.medicalRecord.findUnique as jest.Mock).mockResolvedValueOnce(null);
+
+      const req = new NextRequest(
+        'http://localhost/api/admin/customers/cust-1/intake?recordId=rec-99',
+        { method: 'DELETE' }
+      );
+      const res = await DELETE(req, { params: makeParams('cust-1') });
+      const body = await res.json();
+
+      expect(res.status).toBe(404);
+      expect(body.error).toBe('Record not found');
+    });
+
+    it('returns 404 when record belongs to a different customer', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (prisma.medicalRecord.findUnique as jest.Mock).mockResolvedValueOnce({
+        customerId: 'other-customer',
+      });
+
+      const req = new NextRequest(
+        'http://localhost/api/admin/customers/cust-1/intake?recordId=rec-1',
+        { method: 'DELETE' }
+      );
+      const res = await DELETE(req, { params: makeParams('cust-1') });
+      const body = await res.json();
+
+      expect(res.status).toBe(404);
+      expect(body.error).toBe('Record not found');
+    });
+
     it('deletes record successfully', async () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (prisma.medicalRecord.findUnique as jest.Mock).mockResolvedValueOnce({
+        customerId: 'cust-1',
+      });
       (deleteMedicalRecord as jest.Mock).mockResolvedValueOnce(undefined);
 
       const req = new NextRequest(
@@ -232,6 +294,9 @@ describe('Intake Form Routes', () => {
 
     it('returns 500 when delete fails', async () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (prisma.medicalRecord.findUnique as jest.Mock).mockResolvedValueOnce({
+        customerId: 'cust-1',
+      });
       (deleteMedicalRecord as jest.Mock).mockRejectedValueOnce(new Error('Not found'));
 
       const req = new NextRequest(

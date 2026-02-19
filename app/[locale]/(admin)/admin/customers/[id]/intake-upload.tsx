@@ -58,6 +58,7 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
 
@@ -102,6 +103,7 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
 
   const handleDelete = useCallback(async (recordId: string) => {
     setDeleting(recordId)
+    setDeleteError(null)
     try {
       const res = await fetch(
         `/api/admin/customers/${customerId}/intake?recordId=${recordId}`,
@@ -109,8 +111,8 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
       )
       if (!res.ok) throw new Error('Delete failed')
       mutate()
-    } catch {
-      // silent
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed')
     } finally {
       setDeleting(null)
     }
@@ -138,6 +140,14 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            fileInputRef.current?.click()
+          }
+        }}
+        role="button"
+        tabIndex={0}
         className={`cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
           dragOver
             ? 'border-primary-500 bg-primary-50'
@@ -163,6 +173,10 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
 
       {uploadError && (
         <p className="text-sm text-red-600">{uploadError}</p>
+      )}
+
+      {deleteError && (
+        <p className="text-sm text-red-600">{deleteError}</p>
       )}
 
       {/* File list */}

@@ -74,11 +74,11 @@ export async function deleteMedicalRecord(id: string) {
 
   if (!record) throw new Error('Record not found')
 
-  if (record.imageUrl) {
-    await deleteIntakeForm(record.imageUrl)
-  }
-
   await prisma.medicalRecord.delete({
     where: { id },
   })
+
+  if (record.imageUrl) {
+    await deleteIntakeForm(record.imageUrl)
+  }
 }

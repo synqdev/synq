@@ -31,7 +31,7 @@ export async function getRevenueSummary(params: {
     { period: Date; total_revenue: bigint | null; booking_count: bigint }[]
   >(
     Prisma.sql`
-      SELECT date_trunc(${trunc}, b."startsAt") as period,
+      SELECT date_trunc(${trunc}::text, b."startsAt") as period,
              COALESCE(SUM(s.price), 0) as total_revenue,
              COUNT(*)::bigint as booking_count
       FROM "Booking" b
@@ -55,7 +55,7 @@ export async function getRevenueSummary(params: {
         WHERE status = 'CONFIRMED'
         GROUP BY "customerId"
       )
-      SELECT date_trunc(${trunc}, fb.first_date) as period,
+      SELECT date_trunc(${trunc}::text, fb.first_date) as period,
              COUNT(*)::bigint as new_count
       FROM first_booking fb
       WHERE fb.first_date >= ${startDate}
@@ -73,7 +73,7 @@ export async function getRevenueSummary(params: {
     { period: Date; unique_count: bigint }[]
   >(
     Prisma.sql`
-      SELECT date_trunc(${trunc}, b."startsAt") as period,
+      SELECT date_trunc(${trunc}::text, b."startsAt") as period,
              COUNT(DISTINCT b."customerId")::bigint as unique_count
       FROM "Booking" b
       WHERE b."startsAt" >= ${startDate}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
@@ -116,6 +116,33 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
     [t, workers]
   )
 
+  const [downloading, setDownloading] = useState(false)
+
+  const handleExportCSV = useCallback(async () => {
+    const params = new URLSearchParams()
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    if (assignedStaffId) params.set('assignedStaffId', assignedStaffId)
+    setDownloading(true)
+    let url: string | null = null
+    try {
+      const res = await fetch(`/api/admin/export/customers?${params}`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') ?? 'customers.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      if (url) URL.revokeObjectURL(url)
+      setDownloading(false)
+    }
+  }, [debouncedSearch, assignedStaffId])
+
   const columns = useMemo<DataTableColumn<CustomerListItem>[]>(
     () => [
       {
@@ -219,18 +246,23 @@ export function CustomerList({ locale, workers }: CustomerListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-[1fr_260px]">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('searchPlaceholder')}
-        />
-        <Select
-          value={assignedStaffId}
-          onChange={setAssignedStaffId}
-          options={staffOptions}
-          placeholder={t('assignedStaff')}
-        />
+      <div className="flex items-end gap-3">
+        <div className="grid flex-1 gap-3 md:grid-cols-[1fr_260px]">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t('searchPlaceholder')}
+          />
+          <Select
+            value={assignedStaffId}
+            onChange={setAssignedStaffId}
+            options={staffOptions}
+            placeholder={t('assignedStaff')}
+          />
+        </div>
+        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={downloading} loading={downloading}>
+          {t('exportCsv')}
+        </Button>
       </div>
 
       {customers.length === 0 ? (

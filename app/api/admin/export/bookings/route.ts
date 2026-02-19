@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { getRepeatCustomerRate } from '@/lib/services/reporting.service'
+import { exportBookings } from '@/lib/services/export.service'
 import { workerMetricsQuerySchema } from '@/lib/validations/reporting'
 
 export async function GET(request: NextRequest) {
@@ -10,12 +10,11 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = request.nextUrl
-  const rawInput = {
+  const parsed = workerMetricsQuerySchema.safeParse({
     startDate: searchParams.get('startDate') || undefined,
     endDate: searchParams.get('endDate') || undefined,
-  }
+  })
 
-  const parsed = workerMetricsQuerySchema.safeParse(rawInput)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid query parameters', details: parsed.error.flatten() },
@@ -24,10 +23,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const retention = await getRepeatCustomerRate(parsed.data)
-    return NextResponse.json({ retention })
+    const csv = await exportBookings(parsed.data)
+    const date = new Date().toISOString().split('T')[0]
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="bookings_${date}.csv"`,
+      },
+    })
   } catch (error) {
-    console.error('Failed to fetch retention data:', error)
-    return NextResponse.json({ error: 'Failed to fetch retention data' }, { status: 500 })
+    console.error('Failed to export bookings:', error)
+    return NextResponse.json({ error: 'Export failed' }, { status: 500 })
   }
 }

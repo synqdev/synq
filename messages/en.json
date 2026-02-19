@@ -73,6 +73,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "customers": "Customers",
+      "reports": "Reports",
       "workers": "Workers",
       "services": "Services",
       "resources": "Resources"
@@ -149,6 +150,42 @@
       "previous": "Previous",
       "next": "Next",
       "pageStatus": "Page {page} / {totalPages} ({total} total)"
+    },
+    "reportsPage": {
+      "title": "Sales Reports",
+      "loading": "Loading...",
+      "error": "Failed to load report data. Please try again.",
+      "preset": {
+        "today": "Today",
+        "thisWeek": "This Week",
+        "thisMonth": "This Month",
+        "last30": "Last 30 Days"
+      },
+      "startDate": "Start",
+      "endDate": "End",
+      "groupBy": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "totalRevenue": "Total Revenue",
+      "totalBookings": "Total Bookings",
+      "uniqueCustomers": "Unique Customers",
+      "avgPerBooking": "Avg / Booking",
+      "revenueBreakdown": "Revenue Breakdown",
+      "period": "Period",
+      "revenue": "Revenue",
+      "bookings": "Bookings",
+      "newCustomers": "New Customers",
+      "existingCustomers": "Existing Customers",
+      "total": "Total",
+      "workerPerformance": "Worker Performance",
+      "workerRankings": "Worker Rankings",
+      "workerName": "Worker",
+      "rank": "Rank",
+      "diffFromFirst": "vs #1",
+      "repeatRate": "Repeat Rate",
+      "noData": "No data for this period"
     },
     "customerDetail": {
       "intake": {

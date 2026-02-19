@@ -18,6 +18,7 @@ interface AdminNavProps {
 const navItems = [
   { href: '/admin/dashboard', labelKey: 'dashboard' },
   { href: '/admin/customers', labelKey: 'customers' },
+  { href: '/admin/reports', labelKey: 'reports' },
   { href: '/admin/workers', labelKey: 'workers' },
   { href: '/admin/services', labelKey: 'services' },
   { href: '/admin/resources', labelKey: 'resources' },

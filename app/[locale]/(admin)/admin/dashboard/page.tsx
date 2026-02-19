@@ -15,15 +15,8 @@ interface InitialService {
   duration: number
 }
 
-interface InitialBooking {
-  id: string
-  startsAt: Date
-  endsAt: Date
-  workerId: string
-  serviceId: string
-  customer: { name: string }
-  service: { name: string }
-}
+// System/placeholder customer excluded from bookable customer list
+const SYSTEM_CUSTOMER_ID = '00000000-0000-0000-0000-000000000000'
 
 export default async function AdminDashboardPage({
   params,
@@ -43,7 +36,7 @@ export default async function AdminDashboardPage({
   const endOfDay = new Date(startOfDay)
   endOfDay.setDate(endOfDay.getDate() + 1)
 
-  const [workers, bookings] = await Promise.all([
+  const [workers, bookings, customers, services, resources] = await Promise.all([
     prisma.worker.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' },
@@ -70,11 +63,8 @@ export default async function AdminDashboardPage({
       },
       orderBy: { startsAt: 'asc' },
     }),
-  ])
-
-  const [customers, services] = await Promise.all([
     prisma.customer.findMany({
-      where: { id: { not: '00000000-0000-0000-0000-000000000000' } },
+      where: { id: { not: SYSTEM_CUSTOMER_ID } },
       orderBy: { name: 'asc' },
       select: {
         id: true,
@@ -95,17 +85,16 @@ export default async function AdminDashboardPage({
         createdAt: true,
       },
     }),
+    prisma.resource.findMany({
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        createdAt: true,
+      },
+    }),
   ])
-
-  const resources = await prisma.resource.findMany({
-    orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
-    select: {
-      id: true,
-      name: true,
-      isActive: true,
-      createdAt: true,
-    },
-  })
 
   return (
     <AdminDashboardPrototypeClient
@@ -121,7 +110,7 @@ export default async function AdminDashboardPage({
       initialWorkerCrud={workers}
       initialServiceCrud={services}
       initialResourceCrud={resources}
-      initialBookings={bookings.map((booking: InitialBooking) => ({
+      initialBookings={bookings.map((booking) => ({
         id: booking.id,
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),

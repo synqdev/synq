@@ -1,6 +1,6 @@
 -- Storage RLS policies for intake form uploads.
--- Required because server-side upload currently uses anon key when
--- SUPABASE_SERVICE_ROLE_KEY is not configured.
+-- Server-side operations use SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
+-- These policies control client-side access: authenticated users only.
 
 do $$
 begin
@@ -11,7 +11,7 @@ begin
     create policy "intake_forms_insert"
       on storage.objects
       for insert
-      to public
+      to authenticated
       with check (bucket_id = 'intake-forms');
   end if;
 
@@ -22,7 +22,7 @@ begin
     create policy "intake_forms_select"
       on storage.objects
       for select
-      to public
+      to authenticated
       using (bucket_id = 'intake-forms');
   end if;
 
@@ -33,7 +33,7 @@ begin
     create policy "intake_forms_delete"
       on storage.objects
       for delete
-      to public
-      using (bucket_id = 'intake-forms');
+      to authenticated
+      using (bucket_id = 'intake-forms' and auth.uid() is not null);
   end if;
 end $$;

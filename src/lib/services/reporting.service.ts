@@ -1,43 +1,19 @@
 import { prisma } from '@/lib/db/client'
 import { Prisma } from '@prisma/client'
+import type {
+  RevenuePeriod,
+  WorkerMetric,
+  DashboardTotals,
+  WorkerRanking,
+  RetentionMetrics,
+} from '@/lib/types/reporting'
 
-export interface RevenuePeriod {
-  period: string
-  totalRevenue: number
-  bookingCount: number
-  newCustomerCount: number
-  existingCustomerCount: number
-}
-
-export interface WorkerMetric {
-  workerId: string
-  workerName: string
-  totalRevenue: number
-  bookingCount: number
-  averagePerBooking: number
-}
-
-export interface DashboardTotals {
-  totalRevenue: number
-  totalBookings: number
-  uniqueCustomers: number
-  averageRevenuePerBooking: number
-}
-
-export interface WorkerRanking {
-  rank: number
-  workerId: string
-  workerName: string
-  totalRevenue: number
-  bookingCount: number
-  differenceFromFirst: number
-}
-
-export interface RetentionMetrics {
-  totalCustomers: number
-  repeatCustomers: number
-  repeatRate: number
-  newCustomers: number
+export type {
+  RevenuePeriod,
+  WorkerMetric,
+  DashboardTotals,
+  WorkerRanking,
+  RetentionMetrics,
 }
 
 type GroupBy = 'day' | 'week' | 'month'
@@ -184,9 +160,13 @@ export async function getDashboardTotals(params: {
     `
   )
 
-  const totalRevenue = Number(result?.total_revenue ?? 0)
-  const totalBookings = Number(result?.total_bookings ?? 0)
-  const uniqueCustomers = Number(result?.unique_customers ?? 0)
+  if (!result) {
+    return { totalRevenue: 0, totalBookings: 0, uniqueCustomers: 0, averageRevenuePerBooking: 0 }
+  }
+
+  const totalRevenue = Number(result.total_revenue ?? 0)
+  const totalBookings = Number(result.total_bookings)
+  const uniqueCustomers = Number(result.unique_customers)
 
   return {
     totalRevenue,

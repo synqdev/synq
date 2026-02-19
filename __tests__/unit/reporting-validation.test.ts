@@ -77,5 +77,10 @@ describe('Reporting Validations', () => {
       });
       expect(result.success).toBe(false);
     });
+
+    it('rejects missing dates', () => {
+      const result = workerMetricsQuerySchema.safeParse({});
+      expect(result.success).toBe(false);
+    });
   });
 });

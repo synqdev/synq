@@ -2,22 +2,18 @@
 
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
+import type { WorkerRanking } from '@/lib/types/reporting'
 
 interface RankingsSectionProps {
   startDate: string
   endDate: string
 }
 
-interface WorkerRanking {
-  rank: number
-  workerId: string
-  workerName: string
-  totalRevenue: number
-  bookingCount: number
-  differenceFromFirst: number
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
 }
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 function formatJPY(amount: number): string {
   return `\u00A5${amount.toLocaleString()}`

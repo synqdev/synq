@@ -154,6 +154,7 @@
     "reportsPage": {
       "title": "Sales Reports",
       "loading": "Loading...",
+      "error": "Failed to load report data. Please try again.",
       "preset": {
         "today": "Today",
         "thisWeek": "This Week",

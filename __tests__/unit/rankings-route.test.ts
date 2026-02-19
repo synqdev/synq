@@ -45,6 +45,16 @@ describe('Rankings & Retention API Routes', () => {
       expect(res.status).toBe(400);
     });
 
+    it('returns 500 when getWorkerRankings throws', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (getWorkerRankings as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+
+      const req = new NextRequest('http://localhost/api/admin/reports/rankings?startDate=2026-01-01&endDate=2026-02-01');
+      const res = await rankingsGET(req);
+
+      expect(res.status).toBe(500);
+    });
+
     it('returns rankings on valid request', async () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
       const mockRankings = [
@@ -79,6 +89,16 @@ describe('Rankings & Retention API Routes', () => {
       const res = await retentionGET(req);
 
       expect(res.status).toBe(400);
+    });
+
+    it('returns 500 when getRepeatCustomerRate throws', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (getRepeatCustomerRate as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+
+      const req = new NextRequest('http://localhost/api/admin/reports/retention?startDate=2026-01-01&endDate=2026-02-01');
+      const res = await retentionGET(req);
+
+      expect(res.status).toBe(500);
     });
 
     it('returns retention data on valid request', async () => {

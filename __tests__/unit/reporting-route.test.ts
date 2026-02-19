@@ -109,6 +109,25 @@ describe('Reports API Routes', () => {
       expect(res.status).toBe(400);
     });
 
+    it('returns 400 when endDate before startDate', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+
+      const req = new NextRequest('http://localhost/api/admin/reports/workers?startDate=2026-02-01&endDate=2026-01-01');
+      const res = await workersGET(req);
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 500 when getWorkerMetrics throws', async () => {
+      (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
+      (getWorkerMetrics as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+
+      const req = new NextRequest('http://localhost/api/admin/reports/workers?startDate=2026-01-01&endDate=2026-02-01');
+      const res = await workersGET(req);
+
+      expect(res.status).toBe(500);
+    });
+
     it('returns worker metrics on valid request', async () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
       const mockWorkers = [

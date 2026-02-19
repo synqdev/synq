@@ -4,35 +4,17 @@ import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
 import { RankingsSection } from './rankings-section'
+import type { RevenuePeriod, DashboardTotals, WorkerMetric } from '@/lib/types/reporting'
 
 interface RevenueDashboardProps {
   locale: string
 }
 
-interface RevenuePeriod {
-  period: string
-  totalRevenue: number
-  bookingCount: number
-  newCustomerCount: number
-  existingCustomerCount: number
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
 }
-
-interface DashboardTotals {
-  totalRevenue: number
-  totalBookings: number
-  uniqueCustomers: number
-  averageRevenuePerBooking: number
-}
-
-interface WorkerMetric {
-  workerId: string
-  workerName: string
-  totalRevenue: number
-  bookingCount: number
-  averagePerBooking: number
-}
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 function formatJPY(amount: number): string {
   return `\u00A5${amount.toLocaleString()}`
@@ -110,16 +92,16 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
   const workersUrl = `/api/admin/reports/workers?startDate=${startDate}&endDate=${endDate}`
   const retentionUrl = `/api/admin/reports/retention?startDate=${startDate}&endDate=${endDate}`
 
-  const { data: revenueData, isLoading: revenueLoading } = useSWR<{
+  const { data: revenueData, isLoading: revenueLoading, error: revenueError } = useSWR<{
     summary: RevenuePeriod[]
     totals: DashboardTotals
   }>(revenueUrl, fetcher)
 
-  const { data: workersData, isLoading: workersLoading } = useSWR<{
+  const { data: workersData, isLoading: workersLoading, error: workersError } = useSWR<{
     workers: WorkerMetric[]
   }>(workersUrl, fetcher)
 
-  const { data: retentionData } = useSWR<{
+  const { data: retentionData, isLoading: retentionLoading, error: retentionError } = useSWR<{
     totalCustomers: number
     repeatCustomers: number
     repeatRate: number
@@ -129,6 +111,7 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
   const totals = revenueData?.totals
   const summary = revenueData?.summary ?? []
   const workers = workersData?.workers ?? []
+  const hasError = !!(revenueError || workersError || retentionError)
 
   const summaryTotals = useMemo(() => {
     return summary.reduce(
@@ -148,7 +131,7 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
     setEndDate(toDateString(range.end))
   }
 
-  const isLoading = revenueLoading || workersLoading
+  const isLoading = revenueLoading || workersLoading || retentionLoading
 
   return (
     <div className="space-y-6">
@@ -203,7 +186,9 @@ export function RevenueDashboard({ locale }: RevenueDashboardProps) {
       </div>
 
       {/* Summary Cards */}
-      {isLoading ? (
+      {hasError ? (
+        <div className="py-8 text-center text-red-500">{t('error')}</div>
+      ) : isLoading ? (
         <div className="py-8 text-center text-gray-500">{t('loading')}</div>
       ) : (
         <>

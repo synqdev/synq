@@ -13,7 +13,8 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
 - [x] **Phase 1: MVP** - Foundation, user booking, admin management, tests, email (complete booking system)
 - [ ] **Phase 01.1: Post-MVP UI Enhancements (Inserted)** - Prototype calendar, data table, updated types/exports
 - [ ] **Phase 2: Parity** - CRM, customer management, employee KPIs, sales reporting
-- [ ] **Phase 3: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
+- [ ] **Phase 3: Payments & Membership** - Stripe/Apple Pay checkout, membership plans, QR codes, user & admin payment pages
+- [ ] **Phase 4: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
 
 ## Phase Details
 
@@ -100,10 +101,35 @@ Plans:
 - [x] 02-07-PLAN.md — CSV export (customers, bookings, revenue) (Wave 4)
 - [x] 02-08-PLAN.md — Integration, i18n, and end-to-end verification (Wave 4)
 
-### Phase 3: Differentiation
-**Goal**: Deliver full mindmap vision with loyalty program, dynamic pricing, and customer app features
+### Phase 3: Payments & Membership
+**Goal**: Stripe/Apple Pay checkout, membership plans with QR codes for in-location scanning, user-facing payment pages, admin payment management, backend schema and webhook integration
 **Depends on**: Phase 2
-**Requirements**: (from mindmap - to be detailed when Phase 2 completes)
+**Requirements**: PAY-01 (Stripe checkout), PAY-02 (Apple Pay), PAY-03 (webhooks), MEM-01 (membership plans), MEM-02 (QR codes), MEM-03 (QR scan verification), MEM-04 (admin plan management), MEM-05 (admin payment views)
+
+**Success Criteria** (what must be TRUE):
+  1. Customer can purchase membership plans via Stripe checkout
+  2. Apple Pay supported as payment method
+  3. Customer has QR code in their account for in-location scanning
+  4. Staff can scan QR code to verify membership and process visit
+  5. Admin can view and manage membership plans (create, edit, deactivate)
+  6. Admin can view payment history and membership status per customer
+  7. Stripe webhooks correctly update payment and subscription status
+  8. Checkout flow handles success, failure, and cancellation gracefully
+
+**Plans:** 6 plans in 4 waves
+
+Plans:
+- [ ] 03-01-PLAN.md — Foundation: schema, packages, Stripe client, validations (Wave 1)
+- [ ] 03-02-PLAN.md — Webhook handler and payment/membership services (Wave 2)
+- [ ] 03-03-PLAN.md — Admin membership plan management (Wave 2)
+- [ ] 03-04-PLAN.md — Customer checkout flow with Stripe hosted checkout (Wave 3)
+- [ ] 03-05-PLAN.md — QR code generation, verification, and staff scanner (Wave 3)
+- [ ] 03-06-PLAN.md — Admin payment views, navigation, i18n, and end-to-end verification (Wave 4)
+
+### Phase 4: Differentiation
+**Goal**: Deliver full mindmap vision with loyalty program, dynamic pricing, and customer app features
+**Depends on**: Phase 3
+**Requirements**: (from mindmap - to be detailed when Phase 3 completes)
 
 **Success Criteria** (what must be TRUE):
   1. Customer can purchase and use multi-session tickets (回数券)
@@ -120,11 +146,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Current priority order: 1 -> 2 -> 01.1 -> 3 (01.1 temporarily deferred)
+Current priority order: 1 -> 2 -> 3 -> 01.1 -> 4 (01.1 temporarily deferred)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. MVP | 14/14 | Complete | 2026-02-05 |
 | 01.1 Post-MVP UI Enhancements | 0/1 | Deferred | - |
 | 2. Parity | 8/8 | Complete | 2026-02-19 |
-| 3. Differentiation | 0/? | Not started | - |
+| 3. Payments & Membership | 0/6 | Planned | - |
+| 4. Differentiation | 0/? | Not started | - |

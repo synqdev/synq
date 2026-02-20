@@ -14,7 +14,6 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db/client'
 import { updateBookingSchema, blockTimeSchema } from '@/lib/validations/admin-booking'
 import { getAdminSession } from '@/lib/auth/admin'
-import { SYSTEM_BLOCKER_ID, BLOCK_SERVICE_ID } from '@/lib/constants/system'
 import { toZonedTime } from '@/lib/utils/time'
 import { createBooking } from '@/lib/services/booking.service'
 
@@ -116,8 +115,8 @@ export async function blockWorkerTime(formData: FormData) {
 
   const booking = await prisma.booking.create({
     data: {
-      customerId: SYSTEM_BLOCKER_ID,
-      serviceId: BLOCK_SERVICE_ID,
+      customerId: '00000000-0000-0000-0000-000000000000', // SYSTEM_BLOCKER
+      serviceId: 'block-service', // BLOCK_SERVICE
       workerId: parsed.workerId,
       resourceId: resource.id,
       startsAt,
@@ -150,7 +149,7 @@ export async function removeBlockedTime(bookingId: string) {
     select: { serviceId: true },
   })
 
-  if (booking?.serviceId !== BLOCK_SERVICE_ID) {
+  if (booking?.serviceId !== 'block-service') {
     throw new Error('Not a system block booking')
   }
 

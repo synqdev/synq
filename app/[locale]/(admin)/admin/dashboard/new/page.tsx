@@ -9,6 +9,7 @@ interface AdminDashboardNewPageProps {
   searchParams: Promise<{ date?: string }>
 }
 
+
 export default async function AdminDashboardNewPage({
   params,
   searchParams,

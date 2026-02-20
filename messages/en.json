@@ -22,6 +22,7 @@
     "apply": "Apply",
     "close": "Close",
     "date": "Date",
+    "min": "min",
     "minutes": "min",
     "localeJa": "日本語",
     "localeEn": "English"
@@ -145,7 +146,8 @@
   },
   "welcome": {
     "title": "Welcome to SYNQ",
-    "subtitle": "Smart booking management system"
+    "subtitle": "Smart booking management system",
+    "bookNow": "Book Now"
   },
   "register": {
     "title": "Customer Registration",

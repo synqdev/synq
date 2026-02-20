@@ -391,43 +391,41 @@ export function AdminDashboardPrototypeClient({
 
   const updateUrlTab = (id: string) => {
     const next = new URLSearchParams(searchParams.toString())
-    next.set('date', activeDateStr)
     next.set('tab', id)
+    if (id === 'calendar') {
+      next.set('date', activeDateStr)
+    } else {
+      next.delete('date')
+    }
     router.replace(`/${locale}/admin/dashboard/new?${next.toString()}`)
   }
 
   const panelContent = activeTabId === 'workers' ? (
-    <div className="h-full overflow-auto p-4">
-      <div className="space-y-4">
-        <CrudPanelSection title="Add Worker">
-          <WorkerForm mode="create" />
-        </CrudPanelSection>
-        <CrudPanelSection title="Workers">
-          <WorkerTable workers={initialWorkerCrud} />
-        </CrudPanelSection>
-      </div>
+    <div className="space-y-4 font-bahnschrift">
+      <CrudPanelSection title="Add Worker">
+        <WorkerForm mode="create" />
+      </CrudPanelSection>
+      <CrudPanelSection title="Workers">
+        <WorkerTable workers={initialWorkerCrud} />
+      </CrudPanelSection>
     </div>
   ) : activeTabId === 'services' ? (
-    <div className="h-full overflow-auto p-4">
-      <div className="space-y-4">
-        <CrudPanelSection title="Add Service">
-          <ServiceForm mode="create" />
-        </CrudPanelSection>
-        <CrudPanelSection title="Services">
-          <ServiceTable services={initialServiceCrud} />
-        </CrudPanelSection>
-      </div>
+    <div className="space-y-4 font-bahnschrift">
+      <CrudPanelSection title="Add Service">
+        <ServiceForm mode="create" />
+      </CrudPanelSection>
+      <CrudPanelSection title="Services">
+        <ServiceTable services={initialServiceCrud} />
+      </CrudPanelSection>
     </div>
   ) : activeTabId === 'resources' ? (
-    <div className="h-full overflow-auto p-4">
-      <div className="space-y-4">
-        <CrudPanelSection title="Add Resource">
-          <ResourceForm mode="create" />
-        </CrudPanelSection>
-        <CrudPanelSection title="Resources">
-          <ResourceTable resources={initialResourceCrud} />
-        </CrudPanelSection>
-      </div>
+    <div className="space-y-4 font-bahnschrift">
+      <CrudPanelSection title="Add Resource">
+        <ResourceForm mode="create" />
+      </CrudPanelSection>
+      <CrudPanelSection title="Resources">
+        <ResourceTable resources={initialResourceCrud} />
+      </CrudPanelSection>
     </div>
   ) : undefined
 

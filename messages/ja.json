@@ -22,6 +22,7 @@
     "apply": "適用",
     "close": "閉じる",
     "date": "日付",
+    "min": "分",
     "minutes": "分",
     "localeJa": "日本語",
     "localeEn": "English"
@@ -145,7 +146,8 @@
   },
   "welcome": {
     "title": "SYNQへようこそ",
-    "subtitle": "スマートな予約管理システム"
+    "subtitle": "スマートな予約管理システム",
+    "bookNow": "今すぐ予約"
   },
   "register": {
     "title": "お客様登録",

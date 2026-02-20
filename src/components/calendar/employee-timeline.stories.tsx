@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { EmployeeTimeline, type TimelineSlot, type TimelineWorker } from './employee-timeline';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const meta: Meta<typeof EmployeeTimeline> = {
   title: 'Calendar/EmployeeTimeline',
@@ -31,7 +31,7 @@ const initialWorkers: TimelineWorker[] = [
 ];
 
 // Stateful wrapper
-const StatefulTimeline = (args: React.ComponentProps<typeof EmployeeTimeline>) => {
+const StatefulTimeline = (args: any) => {
   const [workers, setWorkers] = useState<TimelineWorker[]>(args.workers);
 
   const handleSlotRemove = (slotToRemove: TimelineSlot, workerId: string) => {

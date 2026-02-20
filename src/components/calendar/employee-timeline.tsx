@@ -152,7 +152,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
 
         const startMinutes = useMemo(() => timeToMinutes(timeRange.start), [timeRange.start])
         const endMinutes = useMemo(() => timeToMinutes(timeRange.end), [timeRange.end])
-        const totalDuration = Math.max(endMinutes - startMinutes, 1) // Prevent division by zero
+        const totalDuration = endMinutes - startMinutes
 
         // Generate time labels (hours)
         const timeLabels = useMemo(() => {

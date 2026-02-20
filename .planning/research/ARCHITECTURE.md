@@ -14,7 +14,7 @@ SYNQ's architecture must prioritize **concurrent booking prevention** and **effi
 
 ### High-Level Structure
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     Next.js 15 App Router                    │
 ├──────────────────────────┬──────────────────────────────────┤
@@ -47,7 +47,7 @@ SYNQ's architecture must prioritize **concurrent booking prevention** and **effi
 
 #### Booking Creation Flow (Critical Path)
 
-```
+```text
 User selects slot → Public Route Component
                           ↓
             Server Action (createBooking)
@@ -72,7 +72,7 @@ User selects slot → Public Route Component
 
 #### Availability Query Flow
 
-```
+```text
 User requests date → Public Route Component
                           ↓
               Server Action (getAvailability)
@@ -412,7 +412,7 @@ export async function calculateAvailableSlots(
 **Why:** Clear security boundaries, different layouts, easier middleware application
 
 **Example:**
-```
+```text
 app/
 ├── (public)/              # Customer-facing
 │   ├── layout.tsx         # Public layout (header, footer)

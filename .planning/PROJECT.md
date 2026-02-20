@@ -72,24 +72,46 @@ Even if Worker A is free at 2pm, if all 3 beds are occupied by Workers B, C, D's
 **Database Schema:**
 
 ```prisma
+model Shop {
+  id        String   @id @default(uuid())
+  name      String
+  timezone  String   @default("Asia/Tokyo") // IANA timezone
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  NOSHOW
+}
+
 model Service {
   id          String    @id @default(uuid())
+  shopId      String
   name        String    // Primary (Japanese) e.g., "指圧"
   nameEn      String?   // Fallback (English) e.g., "Shiatsu"
   description String?
   duration    Int       // Minutes
   price       Int       // Yen
   isActive    Boolean   @default(true)
+  deletedAt   DateTime?
   bookings    Booking[]
+
+  @@index([shopId])
 }
 
 model Worker {
   id          String           @id @default(uuid())
+  shopId      String
   name        String           // e.g., "Tanaka"
   nameEn      String?          // e.g., "Tanaka" (English display)
   isActive    Boolean          @default(true)
+  deletedAt   DateTime?
   bookings    Booking[]
   schedules   WorkerSchedule[]
+
+  @@index([shopId])
 }
 
 model WorkerSchedule {
@@ -98,8 +120,8 @@ model WorkerSchedule {
   worker       Worker    @relation(fields: [workerId], references: [id])
   dayOfWeek    Int?      // 0=Sunday, 6=Saturday (recurring)
   specificDate DateTime? // One-off block/availability
-  startTime    String    // "09:00" format
-  endTime      String    // "18:00" format
+  startTime    DateTime  // Store as 1970-01-01T09:00:00Z for time-of-day
+  endTime      DateTime  // Store as 1970-01-01T18:00:00Z for time-of-day
   isAvailable  Boolean   @default(true) // false = blocked time
 
   @@index([workerId, dayOfWeek])
@@ -108,29 +130,41 @@ model WorkerSchedule {
 
 model Resource {
   id          String    @id @default(uuid())
+  shopId      String
   name        String    // e.g., "Bed 1"
   isActive    Boolean   @default(true)
+  deletedAt   DateTime?
   bookings    Booking[]
+
+  @@index([shopId])
 }
 
 model Customer {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  phone         String?
-  name          String
-  locale        String    @default("ja") // "en" or "ja"
-  ticketBalance Int       @default(0)    // Multi-session tickets (回数券)
-  notes         String?   // Admin notes
-  bookings      Booking[]
+  id                         String    @id @default(uuid())
+  shopId                     String
+  email                      String    @unique
+  phone                      String?
+  name                       String
+  locale                     String    @default("ja") // "en" or "ja"
+  isEmailVerified            Boolean   @default(false)
+  emailVerificationCode      String?
+  emailVerificationExpiresAt DateTime?
+  notes                      String?   // Admin notes
+  deletedAt                  DateTime?
+  bookings                   Booking[]
+
+  @@index([shopId])
 }
 
 model Booking {
-  id          String    @id @default(uuid())
-  createdAt   DateTime  @default(now())
+  id          String        @id @default(uuid())
+  shopId      String
+  createdAt   DateTime      @default(now())
   startsAt    DateTime
   endsAt      DateTime
-  status      String    // "CONFIRMED", "CANCELLED", "NOSHOW"
-  version     Int       @default(0) // Optimistic locking for concurrency
+  status      BookingStatus @default(CONFIRMED)
+  version     Int           @default(0) // Optimistic locking for concurrency
+  deletedAt   DateTime?
 
   workerId    String
   worker      Worker    @relation(fields: [workerId], references: [id])
@@ -144,7 +178,7 @@ model Booking {
   serviceId   String
   service     Service   @relation(fields: [serviceId], references: [id])
 
-  @@index([startsAt, endsAt])
+  @@index([shopId, startsAt, endsAt])
   @@index([workerId, startsAt, endsAt])
   @@index([resourceId, startsAt, endsAt])
 }
@@ -159,7 +193,7 @@ Both checks run in a serializable transaction to prevent race conditions.
 
 ## Constraints
 
-- **Framework:** Next.js 15 (App Router) — Avoid v16 due to CVE-2025-66478
+- **Framework:** Next.js 15 (App Router) — CVE-2025-66478 (critical RCE, CVSS 10.0) affects both 15.x and 16.x App Router; upgrade to patched releases (15.0.5+ or 16.0.7+). Rotate secrets if the app was public and unpatched as of Dec 4, 2025.
 - **Language:** TypeScript with strict mode
 - **Database:** Supabase (hosted PostgreSQL)
 - **ORM:** Prisma
@@ -176,7 +210,7 @@ Both checks run in a serializable transaction to prevent race conditions.
 | Email verification over SMS | Simpler implementation, no third-party SMS costs | — Pending |
 | Single shop first, multi-tenant schema | Faster to ship, architecture supports growth | — Pending |
 | Custom UI components over Shadcn | Leaner bundle, full control over styling | — Pending |
-| SWR polling for live calendar | Simple real-time-ish updates without WebSocket complexity | — Pending |
+| SWR polling for live calendar (5–10s) | Simple real-time-ish updates without WebSocket complexity | — Pending |
 | Lazy auth for guests | Reduces friction — no password to remember, just verify email | — Pending |
 | TypeScript strict mode | Booking logic is complex, type safety prevents runtime bugs | — Pending |
 | Individual Resource records | Track specific beds per booking (not just capacity count) | — Pending |
@@ -184,7 +218,6 @@ Both checks run in a serializable transaction to prevent race conditions.
 | Service layer separation | Business logic separate from API endpoints for testability | — Pending |
 | RLS on all tables | Security best practice, prevents data leakage | — Pending |
 | Jest for testing | Industry standard, good TypeScript support | — Pending |
-| SWR polling (5-10s) | Simple live updates without WebSocket complexity | — Pending |
 
 ---
 *Last updated: 2025-02-04 after initialization*

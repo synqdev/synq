@@ -73,7 +73,7 @@ Features to explicitly NOT build. Common mistakes in this domain.
 
 ## Feature Dependencies
 
-```
+```text
 Basic booking flow (required first):
   User registration
     → Email verification

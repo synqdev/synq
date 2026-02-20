@@ -21,19 +21,19 @@ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
  * Schema for creating a new booking.
  *
  * Validates:
- * - customerId: non-empty UUID string
- * - workerId: non-empty UUID string
- * - serviceId: non-empty UUID string
- * - resourceId: optional UUID string (auto-assigned if not provided)
+ * - customerId: non-empty string (UUID or custom ID)
+ * - workerId: non-empty string (UUID or custom ID)
+ * - serviceId: non-empty string (UUID or custom ID)
+ * - resourceId: optional non-empty string (auto-assigned if not provided)
  * - date: YYYY-MM-DD format
  * - startTime: HH:MM format
  * - endTime: HH:MM format (must be after startTime)
  */
 export const createBookingSchema = z.object({
-  customerId: z.string().uuid({ message: 'Invalid customer ID format' }),
-  workerId: z.string().uuid({ message: 'Invalid worker ID format' }),
-  serviceId: z.string().uuid({ message: 'Invalid service ID format' }),
-  resourceId: z.string().uuid({ message: 'Invalid resource ID format' }).optional(),
+  customerId: z.string().min(1, { message: 'Customer ID is required' }),
+  workerId: z.string().min(1, { message: 'Worker ID is required' }),
+  serviceId: z.string().min(1, { message: 'Service ID is required' }),
+  resourceId: z.string().min(1, { message: 'Resource ID is required' }).optional(),
   date: z.string().regex(dateRegex, { message: 'Date must be in YYYY-MM-DD format' }),
   startTime: z.string().regex(timeRegex, { message: 'Start time must be in HH:MM format' }),
   endTime: z.string().regex(timeRegex, { message: 'End time must be in HH:MM format' }),
@@ -58,7 +58,7 @@ export type BookingInput = z.infer<typeof createBookingSchema>;
  * Schema for cancelling a booking.
  */
 export const cancelBookingSchema = z.object({
-  bookingId: z.string().uuid({ message: 'Invalid booking ID format' }),
+  bookingId: z.string().min(1, { message: 'Booking ID is required' }),
   reason: z.string().max(500, { message: 'Reason must be 500 characters or less' }).optional(),
 });
 

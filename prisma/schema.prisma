@@ -51,7 +51,7 @@ model WorkerSchedule {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  @@index([workerId, dayOfWeek])
+  @@index([workerId, dayOfWeek, startTime, endTime])
   @@index([workerId, specificDate])
 }
 
@@ -83,7 +83,7 @@ model Booking {
   updatedAt DateTime @updatedAt
   startsAt  DateTime
   endsAt    DateTime
-  status    String   // "CONFIRMED", "CANCELLED", "NOSHOW"
+  status    String   // "CONFIRMED", "CANCELLED", "NOSHOW", "PENDING"
   version   Int      @default(0) // Optimistic locking for concurrency
 
   workerId   String

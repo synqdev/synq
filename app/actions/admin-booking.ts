@@ -15,6 +15,8 @@ import { prisma } from '@/lib/db/client'
 import { updateBookingSchema, blockTimeSchema } from '@/lib/validations/admin-booking'
 import { getAdminSession } from '@/lib/auth/admin'
 import { SYSTEM_BLOCKER_ID, BLOCK_SERVICE_ID } from '@/lib/constants/system'
+import { toZonedTime } from '@/lib/utils/time'
+import { createBooking } from '@/lib/services/booking.service'
 
 /**
  * Cancel a booking by setting its status to CANCELLED.
@@ -101,22 +103,23 @@ export async function blockWorkerTime(formData: FormData) {
   const parsed = blockTimeSchema.parse(raw)
 
   // Parse start and end times
-  const [startHours, startMins] = parsed.startTime.split(':').map(Number)
-  const [endHours, endMins] = parsed.endTime.split(':').map(Number)
-
-  const startsAt = new Date(parsed.date)
-  startsAt.setHours(startHours, startMins, 0, 0)
-
-  const endsAt = new Date(parsed.date)
-  endsAt.setHours(endHours, endMins, 0, 0)
+  // We use toZonedTime to ensure dates are created in the business timezone
+  const dateStr = parsed.date.toISOString().split('T')[0]
+  const startsAt = toZonedTime(dateStr, parsed.startTime)
+  const endsAt = toZonedTime(dateStr, parsed.endTime)
 
   // Create booking with system entities
   // Note: resourceId is omitted for block bookings (doesn't require specific resource)
+  // However, schema requires it, so we attach the first available resource
+  const resource = await prisma.resource.findFirst()
+  if (!resource) throw new Error('No resource available for blocking')
+
   const booking = await prisma.booking.create({
     data: {
       customerId: SYSTEM_BLOCKER_ID,
       serviceId: BLOCK_SERVICE_ID,
       workerId: parsed.workerId,
+      resourceId: resource.id,
       startsAt,
       endsAt,
       status: 'CONFIRMED',
@@ -157,4 +160,66 @@ export async function removeBlockedTime(bookingId: string) {
 
   revalidatePath('/admin/dashboard')
   return { success: true }
+}
+
+export interface SendBookingInput {
+  bookingId: string
+  workerId: string
+  date: string
+  startTime: string
+}
+
+export async function sendBooking(input: SendBookingInput) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) throw new Error('Unauthorized')
+
+  const existing = await prisma.booking.findUnique({
+    where: { id: input.bookingId },
+    select: { startsAt: true, endsAt: true },
+  })
+
+  if (!existing) {
+    throw new Error('Booking not found')
+  }
+
+  const startsAt = toZonedTime(input.date, input.startTime)
+  const durationMs = existing.endsAt.getTime() - existing.startsAt.getTime()
+  const endsAt = new Date(startsAt.getTime() + durationMs)
+
+  await prisma.booking.update({
+    where: { id: input.bookingId },
+    data: {
+      workerId: input.workerId,
+      startsAt,
+      endsAt,
+    },
+  })
+
+  revalidatePath('/admin/dashboard')
+  revalidatePath('/admin/dashboard/new')
+  return { success: true }
+}
+
+export interface CreateAdminBookingInput {
+  customerId: string
+  workerId: string
+  serviceId: string
+  date: string
+  startTime: string
+  endTime: string
+  resourceId?: string
+}
+
+export async function createAdminBooking(input: CreateAdminBookingInput) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) throw new Error('Unauthorized')
+
+  const result = await createBooking(input)
+  if (!result.success) {
+    throw new Error(result.error)
+  }
+
+  revalidatePath('/admin/dashboard')
+  revalidatePath('/admin/dashboard/new')
+  return { success: true, bookingId: result.booking.id }
 }

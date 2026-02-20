@@ -7,8 +7,11 @@
  * Handles slot clicks and navigation to confirmation page.
  */
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { EmployeeTimeline } from '@/components/calendar/employee-timeline'
+import { Button } from '@/components/ui/button'
 import type { TimelineWorker, TimelineSlot } from '@/components/calendar/employee-timeline'
 
 interface SlotSelectionClientProps {
@@ -23,7 +26,8 @@ interface SlotSelectionClientProps {
  *
  * Features:
  * - Green available slots are clickable
- * - Clicking a slot navigates to confirmation page
+ * - Clicking a slot selects it (Select + Submit pattern)
+ * - Next button proceeds to confirmation page
  * - No availability shows helpful message
  */
 export function SlotSelectionClient({
@@ -33,24 +37,44 @@ export function SlotSelectionClient({
   locale,
 }: SlotSelectionClientProps) {
   const router = useRouter()
+  const tBooking = useTranslations('booking')
+  const tCommon = useTranslations('common')
+  const [selectedSlot, setSelectedSlot] = useState<TimelineSlot | null>(null)
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null)
 
   const handleSlotClick = (slot: TimelineSlot, workerId: string) => {
-    const resourceId = slot.data?.resourceIds?.[0]
+    console.log('handleSlotClick called:', { slot, workerId })
+    // Toggle selection if clicking the same slot, otherwise select new
+    if (selectedSlot?.startTime === slot.startTime && selectedWorkerId === workerId) {
+      console.log('Deselecting slot')
+      setSelectedSlot(null)
+      setSelectedWorkerId(null)
+    } else {
+      console.log('Selecting slot')
+      setSelectedSlot(slot)
+      setSelectedWorkerId(workerId)
+    }
+  }
+
+  const handleNext = () => {
+    if (!selectedSlot || !selectedWorkerId) return
+
+    const resourceId = selectedSlot.data?.resourceIds?.[0]
     if (!resourceId) {
       console.error('No resource available for slot')
       return
     }
 
-    // Navigate to confirmation page with all booking details
+    // Navigate to preview page with all booking details
     const params = new URLSearchParams({
       serviceId,
       date,
-      workerId,
-      time: slot.startTime,
+      workerId: selectedWorkerId,
+      time: selectedSlot.startTime,
       resourceId,
     })
 
-    router.push(`/${locale}/booking/confirm?${params.toString()}`)
+    router.push(`/${locale}/booking/preview?${params.toString()}`)
   }
 
   // Check if there are any available slots
@@ -58,22 +82,45 @@ export function SlotSelectionClient({
 
   if (!hasAvailableSlots) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12" data-testid="slots-empty">
         <p className="text-gray-500 text-lg">
-          {locale === 'ja' ? 'この日は空きがありません' : 'No availability on this date'}
+          {tBooking('noSlots')}
         </p>
         <p className="text-gray-400 mt-2">
-          {locale === 'ja' ? '別の日付を選択してください' : 'Please select a different date'}
+          {tBooking('selectDifferentDate')}
         </p>
       </div>
     )
   }
 
   return (
-    <EmployeeTimeline
-      workers={workers}
-      timeRange={{ start: '10:00', end: '19:00' }}
-      className="min-h-[400px]"
-    />
+    <div className="flex flex-col gap-6">
+      <EmployeeTimeline
+        workers={workers}
+        mode="user"
+        selectedSlot={selectedSlot}
+        selectedWorkerId={selectedWorkerId}
+        timeRange={{ start: '10:00', end: '19:00' }}
+        onSlotClick={handleSlotClick}
+        className="min-h-[400px]"
+      />
+
+      <div className="flex justify-between pt-4 border-t border-gray-100">
+        <Button
+          variant="outline"
+          onClick={() => router.back()}
+          className="min-w-[120px]"
+        >
+          {tCommon('back')}
+        </Button>
+        <Button
+          onClick={handleNext}
+          disabled={!selectedSlot}
+          className="min-w-[120px]"
+        >
+          {tCommon('next')}
+        </Button>
+      </div>
+    </div>
   )
 }

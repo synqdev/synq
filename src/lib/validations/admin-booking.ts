@@ -25,8 +25,8 @@ const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
 export const updateBookingSchema = z.object({
   bookingId: z.string().uuid({ message: 'Invalid booking ID format' }),
   startsAt: z.coerce.date().optional(),
-  workerId: z.string().uuid({ message: 'Invalid worker ID format' }).optional(),
-  status: z.enum(['CONFIRMED', 'CANCELLED', 'NOSHOW']).optional(),
+  workerId: z.string().min(1).optional(),
+  status: z.enum(['CONFIRMED', 'CANCELLED', 'NOSHOW', 'PENDING']).optional(),
 })
 
 export type UpdateBookingInput = z.infer<typeof updateBookingSchema>
@@ -43,7 +43,7 @@ export type UpdateBookingInput = z.infer<typeof updateBookingSchema>
  * - endTime: HH:MM format
  */
 export const blockTimeSchema = z.object({
-  workerId: z.string().uuid({ message: 'Invalid worker ID format' }),
+  workerId: z.string().min(1, { message: 'Worker ID is required' }),
   date: z.coerce.date(),
   startTime: z.string().regex(timeRegex, { message: 'Start time must be in HH:MM format' }),
   endTime: z.string().regex(timeRegex, { message: 'End time must be in HH:MM format' }),

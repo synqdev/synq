@@ -1,8 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/db/client';
+import { BUSINESS_TIMEZONE } from '@/lib/constants';
 import { Card, CardHeader, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { getLocaleDateTag, getLocalizedName } from '@/lib/i18n/locale';
 
 interface ConfirmPageProps {
   params: Promise<{ locale: string }>;
@@ -30,7 +32,7 @@ export default async function ConfirmPage({
   // Handle missing booking ID
   if (!bookingId) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center" data-testid="confirm-not-found">
         <Card className="max-w-md text-center">
           <CardBody>
             <h1 className="text-xl font-bold text-error-600">{t('notFound')}</h1>
@@ -60,7 +62,7 @@ export default async function ConfirmPage({
   // Handle booking not found
   if (!booking) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center" data-testid="confirm-not-found">
         <Card className="max-w-md text-center">
           <CardBody>
             <h1 className="text-xl font-bold text-error-600">{t('notFound')}</h1>
@@ -77,23 +79,22 @@ export default async function ConfirmPage({
   }
 
   // Format date and time with locale
-  const dateFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  // Format date and time with locale
+  const dateFormatter = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
     dateStyle: 'full',
+    timeZone: BUSINESS_TIMEZONE,
   });
-  const timeFormatter = new Intl.DateTimeFormat(locale === 'ja' ? 'ja-JP' : 'en-US', {
+  const timeFormatter = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
     timeStyle: 'short',
+    timeZone: BUSINESS_TIMEZONE,
   });
 
   const formattedDate = dateFormatter.format(booking.startsAt);
   const formattedTime = `${timeFormatter.format(booking.startsAt)} - ${timeFormatter.format(booking.endsAt)}`;
 
   // Get localized names
-  const workerName = locale === 'ja'
-    ? booking.worker.name
-    : booking.worker.nameEn || booking.worker.name;
-  const serviceName = locale === 'ja'
-    ? booking.service.name
-    : booking.service.nameEn || booking.service.name;
+  const workerName = getLocalizedName(locale, booking.worker.name, booking.worker.nameEn);
+  const serviceName = getLocalizedName(locale, booking.service.name, booking.service.nameEn);
 
   // Get status label
   const statusLabels: Record<string, string> = {
@@ -114,7 +115,7 @@ export default async function ConfirmPage({
   const statusColor = statusColors[booking.status] || 'bg-secondary-100 text-secondary-700';
 
   return (
-    <div className="mx-auto max-w-2xl py-8">
+    <div className="mx-auto max-w-2xl py-8" data-testid="confirm-page">
       {/* Success header */}
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success-100">
@@ -132,7 +133,7 @@ export default async function ConfirmPage({
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-secondary-900">{t('title')}</h1>
+        <h1 className="text-2xl font-bold text-secondary-900" data-testid="confirm-heading">{t('title')}</h1>
         <p className="mt-1 text-secondary-600">{t('subtitle')}</p>
       </div>
 
@@ -147,28 +148,28 @@ export default async function ConfirmPage({
           {/* Service */}
           <div className="flex justify-between py-3">
             <span className="text-secondary-600">{t('service')}</span>
-            <span className="font-medium text-secondary-900">{serviceName}</span>
+            <span className="font-medium text-secondary-900" data-testid="confirm-service-name">{serviceName}</span>
           </div>
 
           {/* Worker */}
           <div className="flex justify-between py-3">
             <span className="text-secondary-600">{t('worker')}</span>
-            <span className="font-medium text-secondary-900">{workerName}</span>
+            <span className="font-medium text-secondary-900" data-testid="confirm-worker-name">{workerName}</span>
           </div>
 
           {/* Date & Time */}
           <div className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between">
             <span className="text-secondary-600">{t('dateTime')}</span>
             <div className="text-right">
-              <div className="font-medium text-secondary-900">{formattedDate}</div>
-              <div className="text-secondary-600">{formattedTime}</div>
+              <div className="font-medium text-secondary-900" data-testid="confirm-date">{formattedDate}</div>
+              <div className="text-secondary-600" data-testid="confirm-time">{formattedTime}</div>
             </div>
           </div>
 
           {/* Status */}
           <div className="flex justify-between py-3">
             <span className="text-secondary-600">{t('status')}</span>
-            <span className={`rounded-full px-3 py-1 text-sm font-medium ${statusColor}`}>
+            <span className={`rounded-full px-3 py-1 text-sm font-medium ${statusColor}`} data-testid="confirm-status">
               {statusLabel}
             </span>
           </div>
@@ -177,12 +178,12 @@ export default async function ConfirmPage({
 
       {/* Action buttons */}
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Link href="/booking">
+        <Link href="/booking" data-testid="confirm-book-another">
           <Button variant="outline" className="w-full sm:w-auto">
             {t('bookAnother')}
           </Button>
         </Link>
-        <Link href="/">
+        <Link href="/" data-testid="confirm-back-home">
           <Button variant="primary" className="w-full sm:w-auto">
             {t('backToHome')}
           </Button>

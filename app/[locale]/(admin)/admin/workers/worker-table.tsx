@@ -9,6 +9,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteWorker } from '@/app/actions/workers'
 import { WorkerForm } from './worker-form'
@@ -21,33 +22,19 @@ interface Worker {
   createdAt: Date
 }
 
-interface Labels {
-  name: string
-  nameEn: string
-  status: string
-  active: string
-  inactive: string
-  actions: string
-  edit: string
-  delete: string
-  save: string
-  cancel: string
-  noWorkers: string
-  confirmDelete: string
-}
-
 interface WorkerTableProps {
   workers: Worker[]
-  labels: Labels
 }
 
-export function WorkerTable({ workers, labels }: WorkerTableProps) {
+export function WorkerTable({ workers }: WorkerTableProps) {
   const router = useRouter()
+  const tCommon = useTranslations('common')
+  const tWorkers = useTranslations('admin.workersPage')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`${labels.confirmDelete}\n\n${name}`)) return
+    if (!confirm(`${tWorkers('confirmDelete')}\n\n${name}`)) return
 
     startTransition(async () => {
       await deleteWorker(id)
@@ -63,7 +50,7 @@ export function WorkerTable({ workers, labels }: WorkerTableProps) {
   if (workers.length === 0) {
     return (
       <p className="text-center text-secondary-500 py-8">
-        {labels.noWorkers}
+        {tWorkers('notFound')}
       </p>
     )
   }
@@ -73,10 +60,10 @@ export function WorkerTable({ workers, labels }: WorkerTableProps) {
       <table className="w-full text-left text-sm">
         <thead className="border-b border-secondary-200 text-secondary-600">
           <tr>
-            <th className="px-4 py-3 font-medium">{labels.name}</th>
-            <th className="px-4 py-3 font-medium">{labels.nameEn}</th>
-            <th className="px-4 py-3 font-medium">{labels.status}</th>
-            <th className="px-4 py-3 font-medium text-right">{labels.actions}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('name')}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('nameEn')}</th>
+            <th className="px-4 py-3 font-medium">{tCommon('status')}</th>
+            <th className="px-4 py-3 font-medium text-right">{tCommon('actions')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-secondary-100">
@@ -85,7 +72,6 @@ export function WorkerTable({ workers, labels }: WorkerTableProps) {
               {editingId === worker.id ? (
                 <td colSpan={4} className="px-4 py-4">
                   <WorkerForm
-                    labels={labels}
                     mode="edit"
                     worker={worker}
                     onCancel={handleEditCancel}
@@ -101,13 +87,12 @@ export function WorkerTable({ workers, labels }: WorkerTableProps) {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                        worker.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${worker.isActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}
                     >
-                      {worker.isActive ? labels.active : labels.inactive}
+                      {worker.isActive ? tCommon('active') : tCommon('inactive')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -117,7 +102,7 @@ export function WorkerTable({ workers, labels }: WorkerTableProps) {
                         size="sm"
                         onClick={() => setEditingId(worker.id)}
                       >
-                        {labels.edit}
+                        {tCommon('edit')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -126,7 +111,7 @@ export function WorkerTable({ workers, labels }: WorkerTableProps) {
                         disabled={isPending}
                         className="text-red-600 hover:bg-red-50"
                       >
-                        {labels.delete}
+                        {tCommon('delete')}
                       </Button>
                     </div>
                   </td>

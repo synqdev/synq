@@ -5,13 +5,16 @@
  *
  * Interactive calendar view for admin dashboard.
  * Shows all bookings with customer details and allows booking management.
+ * Uses SWR polling for real-time updates (10 second intervals).
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TimelineCalendar } from '@/components/calendar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
+import { useCalendarPolling } from '@/hooks/useCalendarPolling'
 import type { CalendarSlot, CalendarWorker } from '@/types/calendar'
 import { BookingModal, type BookingDetails, type Worker } from './booking-modal'
 
@@ -49,16 +52,37 @@ function formatDisplayDate(date: Date, locale: string): string {
  * - Previous/next day buttons
  * - Click on booking to view/edit details
  * - Interactive mode shows all booking information
+ * - Real-time updates via SWR polling (10 seconds)
  */
 export function AdminCalendar({
-  workers,
-  slots,
+  workers: initialWorkers,
+  slots: initialSlots,
   date,
   locale,
 }: AdminCalendarProps) {
   const router = useRouter()
   const [selectedBooking, setSelectedBooking] = useState<BookingDetails | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Format date for API
+  const dateStr = formatDateParam(date)
+
+  // Use SWR polling for real-time updates
+  const {
+    workers: polledWorkers,
+    slots: polledSlots,
+    isLoading,
+    lastUpdated,
+    refresh,
+  } = useCalendarPolling({
+    date: dateStr,
+    mode: 'admin',
+    pollingInterval: 10000, // 10 seconds
+  })
+
+  // Use polled data if available, otherwise fall back to initial server data
+  const workers = polledWorkers.length > 0 ? polledWorkers : initialWorkers
+  const slots = polledSlots.length > 0 || polledWorkers.length > 0 ? polledSlots : initialSlots
 
   // Convert workers to CalendarWorker format
   const calendarWorkers: CalendarWorker[] = workers.map((w) => ({
@@ -124,9 +148,18 @@ export function AdminCalendar({
   const handleModalClose = () => {
     setIsModalOpen(false)
     setSelectedBooking(null)
-    // Refresh the page to get updated booking data
-    router.refresh()
+    // Trigger SWR refresh for immediate update
+    refresh()
   }
+
+  // Format last updated time
+  const lastUpdatedStr = lastUpdated
+    ? lastUpdated.toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : null
 
   // Count bookings for today
   const bookingCount = slots.filter((s) => s.booking).length
@@ -157,8 +190,18 @@ export function AdminCalendar({
           <span className="text-sm text-gray-600">
             {bookingCount} {locale === 'ja' ? '件の予約' : 'bookings'}
           </span>
+          {isLoading && <Spinner size="sm" />}
         </div>
       </div>
+
+      {/* Last updated indicator */}
+      {lastUpdatedStr && (
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          {locale === 'ja' ? '最終更新: ' : 'Last updated: '}
+          {lastUpdatedStr}
+        </div>
+      )}
 
       {/* Date display */}
       <div className="text-lg font-medium text-gray-900">

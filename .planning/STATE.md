@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 1 of 3 (MVP)
-Plan: 10 of 12 (complete)
-Status: In progress
-Last activity: 2026-02-05 - Completed 01-10-PLAN.md (Admin CRUD Management)
+Plan: 12 of 12 (complete)
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 01-12-PLAN.md (SWR Polling and Test Finalization)
 
-Progress: [██████████░░] 83%
+Progress: [████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 12
 - Average duration: 6 min
-- Total execution time: 1.1 hours
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-mvp | 10 | 64 min | 6 min |
+| 01-mvp | 12 | 69 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 2m, 4m, 8m, 10m, 4m
-- Trend: stable (admin CRUD complete)
+- Last 5 plans: 8m, 10m, 4m, 4m, 1m
+- Trend: stable (Phase 1 MVP complete)
 
 *Updated after each plan completion*
 
@@ -75,6 +75,16 @@ Recent decisions affecting current work:
 - Soft delete for all entities (isActive=false) to preserve booking history (01-10)
 - Inline table editing replaces row with form rather than modal (01-10)
 - Tab-style admin navigation in header under title (01-10)
+- RLS policies use session variables (app.customer_id, app.role) for access control (01-11)
+- Rate limiting via Upstash Redis with graceful fallback when not configured (01-11)
+- Sentry disabled in development unless DSN explicitly set (01-11)
+- Booking service errors tagged with service/operation for Sentry filtering (01-11)
+- Admin has full database access via app.role='admin' session variable (01-11)
+- Unified polling hook for both user and admin modes instead of separate hooks (01-12)
+- 10-second polling with pause when tab hidden for efficiency (01-12)
+- Activity-based adaptive polling via useAdaptivePolling hook (01-12)
+- 100% coverage requirement only on critical business logic (01-12)
+- v8 coverage provider for faster test execution (01-12)
 
 ### Pending Todos
 
@@ -86,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T18:45:09Z
-Stopped at: Completed 01-10-PLAN.md (Admin CRUD Management)
-Resume file: .planning/phases/01-mvp/01-11-PLAN.md
+Last session: 2026-02-05T23:09:42Z
+Stopped at: Completed 01-12-PLAN.md (SWR Polling and Test Finalization) - Phase 1 MVP complete
+Resume file: None (Phase 1 complete - ready for Phase 2 planning)

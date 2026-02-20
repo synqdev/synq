@@ -59,7 +59,7 @@ describe('Rankings & Retention API Routes', () => {
       (getAdminSession as jest.Mock).mockResolvedValueOnce(true);
       const mockRankings = [
         { rank: 1, workerId: 'w1', workerName: '田中', totalRevenue: 30000, bookingCount: 6, differenceFromFirst: 0 },
-        { rank: 2, workerId: 'w2', workerName: '佐藤', totalRevenue: 20000, bookingCount: 4, differenceFromFirst: -10000 },
+        { rank: 2, workerId: 'w2', workerName: '佐藤', totalRevenue: 20000, bookingCount: 4, differenceFromFirst: 10000 },
       ];
       (getWorkerRankings as jest.Mock).mockResolvedValueOnce(mockRankings);
 

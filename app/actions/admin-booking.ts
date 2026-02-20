@@ -111,7 +111,7 @@ export async function blockWorkerTime(formData: FormData) {
   // Create booking with system entities
   // Note: resourceId is omitted for block bookings (doesn't require specific resource)
   // However, schema requires it, so we attach the first available resource
-  const resource = await prisma.resource.findFirst()
+  const resource = await prisma.resource.findFirst({ orderBy: { id: 'asc' } })
   if (!resource) throw new Error('No resource available for blocking')
 
   const booking = await prisma.booking.create({

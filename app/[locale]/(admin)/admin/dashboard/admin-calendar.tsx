@@ -135,9 +135,11 @@ export function AdminCalendar({
     })
   }, [workers, slots])
 
-  // Navigate to a new date
+  // Navigate to a new date — clear selection first to prevent stale slot from prior day
   const navigateToDate = useCallback(
     (newDate: Date) => {
+      setSelectedSlot(null)
+      setSelectedWorkerId(null)
       router.push(`?date=${formatDateParam(newDate)}`)
     },
     [router]
@@ -258,13 +260,14 @@ export function AdminCalendar({
                   formData.set('endTime', endTime)
                   await blockWorkerTime(formData)
                 }
-                setSelectedSlot(null)
-                setSelectedWorkerId(null)
-                refresh()
               } catch (error) {
                 console.error('Failed to block time:', error)
                 alert(tDashboard('blockFailed'))
               } finally {
+                // Always clear selection and refresh, even on partial failures
+                setSelectedSlot(null)
+                setSelectedWorkerId(null)
+                refresh()
                 setIsBlocking(false)
               }
             }}

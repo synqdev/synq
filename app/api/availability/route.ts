@@ -70,26 +70,13 @@ export async function GET(request: NextRequest) {
       prisma.workerSchedule.findMany({
         where: {
           isAvailable: true,
-          OR: [
-            // Recurring schedule for this day of week
-            { dayOfWeek, specificDate: null },
-            // Specific date schedule (overrides recurring)
-            // We need to match the specificDate stored in DB (UTC)
-            // Note: workerSchedule.specificDate is DateTime, so it stores a time component.
-            // Ideally it should be start of day matching.
-            // For now, let's assume specificDate was stored as start of day JST (?)
-            // Actually, prisma comparison with Date object works. 
-            // We want to find schedules specifically for this logic "day".
-            // Since specificDate is usually set to midnight of that day...
-            // Let's rely on gte/lt range if possible, but specificDate is just one field.
-            // If specificDate is 00:00 JST, then it equals startOfDay.
-            { specificDate: startOfDay },
-          ],
+          // Only fetch recurring schedules for this day of week.
+          // specificDate overrides are not yet implemented (no write path exists).
+          dayOfWeek,
+          specificDate: null,
         },
       }),
     ]);
-    console.log('----', startOfDay, endOfDay)
-    console.log('bookings--', bookings)
     // Convert resources to availability service format
     const resourceList: Resource[] = resources.map((r) => ({
       id: r.id,

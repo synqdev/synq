@@ -77,8 +77,10 @@ export function SlotSelectionClient({
     router.push(`/${locale}/booking/preview?${params.toString()}`)
   }
 
-  // Check if there are any available slots
-  const hasAvailableSlots = workers.some(worker => worker.slots.length > 0)
+  // Check if there are any actually bookable slots (excludes booked/blocked ones)
+  const hasAvailableSlots = workers.some(worker =>
+    worker.slots.some(slot => slot.type === 'available')
+  )
 
   if (!hasAvailableSlots) {
     return (

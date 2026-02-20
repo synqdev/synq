@@ -36,8 +36,6 @@ export async function GET(request: NextRequest) {
   const endOfDay = new Date(startOfDay)
   endOfDay.setDate(endOfDay.getDate() + 1)
 
-  console.log('startOfDay (JST)', startOfDay.toISOString())
-  console.log('endOfDay (JST)', endOfDay.toISOString())
   // Fetch workers and bookings in parallel
   const [workers, bookings] = await Promise.all([
     prisma.worker.findMany({

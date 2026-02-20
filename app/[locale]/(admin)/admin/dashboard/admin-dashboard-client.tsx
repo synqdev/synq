@@ -96,9 +96,11 @@ export function AdminDashboardClient({
   // otherwise fall back to initial server data. This correctly handles empty results.
   const workers = lastUpdated !== null ? polledTimelineWorkers : initialWorkers
 
-  // Navigate to a new date
+  // Navigate to a new date — clear selection first to prevent stale slot from prior day
   const navigateToDate = useCallback(
     (newDate: Date) => {
+      setSelectedSlot(null)
+      setSelectedWorkerId(null)
       router.push(`?date=${formatDateParam(newDate)}`)
     },
     [router]

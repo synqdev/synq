@@ -94,5 +94,7 @@ export async function registerCustomer(
 export async function signoutCustomer(locale: string = 'en') {
   const cookieStore = await cookies();
   cookieStore.delete('customerId');
-  redirect(`/${locale}`);
+  const supportedLocales = new Set(['en', 'ja']);
+  const safeLocale = supportedLocales.has(locale) ? locale : 'en';
+  redirect(`/${safeLocale}`);
 }

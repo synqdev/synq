@@ -12,9 +12,14 @@ setup('authenticate as admin', async ({ page }) => {
   // Navigate to admin login page
   await page.goto('/en/admin/login')
 
-  // Fill in login form with credentials from .env
-  await page.fill('input[name="username"]', process.env.ADMIN_USERNAME || 'admin')
-  await page.fill('input[name="password"]', process.env.ADMIN_PASSWORD || '123')
+  // Fill in login form with credentials from .env (fail fast if not configured)
+  const username = process.env.ADMIN_USERNAME
+  const password = process.env.ADMIN_PASSWORD
+  if (!username || !password) {
+    throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be set in .env for E2E tests')
+  }
+  await page.fill('input[name="username"]', username)
+  await page.fill('input[name="password"]', password)
 
   // Submit the form
   await page.click('button[type="submit"]')

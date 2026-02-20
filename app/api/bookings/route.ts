@@ -29,7 +29,7 @@ const createBookingSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('[Booking API] Received request:', body)
+    console.log('[Booking API] Received booking request for service:', body?.serviceId)
 
     // Validate request body
     const parsed = createBookingSchema.safeParse(body)
@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { serviceId, workerId, customerId, resourceId, startsAt, endsAt } = parsed.data
-    console.log('[Booking API] Creating booking:', { serviceId, workerId, customerId, resourceId, startsAt, endsAt })
+    // Log without PII (no customerId or email)
+    console.log('[Booking API] Creating booking:', { serviceId, workerId, resourceId, startsAt, endsAt })
 
     // Extract date and time parts in the business timezone
     // This ensures that "15:00 JST" isn't converted to "22:00 PST" (previous day)
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
         day: 'numeric',
       }).format(bookingDate)
 
-      console.log('[Booking API] Sending confirmation email to:', booking.customer.email)
+      console.log('[Booking API] Sending confirmation email for booking:', result.booking.id)
 
       // Send confirmation email (non-blocking - failures logged but don't prevent response)
       const emailResult = await sendBookingConfirmation({

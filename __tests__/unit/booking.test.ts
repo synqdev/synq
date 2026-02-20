@@ -508,9 +508,15 @@ describe('Booking Service', () => {
       });
     });
 
-    it('should fail validation', async () => {
+    it('should return error when booking with non-UUID id is not found', async () => {
+      // cancelBookingSchema accepts any non-empty string (not UUID-only),
+      // so 'invalid' passes schema validation but no booking is found in DB.
+      (prisma.booking.findUnique as jest.Mock).mockResolvedValueOnce(null);
       const result = await cancelBooking({ bookingId: 'invalid' });
       expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe('Booking not found');
+      }
     });
 
     it('should return error if booking not found', async () => {

@@ -1,0 +1,45 @@
+{
+  "common": {
+    "appName": "SYNQ",
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "back": "戻る",
+    "next": "次へ",
+    "submit": "送信"
+  },
+  "booking": {
+    "title": "予約",
+    "selectTime": "時間を選択",
+    "selectService": "サービスを選択",
+    "selectWorker": "スタッフを選択",
+    "confirm": "確定",
+    "confirmed": "予約確定",
+    "cancelled": "キャンセル済み",
+    "pending": "確認中"
+  },
+  "admin": {
+    "title": "管理画面",
+    "dashboard": "ダッシュボード",
+    "workers": "スタッフ",
+    "services": "サービス",
+    "resources": "リソース",
+    "bookings": "予約一覧",
+    "settings": "設定"
+  },
+  "auth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "register": "登録",
+    "email": "メールアドレス",
+    "password": "パスワード"
+  },
+  "welcome": {
+    "title": "SYNQへようこそ",
+    "subtitle": "スマートな予約管理システム",
+    "bookNow": "今すぐ予約"
+  }
+}

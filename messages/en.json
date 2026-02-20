@@ -1,0 +1,45 @@
+{
+  "common": {
+    "appName": "SYNQ",
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit"
+  },
+  "booking": {
+    "title": "Booking",
+    "selectTime": "Select time",
+    "selectService": "Select service",
+    "selectWorker": "Select worker",
+    "confirm": "Confirm",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "pending": "Pending"
+  },
+  "admin": {
+    "title": "Admin",
+    "dashboard": "Dashboard",
+    "workers": "Workers",
+    "services": "Services",
+    "resources": "Resources",
+    "bookings": "Bookings",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password"
+  },
+  "welcome": {
+    "title": "Welcome to SYNQ",
+    "subtitle": "Smart booking management system",
+    "bookNow": "Book Now"
+  }
+}

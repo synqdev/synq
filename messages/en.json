@@ -39,6 +39,7 @@
   },
   "welcome": {
     "title": "Welcome to SYNQ",
-    "subtitle": "Smart booking management system"
+    "subtitle": "Smart booking management system",
+    "bookNow": "Book Now"
   }
 }

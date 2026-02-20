@@ -30,7 +30,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
             </h3>
           </div>
         )}
-        <div className="p-4">{children}</div>
+        {children}
       </div>
     )
   }

@@ -30,7 +30,7 @@ Progress: [███░░░░░░░] 25%
 | 01-mvp | 3 | 14 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 4m, 6m
+- Last 3 plans: 4m, 4m, 6m
 - Trend: stable
 
 *Updated after each plan completion*

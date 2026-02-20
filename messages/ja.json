@@ -39,6 +39,7 @@
   },
   "welcome": {
     "title": "SYNQへようこそ",
-    "subtitle": "スマートな予約管理システム"
+    "subtitle": "スマートな予約管理システム",
+    "bookNow": "今すぐ予約"
   }
 }

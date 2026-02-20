@@ -25,7 +25,10 @@ function formatJPY(amount: number): string {
 }
 
 function toDateString(d: Date): string {
-  return d.toISOString().split('T')[0]
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function getPresetRange(preset: string): { start: Date; end: Date } {
@@ -53,10 +56,10 @@ function getPresetRange(preset: string): { start: Date; end: Date } {
       return { start, end }
     }
     case 'last30': {
-      const start = new Date(today)
-      start.setDate(start.getDate() - 30)
       const end = new Date(today)
       end.setDate(end.getDate() + 1)
+      const start = new Date(end)
+      start.setDate(start.getDate() - 30)
       return { start, end }
     }
     default:

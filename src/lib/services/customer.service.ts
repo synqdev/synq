@@ -180,6 +180,19 @@ export async function updateCustomerAssignedStaff(id: string, assignedStaffId: s
   });
 }
 
+/**
+ * Atomically updates customer notes and/or assigned staff in a single DB call.
+ */
+export async function updateCustomerFields(
+  id: string,
+  data: { notes?: string; assignedStaffId?: string | null }
+) {
+  return prisma.customer.update({
+    where: { id },
+    data,
+  });
+}
+
 export async function getCustomerList(params: GetCustomerListParams = {}) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 25));

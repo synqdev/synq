@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { findCustomerById, updateCustomerNotes, updateCustomerAssignedStaff } from '@/lib/services/customer.service'
+import { findCustomerById, updateCustomerFields } from '@/lib/services/customer.service'
 import { updateCustomerNotesSchema } from '@/lib/validations/customer'
 
 export async function PUT(
@@ -20,7 +20,13 @@ export async function PUT(
     return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
   }
 
-  const body = await request.json()
+  let body
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
   const parsed = updateCustomerNotesSchema.safeParse(body)
 
   if (!parsed.success) {
@@ -32,12 +38,12 @@ export async function PUT(
 
   const { notes, assignedStaffId } = parsed.data
 
-  if (notes !== undefined) {
-    await updateCustomerNotes(id, notes)
-  }
+  const updateData: { notes?: string; assignedStaffId?: string | null } = {}
+  if (notes !== undefined) updateData.notes = notes
+  if (assignedStaffId !== undefined) updateData.assignedStaffId = assignedStaffId
 
-  if (assignedStaffId !== undefined) {
-    await updateCustomerAssignedStaff(id, assignedStaffId)
+  if (Object.keys(updateData).length > 0) {
+    await updateCustomerFields(id, updateData)
   }
 
   return NextResponse.json({ success: true })

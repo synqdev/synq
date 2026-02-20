@@ -12,11 +12,17 @@ export async function GET(
   }
 
   const { id } = await params
-  const customer = await getCustomerDetail(id)
 
-  if (!customer) {
-    return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+  try {
+    const customer = await getCustomerDetail(id)
+
+    if (!customer) {
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(customer)
+  } catch (error) {
+    console.error('Failed to fetch customer detail:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  return NextResponse.json(customer)
 }

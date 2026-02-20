@@ -34,7 +34,10 @@ export const customerListQuerySchema = z.object({
 
 export const updateCustomerNotesSchema = z.object({
   notes: z.string().max(5000).optional(),
-  assignedStaffId: z.string().nullable().optional(),
+  assignedStaffId: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.string().trim().min(1).nullable().optional()
+  ),
 });
 
 /**

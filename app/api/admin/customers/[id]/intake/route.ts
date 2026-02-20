@@ -71,10 +71,11 @@ export async function POST(
     )
   }
 
-  const item = await getOrCreateIntakeItem()
-  const { path } = await uploadIntakeForm(customerId, file)
-
+  let path: string | null = null
   try {
+    const item = await getOrCreateIntakeItem()
+    const upload = await uploadIntakeForm(customerId, file)
+    path = upload.path
     const record = await createMedicalRecord({
       customerId,
       itemId: item.id,
@@ -83,8 +84,8 @@ export async function POST(
     })
     return NextResponse.json({ record }, { status: 201 })
   } catch {
-    await deleteIntakeForm(path).catch(() => undefined)
-    return NextResponse.json({ error: 'Failed to create record' }, { status: 500 })
+    if (path) await deleteIntakeForm(path).catch(() => undefined)
+    return NextResponse.json({ error: 'Failed to upload intake form' }, { status: 500 })
   }
 }
 

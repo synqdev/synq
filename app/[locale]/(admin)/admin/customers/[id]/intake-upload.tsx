@@ -60,10 +60,12 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const activeUploadsRef = useRef(0)
   const [dragOver, setDragOver] = useState(false)
 
   const handleUpload = useCallback(async (file: File) => {
-    setUploading(true)
+    activeUploadsRef.current += 1
+    if (activeUploadsRef.current === 1) setUploading(true)
     setUploadError(null)
 
     const formData = new FormData()
@@ -84,7 +86,8 @@ export function IntakeUpload({ customerId, locale }: IntakeUploadProps) {
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
-      setUploading(false)
+      activeUploadsRef.current -= 1
+      if (activeUploadsRef.current === 0) setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }, [customerId, mutate])

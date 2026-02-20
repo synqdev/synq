@@ -83,6 +83,10 @@ export async function deleteMedicalRecord(id: string) {
   })
 
   if (record.imageUrl) {
-    await deleteIntakeForm(record.imageUrl)
+    try {
+      await deleteIntakeForm(record.imageUrl)
+    } catch (error) {
+      console.warn('Failed to delete intake form from storage', { id, path: record.imageUrl, error })
+    }
   }
 }

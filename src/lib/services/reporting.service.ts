@@ -189,7 +189,7 @@ export async function getWorkerRankings(params: {
     workerName: m.workerName,
     totalRevenue: m.totalRevenue,
     bookingCount: m.bookingCount,
-    differenceFromFirst: m.totalRevenue - firstRevenue,
+    differenceFromFirst: Math.max(0, firstRevenue - m.totalRevenue),
   }))
 }
 

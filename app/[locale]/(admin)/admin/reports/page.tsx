@@ -9,12 +9,12 @@ interface PageProps {
 }
 
 export default async function ReportsPage({ params }: PageProps) {
+  const { locale } = await params
   const isAdmin = await getAdminSession()
   if (!isAdmin) {
-    redirect('/admin/login')
+    redirect(`/${locale}/admin/login`)
   }
 
-  const { locale } = await params
   const t = await getTranslations('admin.reportsPage')
 
   return (

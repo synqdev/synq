@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { useTranslations } from 'next-intl'
@@ -106,6 +106,11 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
   const [notesChanged, setNotesChanged] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const latestNotesRef = useRef(notes)
+
+  useEffect(() => {
+    latestNotesRef.current = notes
+  }, [notes])
 
   useEffect(() => {
     if (customer) {
@@ -121,7 +126,7 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
   }
 
   const handleSaveNotes = useCallback(async () => {
-    const savedNotes = notes
+    const savedNotes = latestNotesRef.current
     setSaving(true)
     setSaveMessage(null)
     try {
@@ -132,7 +137,7 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
       })
       if (!res.ok) throw new Error('Save failed')
       // Only clear notesChanged if the notes haven't been modified since save started
-      if (notes === savedNotes) {
+      if (latestNotesRef.current === savedNotes) {
         setNotesChanged(false)
       }
       setSaveMessage(t('saved'))
@@ -142,7 +147,7 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
     } finally {
       setSaving(false)
     }
-  }, [customerId, notes, t, mutate])
+  }, [customerId, t, mutate])
 
   const handleStaffChange = useCallback(async (staffId: string) => {
     try {

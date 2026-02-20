@@ -6,7 +6,7 @@ const BOM = '\uFEFF'
 export function generateCSV(headers: string[], rows: string[][]): string {
   const escape = (val: string) => {
     // Neutralize Excel formula injection: prefix with ' any field starting with =, +, -, @
-    const safe = /^[=+\-@]/.test(val) ? `'${val}` : val
+    const safe = /^[=+\-@]/.test(val.trimStart()) ? `'${val}` : val
     if (safe.includes(',') || safe.includes('"') || safe.includes('\n') || safe.includes('\r')) {
       return `"${safe.replace(/"/g, '""')}"`
     }

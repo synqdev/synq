@@ -10,12 +10,12 @@ interface PageProps {
 }
 
 export default async function CustomerDetailPage({ params }: PageProps) {
+  const { locale, id } = await params
   const isAdmin = await getAdminSession()
   if (!isAdmin) {
-    redirect('/admin/login')
+    redirect(`/${locale}/admin/login`)
   }
 
-  const { locale, id } = await params
   const t = await getTranslations('admin.customerDetail')
 
   const workers = await prisma.worker.findMany({

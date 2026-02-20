@@ -82,6 +82,11 @@ export function BookingModal({
     })
   }
 
+  const toLocalInputValue = (date: Date) => {
+    const tzOffset = date.getTimezoneOffset() * 60000
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16)
+  }
+
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US', {
       hour: '2-digit',
@@ -231,7 +236,7 @@ export function BookingModal({
               type="datetime-local"
               name="startsAt"
               label={locale === 'ja' ? '開始日時' : 'Start Time'}
-              defaultValue={new Date(booking.startsAt).toISOString().slice(0, 16)}
+              defaultValue={toLocalInputValue(new Date(booking.startsAt))}
             />
 
             <div>

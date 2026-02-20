@@ -8,9 +8,11 @@
 import { cookies } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 
-const SECRET = new TextEncoder().encode(
-  process.env.ADMIN_SESSION_SECRET || 'dev-secret-change-in-production'
-)
+const rawSecret = process.env.ADMIN_SESSION_SECRET
+if (!rawSecret && process.env.NODE_ENV === 'production') {
+  throw new Error('ADMIN_SESSION_SECRET must be set in production')
+}
+const SECRET = new TextEncoder().encode(rawSecret || 'dev-secret-change-in-production')
 
 /**
  * Verify admin credentials against environment variables.

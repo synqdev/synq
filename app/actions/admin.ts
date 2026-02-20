@@ -31,6 +31,7 @@ export async function adminLogin(
   prevState: AdminLoginFormState,
   formData: FormData
 ): Promise<AdminLoginFormState> {
+  const locale = (formData.get('locale') as string) || 'ja'
   const username = formData.get('username') as string
   const password = formData.get('password') as string
 
@@ -53,15 +54,16 @@ export async function adminLogin(
     path: '/',
   })
 
-  redirect('/ja/admin/dashboard')
+  redirect(`/${locale}/admin/dashboard`)
 }
 
 /**
  * Admin logout action.
  * Clears the session cookie and redirects to login.
  */
-export async function adminLogout(): Promise<never> {
+export async function adminLogout(formData: FormData): Promise<never> {
+  const locale = (formData.get('locale') as string) || 'ja'
   const cookieStore = await cookies()
   cookieStore.delete(COOKIE_NAME)
-  redirect('/ja/admin/login')
+  redirect(`/${locale}/admin/login`)
 }

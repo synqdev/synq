@@ -48,8 +48,12 @@ export function ResourceTable({ resources, labels }: ResourceTableProps) {
     if (!confirm(`${labels.confirmDelete}\n\n${name}`)) return
 
     startTransition(async () => {
-      await deleteResource(id)
-      router.refresh()
+      try {
+        await deleteResource(id)
+        router.refresh()
+      } catch (error) {
+        console.error('Failed to delete resource:', error)
+      }
     })
   }
 

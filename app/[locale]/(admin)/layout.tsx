@@ -26,6 +26,7 @@ export default async function AdminLayout({ children, params }: AdminLayoutProps
           <h1 className="text-xl font-semibold text-gray-900">SYNQ Admin</h1>
           {isAuthenticated && (
             <form action={adminLogout}>
+              <input type="hidden" name="locale" value={locale} />
               <Button
                 type="submit"
                 variant="ghost"

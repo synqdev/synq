@@ -37,6 +37,7 @@ export function AdminNav({ locale }: AdminNavProps) {
               <Link
                 key={item.href}
                 href={fullHref}
+                aria-current={isActive ? 'page' : undefined}
                 className={`
                   relative py-3 text-sm font-medium transition-colors
                   ${isActive

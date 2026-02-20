@@ -19,12 +19,12 @@ interface PageProps {
  * - Soft delete workers (set isActive to false)
  */
 export default async function WorkersPage({ params }: PageProps) {
+  const { locale } = await params
+
   const isAdmin = await getAdminSession()
   if (!isAdmin) {
-    redirect('/admin/login')
+    redirect(`/${locale}/admin/login`)
   }
-
-  const { locale } = await params
 
   const workers = await prisma.worker.findMany({
     orderBy: [{ isActive: 'desc' }, { name: 'asc' }],

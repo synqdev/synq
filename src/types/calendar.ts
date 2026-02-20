@@ -15,8 +15,9 @@ export interface CalendarBooking {
   endsAt: Date
   workerId: string
   resourceId: string
-  customerName?: string  // For admin view
-  serviceName?: string   // For admin view
+  customerName?: string   // For admin view
+  customerEmail?: string  // For admin view
+  serviceName?: string    // For admin view
   status: 'CONFIRMED' | 'CANCELLED' | 'NOSHOW'
 }
 

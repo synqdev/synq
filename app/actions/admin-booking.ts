@@ -31,7 +31,7 @@ export async function cancelBooking(bookingId: string) {
     data: { status: 'CANCELLED' },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -77,7 +77,7 @@ export async function updateBooking(formData: FormData) {
     data: updateData,
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -108,7 +108,7 @@ export async function blockWorkerTime(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, scheduleId: schedule.id }
 }
 
@@ -127,6 +127,6 @@ export async function removeBlockedTime(scheduleId: string) {
     where: { id: scheduleId },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }

@@ -22,12 +22,12 @@ interface PageProps {
  * A booking requires both a worker AND a resource to be available.
  */
 export default async function ResourcesPage({ params }: PageProps) {
+  const { locale } = await params
+
   const isAdmin = await getAdminSession()
   if (!isAdmin) {
-    redirect('/admin/login')
+    redirect(`/${locale}/admin/login`)
   }
-
-  const { locale } = await params
 
   const resources = await prisma.resource.findMany({
     orderBy: [{ isActive: 'desc' }, { name: 'asc' }],

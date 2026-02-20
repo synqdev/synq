@@ -8,12 +8,15 @@
  */
 
 import { useActionState } from 'react'
+import { useParams } from 'next/navigation'
 import { adminLogin, type AdminLoginFormState } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardBody, CardFooter } from '@/components/ui/card'
 
 export default function AdminLoginPage() {
+  const params = useParams()
+  const locale = (params.locale as string) || 'ja'
   const [state, formAction, isPending] = useActionState<
     AdminLoginFormState,
     FormData
@@ -26,9 +29,10 @@ export default function AdminLoginPage() {
           <h1 className="text-xl font-semibold text-center">Admin Login</h1>
         </CardHeader>
         <form action={formAction}>
+          <input type="hidden" name="locale" value={locale} />
           <CardBody className="space-y-4">
             {state?.error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+              <div role="alert" aria-live="polite" className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
                 {state.error}
               </div>
             )}

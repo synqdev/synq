@@ -28,8 +28,11 @@ export default async function AdminDashboardPage({
     redirect(`/${locale}/admin/login`)
   }
 
-  // Parse date from query or use today
-  const date = dateParam ? new Date(dateParam + 'T00:00:00') : new Date()
+  // Parse date from query or use today (validate to avoid Invalid Date in Prisma queries)
+  let date = dateParam ? new Date(`${dateParam}T00:00:00`) : new Date()
+  if (isNaN(date.getTime())) {
+    date = new Date()
+  }
   date.setHours(0, 0, 0, 0)
 
   // Calculate start and end of day
@@ -52,7 +55,7 @@ export default async function AdminDashboardPage({
       },
       include: {
         customer: {
-          select: { name: true, email: true },
+          select: { name: true },
         },
         service: {
           select: { name: true, nameEn: true },
@@ -67,7 +70,7 @@ export default async function AdminDashboardPage({
 
   // Transform bookings to calendar slots
   const slots: CalendarSlot[] = bookings.map((booking) => ({
-    time: booking.startsAt.toISOString().split('T')[1].slice(0, 5),
+    time: `${String(booking.startsAt.getHours()).padStart(2, '0')}:${String(booking.startsAt.getMinutes()).padStart(2, '0')}`,
     workerId: booking.workerId,
     resourceId: booking.resourceId,
     isAvailable: false,

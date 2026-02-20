@@ -7,7 +7,7 @@
  * Uses useActionState for form handling.
  */
 
-import { useActionState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createResource, updateResource } from '@/app/actions/resources'
@@ -60,9 +60,18 @@ async function updateResourceAction(_prevState: FormState, formData: FormData): 
 export function ResourceForm({ labels, mode, resource, onCancel }: ResourceFormProps) {
   const action = mode === 'create' ? createResourceAction : updateResourceAction
   const [state, formAction, isPending] = useActionState(action, { success: false, error: null })
+  const [formKey, setFormKey] = useState(0)
+
+  // Reset the form after successful creation so inputs clear
+  useEffect(() => {
+    if (state.success && mode === 'create') {
+      setFormKey((k) => k + 1)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.success])
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form key={formKey} action={formAction} className="space-y-4">
       {resource && <input type="hidden" name="id" value={resource.id} />}
 
       {state.error && (

@@ -10,15 +10,25 @@ import { prisma } from '@/lib/db/client';
 import { getAvailableSlots, type Resource } from '@/lib/services/availability.service';
 
 /**
- * GET /api/availability?date=YYYY-MM-DD
+ * GET /api/availability?date=YYYY-MM-DD&serviceId=SERVICE_ID
  *
- * Returns workers and their available slots for the specified date.
+ * Returns workers and their available slots for the specified date and service.
+ * Service is required because duration affects slot availability.
  * If no date provided, defaults to today.
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const dateStr = searchParams.get('date') || new Date().toISOString().split('T')[0];
+    const serviceId = searchParams.get('serviceId');
+
+    // Validate serviceId is required
+    if (!serviceId) {
+      return NextResponse.json(
+        { error: 'serviceId is required' },
+        { status: 400 }
+      );
+    }
 
     // Parse date string to start and end of day
     const date = new Date(dateStr + 'T00:00:00');
@@ -30,8 +40,22 @@ export async function GET(request: NextRequest) {
     // Get day of week for schedule lookup (0=Sunday, 6=Saturday)
     const dayOfWeek = date.getDay();
 
+    // Fetch service to get duration (required for availability calculation)
+    const service = await prisma.service.findUnique({
+      where: { id: serviceId, isActive: true },
+    });
+
+    if (!service) {
+      return NextResponse.json(
+        { error: 'Service not found or inactive' },
+        { status: 404 }
+      );
+    }
+
+    const serviceDuration = service.duration;
+
     // Fetch all required data in parallel
-    const [workers, resources, bookings, service, schedules] = await Promise.all([
+    const [workers, resources, bookings, schedules] = await Promise.all([
       prisma.worker.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
       prisma.resource.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
       prisma.booking.findMany({
@@ -40,7 +64,6 @@ export async function GET(request: NextRequest) {
           status: { in: ['CONFIRMED', 'PENDING'] },
         },
       }),
-      prisma.service.findFirst({ where: { isActive: true } }),
       prisma.workerSchedule.findMany({
         where: {
           isAvailable: true,
@@ -53,9 +76,6 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
-
-    // Default service duration to 60 minutes if no service found
-    const serviceDuration = service?.duration || 60;
 
     // Convert resources to availability service format
     const resourceList: Resource[] = resources.map((r) => ({
@@ -126,7 +146,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       date: dateStr,
-      serviceDuration,
+      serviceId: service.id,
+      serviceName: service.name,
+      serviceDuration: service.duration,
       workers: workersWithSlots,
     });
   } catch (error) {

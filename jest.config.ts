@@ -6,7 +6,7 @@
  * - Path alias resolution (@/*)
  * - jsdom test environment for React components
  *
- * Coverage thresholds set to 70% for MVP phase.
+ * Global thresholds relaxed; critical business logic files require 100%.
  * Integration tests excluded by default (require DATABASE_URL).
  */
 
@@ -28,11 +28,11 @@ const config: Config = {
   // Setup file for jest-dom matchers and global mocks
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 
-  // Path alias mapping
+  // Path alias mapping — specific patterns must come before the catch-all
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@/app/(.*)$': '<rootDir>/app/$1',
     '^@/emails/(.*)$': '<rootDir>/emails/$1',
+    '^@/app/(.*)$': '<rootDir>/app/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
 
   // Patterns to ignore during test collection

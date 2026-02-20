@@ -28,18 +28,19 @@ export async function GET(request: NextRequest) {
 
   // Parse date from query params
   const { searchParams } = request.nextUrl
-  const dateStr = searchParams.get('date') || new Date().toISOString().split('T')[0]
-  const date = new Date(dateStr + 'T00:00:00')
+  // Use en-CA locale to get YYYY-MM-DD format for today's date
+  const dateStr = searchParams.get('date') ?? new Date().toLocaleDateString('en-CA')
+  const date = new Date(`${dateStr}T00:00:00Z`)
 
   if (isNaN(date.getTime())) {
     return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
   }
 
-  // Calculate day boundaries
+  // Calculate day boundaries in UTC to avoid timezone drift
   const startOfDay = new Date(date)
-  startOfDay.setHours(0, 0, 0, 0)
-  const endOfDay = new Date(date)
-  endOfDay.setHours(23, 59, 59, 999)
+  startOfDay.setUTCHours(0, 0, 0, 0)
+  const endOfDay = new Date(startOfDay)
+  endOfDay.setUTCDate(endOfDay.getUTCDate() + 1)
 
   // Fetch workers and bookings in parallel
   const [workers, bookings] = await Promise.all([

@@ -248,8 +248,14 @@ export function useAdaptivePolling(baseInterval: number = 10000): number {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
+    let lastActivityTime = 0
 
     const handleActivity = () => {
+      const now = Date.now()
+      // Throttle to once per 100ms to avoid excessive calls on mousemove/scroll
+      if (now - lastActivityTime < 100) return
+      lastActivityTime = now
+
       setIntervalState(baseInterval) // Fast polling on activity
       clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {

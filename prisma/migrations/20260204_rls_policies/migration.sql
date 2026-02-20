@@ -82,6 +82,9 @@ CREATE POLICY "Admin can manage all customers"
   ON "Customer" FOR ALL
   USING (current_setting('app.role', true) = 'admin');
 
+-- INSERT is intentionally unrestricted (WITH CHECK (true)) to support public
+-- customer self-registration during the booking flow. Application-layer rate
+-- limiting (10 req/min per IP) provides the compensating control against abuse.
 CREATE POLICY "New customers can be created"
   ON "Customer" FOR INSERT
   WITH CHECK (true);

@@ -110,6 +110,8 @@ export async function submitBookingForm(
     return { error: 'Missing required booking information' }
   }
 
+  let confirmedBookingId: string | null = null
+
   try {
     // Get default service
     const service = await prisma.service.findFirst({ where: { isActive: true } })
@@ -140,6 +142,8 @@ export async function submitBookingForm(
       return { error: result.error }
     }
 
+    confirmedBookingId = result.booking.id
+
     // Fetch booking details with related data for email
     const booking = await prisma.booking.findUnique({
       where: { id: result.booking.id },
@@ -157,8 +161,8 @@ export async function submitBookingForm(
         ? `${bookingDate.getFullYear()}年${bookingDate.getMonth() + 1}月${bookingDate.getDate()}日`
         : bookingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
-      // Send confirmation email (non-blocking - failures logged but don't prevent redirect)
-      await sendBookingConfirmation({
+      // Send confirmation email (non-blocking - fire and forget, failures don't prevent redirect)
+      sendBookingConfirmation({
         to: booking.customer.email,
         customerName: booking.customer.name,
         serviceName: booking.service.name,
@@ -166,17 +170,19 @@ export async function submitBookingForm(
         date: formattedDate,
         time,
         locale: locale as 'ja' | 'en',
+      }).catch(() => {
+        // Already logged in sendBookingConfirmation
       })
     }
-
-    // Redirect to confirmation page with booking ID
-    redirect(`/${locale}/booking/confirm?id=${result.booking.id}`)
   } catch (error) {
-    // Check if it's a redirect (Next.js throws NEXT_REDIRECT)
-    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
-      throw error
-    }
     console.error('Failed to create booking:', error)
     return { error: 'Failed to create booking. Please try again.' }
   }
+
+  // Redirect outside try/catch to avoid Next.js redirect error handling issues
+  if (confirmedBookingId) {
+    redirect(`/${locale}/booking/confirm?id=${confirmedBookingId}`)
+  }
+
+  return { error: 'Failed to create booking. Please try again.' }
 }

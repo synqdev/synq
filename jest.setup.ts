@@ -47,7 +47,7 @@ jest.mock('next/headers', () => ({
     };
   },
   headers() {
-    return new Map();
+    return new Headers();
   },
 }));
 

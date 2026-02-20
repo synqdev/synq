@@ -145,7 +145,7 @@ Rate limiting falls back to no limiting if not configured. For production:
 1. Create Upstash Redis database: https://console.upstash.com/
 2. Copy REST URL and token from dashboard
 3. Add to .env:
-   ```
+   ```bash
    UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
    UPSTASH_REDIS_REST_TOKEN=xxx
    ```
@@ -159,7 +159,7 @@ Sentry is disabled if not configured. For production monitoring:
 2. Copy DSN from Settings → Projects → [Your Project] → Client Keys
 3. (Optional) Create auth token for source map uploads: Settings → Auth Tokens → Create Token (scopes: project:releases, project:write)
 4. Add to .env:
-   ```
+   ```bash
    NEXT_PUBLIC_SENTRY_DSN=https://xxx@xxx.ingest.sentry.io/xxx
    SENTRY_AUTH_TOKEN=xxx  # Optional for source maps
    ```

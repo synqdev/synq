@@ -75,7 +75,7 @@ All API endpoints and server actions validate input using Zod schemas:
 
 ### Environment Variables
 
-```
+```bash
 ADMIN_USERNAME=<admin username>
 ADMIN_PASSWORD=<admin password>
 ADMIN_SESSION_SECRET=<32+ char random string>
@@ -110,7 +110,7 @@ Sentry is configured for production error tracking and performance monitoring.
 
 ### Configuration
 
-```
+```bash
 NEXT_PUBLIC_SENTRY_DSN=<your sentry dsn>
 SENTRY_AUTH_TOKEN=<your auth token for source maps>
 ```

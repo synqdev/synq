@@ -196,20 +196,27 @@ export async function createBooking(
       }
 
       // Capture non-retryable errors in Sentry
-      Sentry.captureException(error, {
-        tags: {
-          service: 'booking',
-          operation: 'createBooking'
-        },
-        extra: {
-          customerId: validated.customerId,
-          workerId: validated.workerId,
-          serviceId: validated.serviceId,
-          startsAt: startsAt.toISOString(),
-          endsAt: endsAt.toISOString(),
-          attempt,
-        },
-      });
+      // Skip known business logic errors (expected user-facing failures, not bugs)
+      const isBusinessLogicError = error instanceof Error &&
+        (error.message.includes('not available') ||
+         error.message.includes('No resources'));
+
+      if (!isBusinessLogicError) {
+        Sentry.captureException(error, {
+          tags: {
+            service: 'booking',
+            operation: 'createBooking'
+          },
+          extra: {
+            customerId: validated.customerId,
+            workerId: validated.workerId,
+            serviceId: validated.serviceId,
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
+            attempt,
+          },
+        });
+      }
 
       // Return error for non-retryable errors
       if (error instanceof Error) {

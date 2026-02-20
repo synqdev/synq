@@ -8,7 +8,7 @@
  * Uses SWR polling for real-time updates (10 second intervals).
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { TimelineCalendar } from '@/components/calendar'
 import { Button } from '@/components/ui/button'
@@ -82,7 +82,7 @@ export function AdminCalendar({
 
   // Use polled data if available, otherwise fall back to initial server data
   const workers = polledWorkers.length > 0 ? polledWorkers : initialWorkers
-  const slots = polledSlots.length > 0 || polledWorkers.length > 0 ? polledSlots : initialSlots
+  const slots = polledWorkers.length > 0 ? polledSlots : initialSlots
 
   // Convert workers to CalendarWorker format
   const calendarWorkers: CalendarWorker[] = workers.map((w) => ({

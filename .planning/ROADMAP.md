@@ -116,15 +116,15 @@ Plans:
   7. Stripe webhooks correctly update payment and subscription status
   8. Checkout flow handles success, failure, and cancellation gracefully
 
-**Plans:** 6 plans in 4 waves
+**Plans:** 6 plans in 5 waves
 
 Plans:
 - [ ] 03-01-PLAN.md — Foundation: schema, packages, Stripe client, validations (Wave 1)
 - [ ] 03-02-PLAN.md — Webhook handler and payment/membership services (Wave 2)
-- [ ] 03-03-PLAN.md — Admin membership plan management (Wave 2)
-- [ ] 03-04-PLAN.md — Customer checkout flow with Stripe hosted checkout (Wave 3)
+- [ ] 03-03-PLAN.md — Admin membership plan management (Wave 3)
+- [ ] 03-04-PLAN.md — Customer checkout flow with Stripe hosted checkout (Wave 4)
 - [ ] 03-05-PLAN.md — QR code generation, verification, and staff scanner (Wave 3)
-- [ ] 03-06-PLAN.md — Admin payment views, navigation, i18n, and end-to-end verification (Wave 4)
+- [ ] 03-06-PLAN.md — Admin payment views, navigation, i18n, and end-to-end verification (Wave 5)
 
 ### Phase 4: Differentiation
 **Goal**: Deliver full mindmap vision with loyalty program, dynamic pricing, and customer app features

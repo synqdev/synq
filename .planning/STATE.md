@@ -115,6 +115,7 @@ Recent decisions affecting current work:
 - Created executable plan `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
 - Priority updated on 2026-02-17: Start Phase 2 before completing Phase 01.1
 - Delivery workflow updated on 2026-02-17: one task per branch + one PR per task for automated review
+- Phase 3 added (former Phase 3 Differentiation pushed to Phase 4): Payments & Membership — Stripe/Apple Pay checkout, membership plans with QR codes, user & admin payment pages
 
 ### Pending Todos
 

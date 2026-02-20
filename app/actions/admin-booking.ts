@@ -146,7 +146,11 @@ export async function removeBlockedTime(bookingId: string) {
     select: { serviceId: true },
   })
 
-  if (booking?.serviceId !== 'block-service') {
+  if (!booking) {
+    throw new Error('Booking not found')
+  }
+
+  if (booking.serviceId !== 'block-service') {
     throw new Error('Not a system block booking')
   }
 

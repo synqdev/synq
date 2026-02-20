@@ -94,7 +94,13 @@ async function main() {
   // Create Premium Oil service
   const premiumOil = await prisma.service.upsert({
     where: { id: 'service-premium-oil' },
-    update: {},
+    update: {
+      name: 'プレミアムオイル',
+      nameEn: 'Premium Oil',
+      description: '全身オイルマッサージ（90分）',
+      duration: 90,
+      price: 10000,
+    },
     create: {
       id: 'service-premium-oil',
       name: 'プレミアムオイル',

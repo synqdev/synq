@@ -9,7 +9,15 @@
 import { prisma } from '@/lib/db/client';
 import type { RegisterCustomerInput } from '@/lib/validations/customer';
 
-export type CustomerListSortBy = 'name' | 'visitCount' | 'lastVisitDate' | 'createdAt';
+export type CustomerListSortBy =
+  | 'name'
+  | 'email'
+  | 'phone'
+  | 'assignedStaffName'
+  | 'visitCount'
+  | 'lastVisitDate'
+  | 'createdAt'
+  | 'outstandingAmount';
 export type CustomerListSortOrder = 'asc' | 'desc';
 
 export interface CustomerListItem {
@@ -313,11 +321,23 @@ export async function getCustomerList(params: GetCustomerListParams = {}) {
       case 'name':
         base = left.name.localeCompare(right.name, 'ja');
         break;
+      case 'email':
+        base = left.email.localeCompare(right.email, 'ja');
+        break;
+      case 'phone':
+        base = (left.phone ?? '').localeCompare(right.phone ?? '', 'ja');
+        break;
+      case 'assignedStaffName':
+        base = (left.assignedStaffName ?? '').localeCompare(right.assignedStaffName ?? '', 'ja');
+        break;
       case 'visitCount':
         base = left.visitCount - right.visitCount;
         break;
       case 'lastVisitDate':
         base = compareByDate(left.lastVisitDate, right.lastVisitDate);
+        break;
+      case 'outstandingAmount':
+        base = left.outstandingAmount - right.outstandingAmount;
         break;
       case 'createdAt':
       default:

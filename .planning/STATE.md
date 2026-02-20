@@ -11,21 +11,17 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 2 of 4 (Parity)
-Plan: 7 of 8 (next: 02-08)
-Status: Active execution
-Last activity: 2026-02-19 - Completed 02-05 (reporting dashboard), 02-06 (worker rankings, repeat rate), 02-07 (CSV export)
+Plan: 8 of 8 (all complete)
+Status: Phase complete — PR #34 (phase2 → main) open for final merge
+Last activity: 2026-02-19 - All 8 plans merged, post-merge fixes applied (i18n, RLS, dashboard move, test fixes)
 
-Progress: [#####---] 50%
+Progress: [########] 100%
 
-### Open PRs (targeting phase2)
+### Open PRs
 
-| # | Branch | Feature | Tests |
-|---|--------|---------|-------|
-| 26 | codex/phase2-02-03-customer-detail | Customer detail page | - |
-| 27 | test/customer-service-unit | Customer service unit tests | 28 |
-| 28 | test/customer-api-route | Customer API route tests | 4 |
-| 29 | codex/phase2-02-04-intake-upload | Intake form upload | 19 |
-| 32 | codex/phase2-02-07-csv-export | CSV export (customers, bookings, revenue) | 24 |
+| # | Branch | Target | Description |
+|---|--------|--------|-------------|
+| 34 | phase2 | main | Phase 2: Parity (all features) |
 
 ## Performance Metrics
 
@@ -131,5 +127,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Phase 2 plans 02-05, 02-06, 02-07 completed (PRs #26-29, #32 open)
-Resume file: `.planning/phases/02-parity/02-08-PLAN.md`
+Stopped at: Phase 2 complete — all 8 plans merged, post-merge fixes applied, PR #34 open
+Resume: Merge PR #34 to main, then begin Phase 3 (or Phase 01.1)

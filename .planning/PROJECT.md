@@ -69,6 +69,94 @@ Even if Worker A is free at 2pm, if all 3 beds are occupied by Workers B, C, D's
 - `userview.png` — User calendar mockup (single-day timeline, workers as rows)
 - `adminview.png` — Admin calendar mockup (shows booking details, color-coded statuses)
 
+**Database Schema:**
+
+```prisma
+model Service {
+  id          String    @id @default(uuid())
+  name        String    // Primary (Japanese) e.g., "指圧"
+  nameEn      String?   // Fallback (English) e.g., "Shiatsu"
+  description String?
+  duration    Int       // Minutes
+  price       Int       // Yen
+  isActive    Boolean   @default(true)
+  bookings    Booking[]
+}
+
+model Worker {
+  id          String           @id @default(uuid())
+  name        String           // e.g., "Tanaka"
+  nameEn      String?          // e.g., "Tanaka" (English display)
+  isActive    Boolean          @default(true)
+  bookings    Booking[]
+  schedules   WorkerSchedule[]
+}
+
+model WorkerSchedule {
+  id           String    @id @default(uuid())
+  workerId     String
+  worker       Worker    @relation(fields: [workerId], references: [id])
+  dayOfWeek    Int?      // 0=Sunday, 6=Saturday (recurring)
+  specificDate DateTime? // One-off block/availability
+  startTime    String    // "09:00" format
+  endTime      String    // "18:00" format
+  isAvailable  Boolean   @default(true) // false = blocked time
+
+  @@index([workerId, dayOfWeek])
+  @@index([workerId, specificDate])
+}
+
+model Resource {
+  id          String    @id @default(uuid())
+  name        String    // e.g., "Bed 1"
+  isActive    Boolean   @default(true)
+  bookings    Booking[]
+}
+
+model Customer {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  phone         String?
+  name          String
+  locale        String    @default("ja") // "en" or "ja"
+  ticketBalance Int       @default(0)    // Multi-session tickets (回数券)
+  notes         String?   // Admin notes
+  bookings      Booking[]
+}
+
+model Booking {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  startsAt    DateTime
+  endsAt      DateTime
+  status      String    // "CONFIRMED", "CANCELLED", "NOSHOW"
+  version     Int       @default(0) // Optimistic locking for concurrency
+
+  workerId    String
+  worker      Worker    @relation(fields: [workerId], references: [id])
+
+  resourceId  String
+  resource    Resource  @relation(fields: [resourceId], references: [id])
+
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id])
+
+  serviceId   String
+  service     Service   @relation(fields: [serviceId], references: [id])
+
+  @@index([startsAt, endsAt])
+  @@index([workerId, startsAt, endsAt])
+  @@index([resourceId, startsAt, endsAt])
+}
+```
+
+**Double-Bottleneck Logic:**
+A slot is AVAILABLE if and only if:
+1. **Worker Check:** No existing booking for that worker overlaps the time range
+2. **Resource Check:** At least one Resource (bed) has no overlapping booking
+
+Both checks run in a serializable transaction to prevent race conditions.
+
 ## Constraints
 
 - **Framework:** Next.js 15 (App Router) — Avoid v16 due to CVE-2025-66478
@@ -91,6 +179,20 @@ Even if Worker A is free at 2pm, if all 3 beds are occupied by Workers B, C, D's
 | SWR polling for live calendar | Simple real-time-ish updates without WebSocket complexity | — Pending |
 | Lazy auth for guests | Reduces friction — no password to remember, just verify email | — Pending |
 | TypeScript strict mode | Booking logic is complex, type safety prevents runtime bugs | — Pending |
+| Individual Resource records | Track specific beds per booking (not just capacity count) | — Pending |
+| WorkerSchedule model | Enables admin time blocking and recurring schedules | — Pending |
+| Service layer separation | Business logic separate from API endpoints for testability | — Pending |
+| RLS on all tables | Security best practice, prevents data leakage | — Pending |
+| Jest for testing | Industry standard, good TypeScript support | — Pending |
+| SWR polling (5-10s) | Simple live updates without WebSocket complexity | — Pending |
+| EmployeeTimeline naming retained | Avoid confusion; matches user mental model | Adopted |
+| Admin cancel confirmation via popover only | Consistent UI; avoid double confirmations | Adopted |
+| Admin blocking stored as special bookings | Reuse booking pipeline and calendar rendering | Adopted |
+| Admin timeline base available slot background | Provide full-day visual context | Adopted |
+| Jest unit runs ignore mobile and e2e tests | Faster, avoids unrelated failures | Adopted |
+| Zod validation allows non-UUID IDs | Support system and test IDs | Adopted |
+| auth.signOut uses i18n messages | Remove hardcoded strings | Adopted |
+| Booking calendar uses serviceDuration from API | Support non-60-minute services | Adopted |
 
 ---
-*Last updated: 2025-02-04 after initialization*
+*Last updated: 2026-02-07 after session summary backfill*

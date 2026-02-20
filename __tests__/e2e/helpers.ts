@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import type { Page } from '@playwright/test'
 
 export const E2E_EMAIL_PREFIX = 'e2e-'
@@ -62,7 +63,7 @@ export async function registerTestCustomer(page: Page, locale = 'en') {
   await page.getByTestId('register-form').waitFor({ state: 'visible' })
 
   await page.fill('input[name="name"]', 'E2E Test User')
-  await page.fill('input[name="email"]', `${E2E_EMAIL_PREFIX}${Date.now()}${E2E_EMAIL_DOMAIN}`)
+  await page.fill('input[name="email"]', `${E2E_EMAIL_PREFIX}${randomUUID()}${E2E_EMAIL_DOMAIN}`)
   await page.fill('input[name="phone"]', '090-0000-0000')
   // Submit form — server action creates customer, sets cookie, then redirects
   await page.click('button[type="submit"]')

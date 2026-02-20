@@ -14,7 +14,7 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   // instrumentationHook is enabled by default in Next.js 15.5+
-  webpack: (config: { ignoreWarnings?: Array<RegExp | { module?: RegExp; message?: RegExp }> }) => {
+  webpack: (config) => {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings ?? []),
       {

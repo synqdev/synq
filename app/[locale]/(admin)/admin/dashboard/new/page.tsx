@@ -9,21 +9,6 @@ interface AdminDashboardNewPageProps {
   searchParams: Promise<{ date?: string }>
 }
 
-interface InitialService {
-  id: string
-  name: string
-  duration: number
-}
-
-interface InitialBooking {
-  id: string
-  startsAt: Date
-  endsAt: Date
-  workerId: string
-  serviceId: string
-  customer: { name: string }
-  service: { name: string }
-}
 
 export default async function AdminDashboardNewPage({
   params,
@@ -113,7 +98,7 @@ export default async function AdminDashboardNewPage({
       dateStr={dateStr}
       initialWorkers={workers}
       initialCustomers={customers}
-      initialServices={services.map((service: InitialService) => ({
+      initialServices={services.map((service) => ({
         id: service.id,
         name: service.name,
         duration: service.duration,
@@ -121,7 +106,7 @@ export default async function AdminDashboardNewPage({
       initialWorkerCrud={workers}
       initialServiceCrud={services}
       initialResourceCrud={resources}
-      initialBookings={bookings.map((booking: InitialBooking) => ({
+      initialBookings={bookings.map((booking) => ({
         id: booking.id,
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),

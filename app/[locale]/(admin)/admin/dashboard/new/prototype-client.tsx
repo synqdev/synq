@@ -401,7 +401,7 @@ export function AdminDashboardPrototypeClient({
   }
 
   const panelContent = activeTabId === 'workers' ? (
-    <div className="space-y-4">
+    <div className="space-y-4 font-bahnschrift">
       <CrudPanelSection title="Add Worker">
         <WorkerForm mode="create" />
       </CrudPanelSection>
@@ -419,7 +419,7 @@ export function AdminDashboardPrototypeClient({
       </CrudPanelSection>
     </div>
   ) : activeTabId === 'resources' ? (
-    <div className="space-y-4">
+    <div className="space-y-4 font-bahnschrift">
       <CrudPanelSection title="Add Resource">
         <ResourceForm mode="create" />
       </CrudPanelSection>

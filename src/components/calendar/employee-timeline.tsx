@@ -1,13 +1,27 @@
 import { forwardRef, useMemo, useState } from 'react'
 import type { CalendarProps } from '@/types/calendar'
 
+// Typed data shapes for timeline events
+export interface BookedEventData {
+    bookingId?: string
+    customer?: string
+    name?: string
+    title?: string
+    status?: string
+}
+
+export interface AvailableSlotData {
+    resourceIds?: string[]
+    endTime?: string
+}
+
 // Simplified event type for the timeline
 export interface TimelineEvent {
     workerId: string
     time: string
     duration: number
     type: 'booked' | 'blocked'
-    data?: any
+    data?: BookedEventData | AvailableSlotData | Record<string, unknown>
 }
 
 export interface EmployeeTimelineProps extends Omit<CalendarProps, 'mode' | 'onBookingClick' | 'onSlotSelect' | 'selectedSlot'> {
@@ -38,7 +52,7 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
 
         const startMinutes = useMemo(() => timeToMinutes(timeRange?.start || '10:00'), [timeRange])
         const endMinutes = useMemo(() => timeToMinutes(timeRange?.end || '19:00'), [timeRange])
-        const totalDuration = endMinutes - startMinutes
+        const totalDuration = Math.max(endMinutes - startMinutes, 1) // Prevent division by zero
 
         // Generate time labels (hours)
         const timeLabels = useMemo(() => {
@@ -170,8 +184,8 @@ export const EmployeeTimeline = forwardRef<HTMLDivElement, EmployeeTimelineProps
                                                             strokeLinecap="round"
                                                             strokeLinejoin="round"
                                                         >
-                                                            <path d="M18 6 6 18" />
-                                                            <path d="m6 6 18 18" />
+                                                            <path d="M18 6 L6 18" />
+                                                            <path d="M6 6 L18 18" />
                                                         </svg>
                                                     </button>
                                                 )}

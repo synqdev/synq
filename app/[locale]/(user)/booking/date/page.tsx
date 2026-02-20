@@ -1,8 +1,17 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 
 interface DatePageProps {
   params: Promise<{ locale: string }>
   searchParams: Promise<{ serviceId?: string }>
+}
+
+interface Service {
+  id: string
+  name: string
+  nameEn?: string
+  duration: number
+  price: number
 }
 
 /**
@@ -22,11 +31,17 @@ export default async function DateSelectionPage({ params, searchParams }: DatePa
 
   // Fetch service details
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const services = await fetch(`${baseUrl}/api/services`, {
+  const servicesResponse = await fetch(`${baseUrl}/api/services`, {
     cache: 'force-cache',
-  }).then(r => r.json())
+  })
 
-  const service = services.find((s: any) => s.id === serviceId)
+  if (!servicesResponse.ok) {
+    throw new Error(`Failed to fetch services: ${servicesResponse.status}`)
+  }
+
+  const services: Service[] = await servicesResponse.json()
+
+  const service = services.find((s: Service) => s.id === serviceId)
 
   if (!service) {
     redirect(`/${locale}/booking/service`)
@@ -35,9 +50,9 @@ export default async function DateSelectionPage({ params, searchParams }: DatePa
   async function selectDate(formData: FormData) {
     'use server'
     const date = formData.get('date') as string
-    const serviceId = formData.get('serviceId') as string
-    const locale = formData.get('locale') as string
-    redirect(`/${locale}/booking/slots?serviceId=${serviceId}&date=${date}`)
+    const formServiceId = formData.get('serviceId') as string
+    const formLocale = formData.get('locale') as string
+    redirect(`/${formLocale}/booking/slots?serviceId=${formServiceId}&date=${date}`)
   }
 
   return (
@@ -70,12 +85,12 @@ export default async function DateSelectionPage({ params, searchParams }: DatePa
         </button>
       </form>
 
-      <a
+      <Link
         href={`/${locale}/booking/service`}
         className="block mt-4 text-center text-gray-600 hover:text-gray-800"
       >
         {locale === 'ja' ? '← サービス選択に戻る' : '← Back to service selection'}
-      </a>
+      </Link>
     </div>
   )
 }

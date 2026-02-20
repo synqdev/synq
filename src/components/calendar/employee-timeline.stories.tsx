@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { EmployeeTimeline, type TimelineEvent } from './employee-timeline';
 import type { CalendarWorker } from '@/types/calendar';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 const meta: Meta<typeof EmployeeTimeline> = {
   title: 'Calendar/EmployeeTimeline',
@@ -30,12 +30,12 @@ const initialEvents: TimelineEvent[] = [
 ];
 
 // Stateful wrapper to demonstrate removal
-const StatefulTimeline = (args: any) => {
-  const [events, setEvents] = useState(args.events);
+const StatefulTimeline = (args: React.ComponentProps<typeof EmployeeTimeline>) => {
+  const [events, setEvents] = useState<TimelineEvent[]>(args.events ?? []);
 
   const handleRemove = (eventToRemove: TimelineEvent) => {
     console.log('Removing event:', eventToRemove);
-    setEvents(events.filter((e: TimelineEvent) => e !== eventToRemove));
+    setEvents(events.filter((e) => e !== eventToRemove));
   };
 
   return <EmployeeTimeline {...args} events={events} onEventRemove={handleRemove} />;

@@ -72,9 +72,7 @@ export function SlotSelectionClient({
   return (
     <EmployeeTimeline
       workers={workers}
-      mode="user"
       timeRange={{ start: '10:00', end: '19:00' }}
-      onSlotClick={handleSlotClick}
       className="min-h-[400px]"
     />
   )

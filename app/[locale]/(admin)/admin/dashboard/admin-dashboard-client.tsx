@@ -26,9 +26,13 @@ interface AdminDashboardClientProps {
 
 /**
  * Format date to YYYY-MM-DD string for URL params.
+ * Uses local date to avoid timezone shifting near midnight.
  */
 function formatDateParam(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -94,8 +98,9 @@ export function AdminDashboardClient({
         )
       : []
 
-  // Use polled data if available, otherwise fall back to initial server data
-  const workers = polledTimelineWorkers.length > 0 ? polledTimelineWorkers : initialWorkers
+  // Use polled data once SWR has completed at least one fetch (lastUpdated is set),
+  // otherwise fall back to initial server data. This correctly handles empty results.
+  const workers = lastUpdated !== null ? polledTimelineWorkers : initialWorkers
 
   // Navigate to a new date
   const navigateToDate = useCallback(
@@ -217,7 +222,7 @@ export function AdminDashboardClient({
         workers={workers}
         mode="admin"
         timeRange={{ start: '10:00', end: '19:00' }}
-        onSlotRemove={handleSlotRemove}
+        onEventRemove={handleSlotRemove}
         className="min-h-[400px]"
       />
     </div>

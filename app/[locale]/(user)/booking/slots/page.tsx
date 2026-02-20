@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { SlotSelectionClient } from './slot-selection-client'
 import { mapAvailabilityToCalendar } from '@/lib/mappers/calendar'
 
@@ -24,12 +25,18 @@ export default async function SlotSelectionPage({ params, searchParams }: SlotsP
 
   // Fetch availability
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const availability = await fetch(
+  const availabilityResponse = await fetch(
     `${baseUrl}/api/availability?serviceId=${serviceId}&date=${date}`,
     {
       cache: 'no-store', // Availability changes frequently
     }
-  ).then(r => r.json())
+  )
+
+  if (!availabilityResponse.ok) {
+    redirect(`/${locale}/booking/service?error=availability`)
+  }
+
+  const availability = await availabilityResponse.json()
 
   // Map to timeline format
   const timelineWorkers = mapAvailabilityToCalendar(availability)
@@ -50,12 +57,12 @@ export default async function SlotSelectionPage({ params, searchParams }: SlotsP
         locale={locale}
       />
 
-      <a
+      <Link
         href={`/${locale}/booking/date?serviceId=${serviceId}`}
         className="block mt-6 text-center text-gray-600 hover:text-gray-800"
       >
         {locale === 'ja' ? '← 日付選択に戻る' : '← Back to date selection'}
-      </a>
+      </Link>
     </div>
   )
 }

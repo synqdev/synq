@@ -4,6 +4,14 @@ interface ServicePageProps {
   params: Promise<{ locale: string }>
 }
 
+interface Service {
+  id: string
+  name: string
+  nameEn?: string
+  duration: number
+  price: number
+}
+
 /**
  * Service Selection Page
  *
@@ -16,15 +24,21 @@ export default async function ServiceSelectionPage({ params }: ServicePageProps)
 
   // Fetch services from API
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const services = await fetch(`${baseUrl}/api/services`, {
+  const servicesResponse = await fetch(`${baseUrl}/api/services`, {
     cache: 'force-cache', // Services change rarely
-  }).then(r => r.json())
+  })
+
+  if (!servicesResponse.ok) {
+    throw new Error(`Failed to fetch services: ${servicesResponse.status}`)
+  }
+
+  const services: Service[] = await servicesResponse.json()
 
   async function selectService(formData: FormData) {
     'use server'
     const serviceId = formData.get('serviceId') as string
-    const locale = formData.get('locale') as string
-    redirect(`/${locale}/booking/date?serviceId=${serviceId}`)
+    const formLocale = formData.get('locale') as string
+    redirect(`/${formLocale}/booking/date?serviceId=${serviceId}`)
   }
 
   return (
@@ -37,7 +51,7 @@ export default async function ServiceSelectionPage({ params }: ServicePageProps)
         <input type="hidden" name="locale" value={locale} />
 
         <div className="space-y-4">
-          {services.map((service: any) => (
+          {services.map((service: Service) => (
             <button
               key={service.id}
               type="submit"

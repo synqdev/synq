@@ -22,7 +22,7 @@ const variantClasses = {
   ghost:
     'text-secondary-700 hover:bg-secondary-100 focus-visible:ring-secondary-500 disabled:text-secondary-400',
   iso:
-    'bg-white text-black border-2 border-black rounded-xl font-black hover:bg-gray-100 transition-colors h-12 px-6',
+    'bg-white text-black border-2 border-black rounded-xl font-black hover:bg-gray-100 transition-colors !h-12 !px-6',
 } as const
 
 const sizeClasses = {

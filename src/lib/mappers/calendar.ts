@@ -76,7 +76,9 @@ export function mapAdminBookingsToCalendar(
     slots: bookings
       .filter(b => b.workerId === worker.id)
       .map(booking => {
-        const start = booking.startsAt.toTimeString().slice(0, 5) // "HH:MM"
+        const hours = booking.startsAt.getHours().toString().padStart(2, '0')
+        const mins = booking.startsAt.getMinutes().toString().padStart(2, '0')
+        const start = `${hours}:${mins}` // "HH:MM"
         const duration = Math.floor(
           (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60000
         )
@@ -111,7 +113,9 @@ export function mapAvailabilityWithBookings(
     const workerBookings = bookings
       .filter(b => b.workerId === worker.id)
       .map(booking => {
-        const start = booking.startsAt.toTimeString().slice(0, 5)
+        const hours = booking.startsAt.getHours().toString().padStart(2, '0')
+        const mins = booking.startsAt.getMinutes().toString().padStart(2, '0')
+        const start = `${hours}:${mins}`
         const duration = Math.floor(
           (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60000
         )

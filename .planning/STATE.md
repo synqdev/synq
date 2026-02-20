@@ -5,17 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 01.1: Post-MVP UI Enhancements
-**Phase 2 status:** Not started (intentionally deferred until Phase 01.1 completion)
+**Current focus:** Phase 2: Parity
+**Phase 2 status:** In progress (started before finishing Phase 01.1 by explicit priority change)
 
 ## Current Position
 
-Phase: 01.1 of 4 (Post-MVP UI Enhancements)
-Plan: 0 of 1 (in progress)
-Status: Active execution
-Last activity: 2026-02-11 - Calendar prototype componentization and Storybook parity iteration
+Phase: 2 of 4 (Parity)
+Plan: 8 of 8 (all complete)
+Status: Phase complete — PR #34 (phase2 → main) open for final merge
+Last activity: 2026-02-19 - All 8 plans merged, post-merge fixes applied (i18n, RLS, dashboard move, test fixes)
 
-Progress: [#####-----] 50%
+Progress: [########] 100%
+
+### Open PRs
+
+| # | Branch | Target | Description |
+|---|--------|--------|-------------|
+| 34 | phase2 | main | Phase 2: Parity (all features) |
 
 ## Performance Metrics
 
@@ -101,11 +107,14 @@ Recent decisions affecting current work:
 - Zod validation allows non-UUID IDs for worker/booking tests (2026-02-06)
 - auth.signOut uses i18n messages (2026-02-06)
 - Booking calendar uses serviceDuration from API (no hardcoded 60) (2026-02-06)
+- Admin CRM list uses shared Storybook DataTable component for sortable table UI (2026-02-17)
 
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: Post-MVP UI enhancements — prototype calendar, data table, updated types and exports (URGENT)
 - Created executable plan `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
+- Priority updated on 2026-02-17: Start Phase 2 before completing Phase 01.1
+- Delivery workflow updated on 2026-02-17: one task per branch + one PR per task for automated review
 
 ### Pending Todos
 
@@ -117,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Aligning settings rail and timetable composition in prototype calendar
-Resume file: `.planning/phases/01.1-post-mvp-ui-enhancements-prototype-calendar-data-table-updated-types-and-exports/01.1-01-PLAN.md`
+Last session: 2026-02-19
+Stopped at: Phase 2 complete — all 8 plans merged, post-merge fixes applied, PR #34 open
+Resume: Merge PR #34 to main, then begin Phase 3 (or Phase 01.1)

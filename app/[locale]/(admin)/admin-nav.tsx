@@ -17,6 +17,8 @@ interface AdminNavProps {
 
 const navItems = [
   { href: '/admin/dashboard', labelKey: 'dashboard' },
+  { href: '/admin/customers', labelKey: 'customers' },
+  { href: '/admin/reports', labelKey: 'reports' },
   { href: '/admin/workers', labelKey: 'workers' },
   { href: '/admin/services', labelKey: 'services' },
   { href: '/admin/resources', labelKey: 'resources' },
@@ -25,11 +27,6 @@ const navItems = [
 export function AdminNav({ locale }: AdminNavProps) {
   const pathname = usePathname()
   const t = useTranslations('admin.nav')
-
-  // Prototype calendar route has its own in-canvas tab navigation.
-  if (pathname === `/${locale}/admin/dashboard/new`) {
-    return null
-  }
 
   return (
     <nav className="border-t border-gray-100 bg-white">

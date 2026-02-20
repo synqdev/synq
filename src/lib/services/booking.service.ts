@@ -30,21 +30,8 @@ import {
 const MAX_RETRIES = 3;
 
 function captureBookingError(error: unknown, context: Record<string, unknown>) {
-  Sentry.withScope((scope) => {
-    scope.setContext('booking', context);
-    Sentry.captureException(error);
-  });
-  const { service, operation, attempt } = context as {
-    service?: string;
-    operation?: string;
-    attempt?: number;
-  };
-  console.error('[booking.service] operation failed', {
-    error: error instanceof Error ? error.message : String(error),
-    service,
-    operation,
-    attempt,
-  });
+  Sentry.captureException(error);
+  console.error('[booking.service] operation failed', { error, ...context });
 }
 
 /**

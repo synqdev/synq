@@ -72,6 +72,8 @@
     "settings": "設定",
     "nav": {
       "dashboard": "ダッシュボード",
+      "customers": "顧客管理",
+      "reports": "売上レポート",
       "workers": "スタッフ",
       "services": "サービス",
       "resources": "ベッド"
@@ -134,6 +136,89 @@
       "add": "新規ベッド追加",
       "notFound": "ベッドがありません",
       "confirmDelete": "このベッドを削除しますか？"
+    },
+    "customersPage": {
+      "title": "顧客管理",
+      "searchPlaceholder": "名前・メール・電話番号で検索",
+      "assignedStaff": "担当者",
+      "allStaff": "全員",
+      "visitCount": "来店回数",
+      "lastVisit": "最終来店日",
+      "registeredAt": "登録日",
+      "outstandingAmount": "未収金額",
+      "noCustomers": "顧客が見つかりません",
+      "previous": "前へ",
+      "next": "次へ",
+      "pageStatus": "ページ {page} / {totalPages}（合計 {total} 件）",
+      "exportCsv": "CSV出力"
+    },
+    "reportsPage": {
+      "title": "売上レポート",
+      "loading": "読み込み中...",
+      "error": "レポートデータの読み込みに失敗しました。再試行してください。",
+      "preset": {
+        "today": "今日",
+        "thisWeek": "今週",
+        "thisMonth": "今月",
+        "last30": "過去30日"
+      },
+      "startDate": "開始",
+      "endDate": "終了",
+      "groupBy": {
+        "day": "日別",
+        "week": "週別",
+        "month": "月別"
+      },
+      "totalRevenue": "合計売上",
+      "totalBookings": "予約件数",
+      "uniqueCustomers": "顧客数",
+      "avgPerBooking": "平均単価",
+      "revenueBreakdown": "売上内訳",
+      "period": "期間",
+      "revenue": "売上",
+      "bookings": "予約数",
+      "newCustomers": "新規顧客",
+      "existingCustomers": "既存顧客",
+      "total": "合計",
+      "workerPerformance": "スタッフ実績",
+      "workerRankings": "スタッフランキング",
+      "workerName": "スタッフ",
+      "rank": "順位",
+      "diffFromFirst": "1位との差",
+      "repeatRate": "リピート率",
+      "noData": "この期間のデータはありません",
+      "exportRevenue": "売上CSV出力",
+      "exportBookings": "予約CSV出力",
+      "exporting": "出力中..."
+    },
+    "customerDetail": {
+      "title": "顧客詳細",
+      "backToList": "顧客一覧に戻る",
+      "registeredAt": "登録日",
+      "visitCount": "来店回数",
+      "lastVisit": "最終来店日",
+      "nextBooking": "次回予約",
+      "outstandingAmount": "未収金額",
+      "assignedStaff": "担当者",
+      "noStaff": "なし",
+      "notes": "メモ",
+      "notesPlaceholder": "顧客に関するメモを入力...",
+      "saved": "保存しました",
+      "saveFailed": "保存に失敗しました",
+      "bookingHistory": "予約履歴",
+      "noBookings": "予約がありません",
+      "time": "時間",
+      "service": "サービス",
+      "worker": "担当",
+      "price": "料金",
+      "medicalRecords": "カルテ",
+      "comingSoon": "準備中",
+      "notFound": "顧客が見つかりません",
+      "intake": {
+        "dropzone": "ファイルをドロップまたはクリックしてアップロード（PDF, JPG, PNG, WEBP, 最大10MB）",
+        "uploading": "アップロード中...",
+        "noFiles": "問診票がまだアップロードされていません"
+      }
     }
   },
   "auth": {
@@ -146,8 +231,7 @@
   },
   "welcome": {
     "title": "SYNQへようこそ",
-    "subtitle": "スマートな予約管理システム",
-    "bookNow": "今すぐ予約"
+    "subtitle": "スマートな予約管理システム"
   },
   "register": {
     "title": "お客様登録",

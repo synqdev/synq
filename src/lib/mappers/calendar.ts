@@ -130,9 +130,7 @@ export function mapAvailabilityWithBookings(
     const workerBookings = bookings
       .filter(b => b.workerId === worker.id)
       .map(booking => {
-        const hours = booking.startsAt.getHours().toString().padStart(2, '0')
-        const mins = booking.startsAt.getMinutes().toString().padStart(2, '0')
-        const start = `${hours}:${mins}`
+        const start = booking.startsAt.toTimeString().slice(0, 5)
         const duration = Math.floor(
           (booking.endsAt.getTime() - booking.startsAt.getTime()) / 60000
         )

@@ -6,12 +6,12 @@ import { adminLogout } from '@/app/actions/admin'
 import { useCalendarPolling } from '@/hooks/useCalendarPolling'
 import { formatInTimeZone } from '@/lib/utils/time'
 import { blockWorkerTime, createAdminBooking, sendBooking } from '@/app/actions/admin-booking'
-import { WorkerForm } from '../../workers/worker-form'
-import { WorkerTable } from '../../workers/worker-table'
-import { ServiceForm } from '../../services/service-form'
-import { ServiceTable } from '../../services/service-table'
-import { ResourceForm } from '../../resources/resource-form'
-import { ResourceTable } from '../../resources/resource-table'
+import { WorkerForm } from '../workers/worker-form'
+import { WorkerTable } from '../workers/worker-table'
+import { ServiceForm } from '../services/service-form'
+import { ServiceTable } from '../services/service-table'
+import { ResourceForm } from '../resources/resource-form'
+import { ResourceTable } from '../resources/resource-table'
 import {
   TimetableWithTabs,
   type SideActionItem,
@@ -92,7 +92,7 @@ const tabs: TopTabItem[] = [
 
 const tabRouteById: Record<string, string> = {
   dashboard: '/admin/dashboard',
-  calendar: '/admin/dashboard/new',
+  calendar: '/admin/dashboard',
 }
 
 const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources'])
@@ -397,11 +397,11 @@ export function AdminDashboardPrototypeClient({
     } else {
       next.delete('date')
     }
-    router.replace(`/${locale}/admin/dashboard/new?${next.toString()}`)
+    router.replace(`/${locale}/admin/dashboard?${next.toString()}`)
   }
 
   const panelContent = activeTabId === 'workers' ? (
-    <div className="space-y-4 font-bahnschrift">
+    <div className="space-y-4">
       <CrudPanelSection title="Add Worker">
         <WorkerForm mode="create" />
       </CrudPanelSection>
@@ -419,7 +419,7 @@ export function AdminDashboardPrototypeClient({
       </CrudPanelSection>
     </div>
   ) : activeTabId === 'resources' ? (
-    <div className="space-y-4 font-bahnschrift">
+    <div className="space-y-4">
       <CrudPanelSection title="Add Resource">
         <ResourceForm mode="create" />
       </CrudPanelSection>

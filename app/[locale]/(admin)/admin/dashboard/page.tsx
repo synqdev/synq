@@ -1,126 +1,124 @@
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import { getAdminSession } from '@/lib/auth/admin'
 import { prisma } from '@/lib/db/client'
-import { AdminDashboardClient } from './admin-dashboard-client'
-import { mapAdminBookingsToCalendar } from '@/lib/mappers/calendar'
 import { toZonedTime } from '@/lib/utils/time'
-import type { AdminBooking } from '@/lib/mappers/calendar'
+import { AdminDashboardPrototypeClient } from './prototype-client'
 
 interface AdminDashboardPageProps {
   params: Promise<{ locale: string }>
   searchParams: Promise<{ date?: string }>
 }
 
-interface WorkerRow {
+interface InitialService {
   id: string
   name: string
-  nameEn: string | null
+  duration: number
 }
 
-interface BookingRow {
-  id: string
-  workerId: string
-  startsAt: Date
-  endsAt: Date
-  status: string
-  serviceId: string
-  customer: {
-    name: string
-    email: string
-  }
-  service: {
-    name: string
-    nameEn: string | null
-  }
-  worker: {
-    name: string
-  }
-}
+// System/placeholder customer excluded from bookable customer list
+const SYSTEM_CUSTOMER_ID = '00000000-0000-0000-0000-000000000000'
 
-/**
- * Admin Dashboard Page
- *
- * Protected admin page showing calendar with all bookings using EmployeeTimeline.
- * Fetches workers and bookings for the selected date.
- */
 export default async function AdminDashboardPage({
   params,
   searchParams,
 }: AdminDashboardPageProps) {
   const { locale } = await params
   const { date: dateParam } = await searchParams
-  const t = await getTranslations('admin.dashboardPage')
 
-  // Verify admin session (full JWT verification)
   const isAuthenticated = await getAdminSession()
   if (!isAuthenticated) {
     redirect(`/${locale}/admin/login`)
   }
 
-  // Parse date from query or use today (in JST)
   const dateStr = dateParam || new Date().toISOString().split('T')[0]
-  const date = new Date(dateStr + 'T00:00:00')
 
-  // Calculate start and end of day in JST (same as availability API)
   const startOfDay = toZonedTime(dateStr, '00:00')
   const endOfDay = new Date(startOfDay)
   endOfDay.setDate(endOfDay.getDate() + 1)
 
-  // Fetch workers and bookings in parallel
-  const [workers, bookings] = await Promise.all([
+  const [workers, bookings, customers, services, resources] = await Promise.all([
     prisma.worker.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        nameEn: true,
+        isActive: true,
+        createdAt: true,
+      },
     }),
     prisma.booking.findMany({
       where: {
-        startsAt: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
+        startsAt: { gte: startOfDay, lt: endOfDay },
+        status: { not: 'CANCELLED' },
       },
       include: {
         customer: {
-          select: { name: true, email: true },
+          select: { name: true },
         },
         service: {
-          select: { name: true, nameEn: true },
-        },
-        worker: {
           select: { name: true },
         },
       },
       orderBy: { startsAt: 'asc' },
     }),
+    prisma.customer.findMany({
+      where: { id: { not: SYSTEM_CUSTOMER_ID } },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+      },
+    }),
+    prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        nameEn: true,
+        description: true,
+        duration: true,
+        price: true,
+        isActive: true,
+        createdAt: true,
+      },
+    }),
+    prisma.resource.findMany({
+      orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        createdAt: true,
+      },
+    }),
   ])
 
-  // Transform to mapper format
-  const adminBookings: AdminBooking[] = bookings.map((booking: BookingRow) => ({
-    id: booking.id,
-    workerId: booking.workerId,
-    startsAt: booking.startsAt,
-    endsAt: booking.endsAt,
-    customerName: booking.customer.name,
-    status: booking.status,
-    serviceId: booking.serviceId,
-  }))
-
-  // Use mapper to transform for EmployeeTimeline
-  const timelineWorkers = mapAdminBookingsToCalendar(
-    workers.map((w: WorkerRow) => ({ id: w.id, name: w.name, nameEn: w.nameEn ?? undefined })),
-    adminBookings
-  )
-
   return (
-    <div data-testid="admin-dashboard-page">
-      <h2 className="text-2xl font-bold mb-6" data-testid="admin-dashboard-heading">
-        {t('title')}
-      </h2>
-      <AdminDashboardClient
-        initialWorkers={timelineWorkers}
-        date={date}
-      />
-    </div>
+    <AdminDashboardPrototypeClient
+      locale={locale}
+      dateStr={dateStr}
+      initialWorkers={workers}
+      initialCustomers={customers}
+      initialServices={services.map((service: InitialService) => ({
+        id: service.id,
+        name: service.name,
+        duration: service.duration,
+      }))}
+      initialWorkerCrud={workers}
+      initialServiceCrud={services}
+      initialResourceCrud={resources}
+      initialBookings={bookings.map((booking) => ({
+        id: booking.id,
+        startsAt: booking.startsAt.toISOString(),
+        endsAt: booking.endsAt.toISOString(),
+        workerId: booking.workerId,
+        serviceId: booking.serviceId,
+        customerName: booking.customer.name,
+        serviceName: booking.service.name,
+      }))}
+    />
   )
 }

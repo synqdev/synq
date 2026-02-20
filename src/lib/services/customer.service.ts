@@ -9,6 +9,39 @@
 import { prisma } from '@/lib/db/client';
 import type { RegisterCustomerInput } from '@/lib/validations/customer';
 
+export type CustomerListSortBy =
+  | 'name'
+  | 'email'
+  | 'phone'
+  | 'assignedStaffName'
+  | 'visitCount'
+  | 'lastVisitDate'
+  | 'createdAt'
+  | 'outstandingAmount';
+export type CustomerListSortOrder = 'asc' | 'desc';
+
+export interface CustomerListItem {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  assignedStaffName: string | null;
+  visitCount: number;
+  lastVisitDate: string | null;
+  nextBookingDate: string | null;
+  createdAt: string;
+  outstandingAmount: number;
+}
+
+interface GetCustomerListParams {
+  search?: string;
+  assignedStaffId?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: CustomerListSortBy;
+  sortOrder?: CustomerListSortOrder;
+}
+
 /**
  * Finds an existing customer by email or creates a new one.
  *
@@ -53,4 +86,280 @@ export async function findCustomerById(customerId: string) {
   return prisma.customer.findUnique({
     where: { id: customerId },
   });
+}
+
+/**
+ * Returns customers for admin CRM list with computed metrics from bookings.
+ *
+ * Metrics are derived from actual bookings, not denormalized customer fields:
+ * - visitCount: count of CONFIRMED bookings
+ * - lastVisitDate: max(startsAt) of CONFIRMED bookings
+ * - nextBookingDate: nearest future CONFIRMED booking
+ */
+/**
+ * Returns full customer detail with booking history for admin CRM view.
+ */
+export async function getCustomerDetail(id: string) {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    include: {
+      assignedStaff: { select: { id: true, name: true } },
+      bookings: {
+        orderBy: { startsAt: 'desc' },
+        take: 50,
+        select: {
+          id: true,
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          service: { select: { name: true, price: true } },
+          worker: { select: { name: true } },
+          resource: { select: { name: true } },
+        },
+      },
+    },
+  });
+
+  if (!customer) return null;
+
+  // Compute metrics from full booking set, not the truncated 50-item display array
+  const now = new Date();
+  const [visitCount, lastVisit, nextBooking] = await Promise.all([
+    prisma.booking.count({ where: { customerId: id, status: 'CONFIRMED' } }),
+    prisma.booking.findFirst({
+      where: { customerId: id, status: 'CONFIRMED', startsAt: { lte: now } },
+      orderBy: { startsAt: 'desc' },
+      select: { startsAt: true },
+    }),
+    prisma.booking.findFirst({
+      where: { customerId: id, status: 'CONFIRMED', startsAt: { gt: now } },
+      orderBy: { startsAt: 'asc' },
+      select: { startsAt: true },
+    }),
+  ]);
+  const lastVisitDate = lastVisit?.startsAt ? lastVisit.startsAt.toISOString() : null;
+  const nextBookingDate = nextBooking?.startsAt ? nextBooking.startsAt.toISOString() : null;
+
+  return {
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    locale: customer.locale,
+    notes: customer.notes,
+    ticketBalance: customer.ticketBalance,
+    outstandingAmount: customer.outstandingAmount,
+    assignedStaff: customer.assignedStaff,
+    visitCount,
+    lastVisitDate,
+    nextBookingDate,
+    createdAt: customer.createdAt.toISOString(),
+    updatedAt: customer.updatedAt.toISOString(),
+    bookings: customer.bookings.map((b) => ({
+      id: b.id,
+      startsAt: b.startsAt.toISOString(),
+      endsAt: b.endsAt.toISOString(),
+      status: b.status,
+      serviceName: b.service.name,
+      servicePrice: b.service.price,
+      workerName: b.worker.name,
+      resourceName: b.resource.name,
+    })),
+  };
+}
+
+/**
+ * Updates customer notes.
+ */
+export async function updateCustomerNotes(id: string, notes: string) {
+  return prisma.customer.update({
+    where: { id },
+    data: { notes },
+  });
+}
+
+/**
+ * Updates customer assigned staff.
+ */
+export async function updateCustomerAssignedStaff(id: string, assignedStaffId: string | null) {
+  return prisma.customer.update({
+    where: { id },
+    data: { assignedStaffId },
+  });
+}
+
+/**
+ * Atomically updates customer notes and/or assigned staff in a single DB call.
+ */
+export async function updateCustomerFields(
+  id: string,
+  data: { notes?: string; assignedStaffId?: string | null }
+) {
+  return prisma.customer.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function getCustomerList(params: GetCustomerListParams = {}) {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 25));
+  const sortBy: CustomerListSortBy = params.sortBy ?? 'createdAt';
+  const sortOrder: CustomerListSortOrder = params.sortOrder ?? 'desc';
+  const search = params.search?.trim();
+  const assignedStaffId = params.assignedStaffId?.trim();
+
+  const where = {
+    ...(search
+      ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { email: { contains: search, mode: 'insensitive' as const } },
+          { phone: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }
+      : {}),
+    ...(assignedStaffId ? { assignedStaffId } : {}),
+  };
+
+  const customers = await prisma.customer.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      createdAt: true,
+      outstandingAmount: true,
+      assignedStaff: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  const customerIds = customers.map((customer) => customer.id);
+
+  let confirmedBookingStats: Array<{
+    customerId: string;
+    _count: { _all: number };
+    _max: { startsAt: Date | null };
+  }> = [];
+  let nextBookingStats: Array<{
+    customerId: string;
+    _min: { startsAt: Date | null };
+  }> = [];
+
+  if (customerIds.length > 0) {
+    const [confirmedStats, upcomingStats] = await Promise.all([
+      prisma.booking.groupBy({
+        by: ['customerId'],
+        where: {
+          customerId: { in: customerIds },
+          status: 'CONFIRMED',
+        },
+        _count: { _all: true },
+        _max: { startsAt: true },
+      }),
+      prisma.booking.groupBy({
+        by: ['customerId'],
+        where: {
+          customerId: { in: customerIds },
+          status: 'CONFIRMED',
+          startsAt: { gte: new Date() },
+        },
+        _min: { startsAt: true },
+      }),
+    ]);
+
+    confirmedBookingStats = confirmedStats;
+    nextBookingStats = upcomingStats;
+  }
+
+  const statsByCustomerId = new Map(
+    confirmedBookingStats.map((stat) => [
+      stat.customerId,
+      {
+        visitCount: stat._count._all,
+        lastVisitDate: stat._max.startsAt,
+      },
+    ])
+  );
+
+  const nextByCustomerId = new Map(
+    nextBookingStats.map((stat) => [stat.customerId, stat._min.startsAt])
+  );
+
+  const list: CustomerListItem[] = customers.map((customer) => {
+    const stats = statsByCustomerId.get(customer.id);
+    const nextBookingDate = nextByCustomerId.get(customer.id);
+
+    return {
+      id: customer.id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      assignedStaffName: customer.assignedStaff?.name ?? null,
+      visitCount: stats?.visitCount ?? 0,
+      lastVisitDate: stats?.lastVisitDate ? stats.lastVisitDate.toISOString() : null,
+      nextBookingDate: nextBookingDate ? nextBookingDate.toISOString() : null,
+      createdAt: customer.createdAt.toISOString(),
+      outstandingAmount: customer.outstandingAmount,
+    };
+  });
+
+  const compareByDate = (left: string | null, right: string | null) => {
+    const leftMs = left ? new Date(left).getTime() : Number.NEGATIVE_INFINITY;
+    const rightMs = right ? new Date(right).getTime() : Number.NEGATIVE_INFINITY;
+    return leftMs - rightMs;
+  };
+
+  list.sort((left, right) => {
+    let base = 0;
+    switch (sortBy) {
+      case 'name':
+        base = left.name.localeCompare(right.name, 'ja');
+        break;
+      case 'email':
+        base = left.email.localeCompare(right.email, 'ja');
+        break;
+      case 'phone':
+        base = (left.phone ?? '').localeCompare(right.phone ?? '', 'ja');
+        break;
+      case 'assignedStaffName':
+        base = (left.assignedStaffName ?? '').localeCompare(right.assignedStaffName ?? '', 'ja');
+        break;
+      case 'visitCount':
+        base = left.visitCount - right.visitCount;
+        break;
+      case 'lastVisitDate':
+        base = compareByDate(left.lastVisitDate, right.lastVisitDate);
+        break;
+      case 'outstandingAmount':
+        base = left.outstandingAmount - right.outstandingAmount;
+        break;
+      case 'createdAt':
+      default:
+        base = compareByDate(left.createdAt, right.createdAt);
+        break;
+    }
+
+    if (base === 0) {
+      base = left.name.localeCompare(right.name, 'ja');
+    }
+
+    return sortOrder === 'desc' ? -base : base;
+  });
+
+  const total = list.length;
+  const start = (page - 1) * pageSize;
+  const paginatedCustomers = list.slice(start, start + pageSize);
+
+  return {
+    customers: paginatedCustomers,
+    total,
+    page,
+    pageSize,
+  };
 }

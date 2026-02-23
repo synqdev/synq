@@ -102,28 +102,28 @@ Plans:
 - [x] 02-08-PLAN.md — Integration, i18n, and end-to-end verification (Wave 4)
 
 ### Phase 3: Payments & Membership
-**Goal**: Stripe/Apple Pay checkout, membership plans with QR codes for in-location scanning, user-facing payment pages, admin payment management, backend schema and webhook integration
+**Goal**: Prepaid session packs with Stripe one-time checkout, QR code redemption for in-location scanning, user-facing payment pages, admin payment management, backend schema and webhook integration
 **Depends on**: Phase 2
-**Requirements**: PAY-01 (Stripe checkout), PAY-02 (Apple Pay), PAY-03 (webhooks), MEM-01 (membership plans), MEM-02 (QR codes), MEM-03 (QR scan verification), MEM-04 (admin plan management), MEM-05 (admin payment views)
+**Requirements**: PAY-01 (Stripe checkout), PAY-02 (Apple Pay), PAY-03 (webhooks), MEM-01 (session pack plans), MEM-02 (QR codes), MEM-03 (QR scan redemption), MEM-04 (admin plan management), MEM-05 (admin payment views)
 
 **Success Criteria** (what must be TRUE):
-  1. Customer can purchase membership plans via Stripe checkout
-  2. Apple Pay supported as payment method
+  1. Customer can purchase prepaid session packs via Stripe one-time checkout
+  2. Apple Pay supported as payment method (automatic via Stripe hosted checkout)
   3. Customer has QR code in their account for in-location scanning
-  4. Staff can scan QR code to verify membership and process visit
-  5. Admin can view and manage membership plans (create, edit, deactivate)
-  6. Admin can view payment history and membership status per customer
-  7. Stripe webhooks correctly update payment and subscription status
+  4. Staff can scan QR code to redeem one session and see remaining count
+  5. Admin can view and manage session pack plans (create, edit, deactivate)
+  6. Admin can view payment history and session balance per customer
+  7. Stripe webhook correctly processes checkout.session.completed (one-time payment)
   8. Checkout flow handles success, failure, and cancellation gracefully
 
 **Plans:** 6 plans in 5 waves
 
 Plans:
-- [ ] 03-01-PLAN.md — Foundation: schema, packages, Stripe client, validations (Wave 1)
-- [ ] 03-02-PLAN.md — Webhook handler and payment/membership services (Wave 2)
-- [ ] 03-03-PLAN.md — Admin membership plan management (Wave 3)
-- [ ] 03-04-PLAN.md — Customer checkout flow with Stripe hosted checkout (Wave 4)
-- [ ] 03-05-PLAN.md — QR code generation, verification, and staff scanner (Wave 3)
+- [ ] 03-01-PLAN.md — Foundation: schema (with enums), packages, Stripe client, validations (Wave 1)
+- [ ] 03-02-PLAN.md — Webhook handler (process-then-mark) and payment/membership services (Wave 2)
+- [ ] 03-03-PLAN.md — Admin session pack plan management (Wave 3)
+- [ ] 03-04-PLAN.md — Customer checkout flow with Stripe one-time payment (Wave 4)
+- [ ] 03-05-PLAN.md — QR code generation, session redemption, and staff scanner (Wave 3)
 - [ ] 03-06-PLAN.md — Admin payment views, navigation, i18n, and end-to-end verification (Wave 5)
 
 ### Phase 4: Differentiation

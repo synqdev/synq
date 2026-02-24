@@ -80,7 +80,7 @@ ADMIN_USERNAME=<admin username>
 ADMIN_PASSWORD=<admin password>
 ADMIN_SESSION_SECRET=<32+ char random string>
 ```
-
+ 
 **Important:** Always set `ADMIN_SESSION_SECRET` to a unique random string in production.
 
 ## SQL Injection Prevention

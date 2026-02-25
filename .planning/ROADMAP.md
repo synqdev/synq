@@ -173,6 +173,6 @@ Current priority order: 1 -> 2 -> 2.1 -> 3 -> 01.1 -> 4 (01.1 temporarily deferr
 | 1. MVP | 14/14 | Complete | 2026-02-05 |
 | 01.1 Post-MVP UI Enhancements | 0/1 | Deferred | - |
 | 2. Parity | 8/8 | Complete | 2026-02-25 |
-| 2.1 Staff Availability | 0/? | Not started | - |
+| 2.1 Staff Availability | 0/2 | Planned | - |
 | 3. Payments & Membership | 0/6 | Planned | - |
 | 4. Differentiation | 0/? | Not started | - |

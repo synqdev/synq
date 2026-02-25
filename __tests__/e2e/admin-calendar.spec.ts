@@ -1,7 +1,7 @@
 /**
  * Admin Calendar E2E Tests
  *
- * Tests the admin dashboard calendar with real seeded data.
+ * Tests the admin dashboard with the prototype calendar (TimetableWithTabs).
  * Auth setup must succeed — tests fail immediately if not on dashboard.
  */
 import { test, expect } from '@playwright/test'
@@ -10,64 +10,30 @@ import { SEED } from './helpers'
 test.describe('Admin Calendar', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/en/admin/dashboard')
-    // If auth setup failed, this assertion fails immediately — no silent skipping
     await expect(page).toHaveURL(/\/admin\/dashboard/)
-    await expect(page.getByTestId('admin-dashboard-heading')).toBeVisible()
+    // Layout renders the SYNQ heading
+    await expect(page.locator('h1')).toContainText('SYNQ')
   })
 
   test('displays dashboard with all 3 seeded workers', async ({ page }) => {
-    await expect(page.getByTestId('employee-timeline')).toBeVisible()
-
-    // Exactly 3 workers from seed data
-    const workerNames = page.getByTestId('timeline-worker-name')
-    await expect(workerNames).toHaveCount(3)
-
-    // Verify exact worker IDs from seed
-    await expect(page.locator('[data-worker-id="worker-tanaka"]')).toBeVisible()
-    await expect(page.locator('[data-worker-id="worker-suzuki"]')).toBeVisible()
-    await expect(page.locator('[data-worker-id="worker-yamamoto"]')).toBeVisible()
-
-    // Time labels should cover 10:00-19:00 (10 labels)
-    const timeLabels = page.getByTestId('timeline-time-label')
-    expect(await timeLabels.count()).toBeGreaterThanOrEqual(10)
-
-    // Date navigation controls should be present
-    await expect(page.getByTestId('admin-date-previous')).toBeVisible()
-    await expect(page.getByTestId('admin-date-today')).toBeVisible()
-    await expect(page.getByTestId('admin-date-next')).toBeVisible()
+    // Workers render as avatar cards with their names in the timetable
+    for (const worker of Object.values(SEED.workers)) {
+      await expect(page.getByText(worker.name)).toBeVisible()
+    }
   })
 
-  test('date navigation changes the displayed date and returns', async ({ page }) => {
-    const displayBefore = await page.getByTestId('admin-date-display').textContent()
+  test('tab navigation works between calendar and management views', async ({ page }) => {
+    // Click Workers tab
+    await page.getByText('Workers').click()
+    await page.waitForURL(/tab=workers/)
 
-    // Navigate forward
-    await page.getByTestId('admin-date-next').click()
-    await page.waitForURL(/date=/)
+    // Click Services tab
+    await page.getByText('Services').click()
+    await page.waitForURL(/tab=services/)
 
-    const displayAfter = await page.getByTestId('admin-date-display').textContent()
-    expect(displayAfter).not.toEqual(displayBefore)
-
-    // Dashboard and timeline should persist
-    await expect(page.getByTestId('admin-dashboard-heading')).toBeVisible()
-    await expect(page.getByTestId('employee-timeline')).toBeVisible()
-
-    // Navigate back — date display should change
-    await page.getByTestId('admin-date-previous').click()
-    // Wait for date display to update (it changes via client-side state)
-    await expect(page.getByTestId('admin-date-display')).not.toHaveText(displayAfter!)
-  })
-
-  test('today button navigates to current date', async ({ page }) => {
-    // First navigate away
-    await page.getByTestId('admin-date-next').click()
-    await page.waitForURL(/date=/)
-
-    // Click today
-    await page.getByTestId('admin-date-today').click()
-
-    // Dashboard should reload with today's data
-    await expect(page.getByTestId('admin-dashboard-heading')).toBeVisible()
-    await expect(page.getByTestId('employee-timeline')).toBeVisible()
+    // Click back to Calendar
+    await page.getByText('Calendar').click()
+    await page.waitForURL(/tab=calendar|\/admin\/dashboard/)
   })
 
   test('calendar API returns correct data shape with 3 workers', async ({ page }) => {
@@ -102,12 +68,12 @@ test.describe('Admin Calendar', () => {
   test('calendar works in Japanese locale', async ({ page }) => {
     await page.goto('/ja/admin/dashboard')
     await expect(page).toHaveURL(/\/admin\/dashboard/)
-    await expect(page.getByTestId('admin-dashboard-heading')).toBeVisible()
-    await expect(page.getByTestId('employee-timeline')).toBeVisible()
+    await expect(page.locator('h1')).toContainText('SYNQ')
 
-    // All 3 workers should still render
-    const workerNames = page.getByTestId('timeline-worker-name')
-    await expect(workerNames).toHaveCount(3)
+    // All 3 workers should render with Japanese names
+    for (const worker of Object.values(SEED.workers)) {
+      await expect(page.getByText(worker.name)).toBeVisible()
+    }
   })
 
   test('loads without console errors', async ({ page }) => {

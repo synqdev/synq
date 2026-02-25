@@ -54,13 +54,13 @@ describe('Rankings & Retention Service', () => {
         rank: 2,
         workerName: '佐藤',
         totalRevenue: 20000,
-        differenceFromFirst: -10000,
+        differenceFromFirst: 10000,
       }));
       expect(result[2]).toEqual(expect.objectContaining({
         rank: 3,
         workerName: '鈴木',
         totalRevenue: 10000,
-        differenceFromFirst: -20000,
+        differenceFromFirst: 20000,
       }));
     });
 

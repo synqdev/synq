@@ -5,6 +5,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Keep tracing anchored to this repo root so server bundle artifacts
+  // (including app route client-reference manifests) are not missed.
+  outputFileTracingRoot: __dirname,
   // TypeScript strict mode
   typescript: {
     ignoreBuildErrors: false,

@@ -121,6 +121,30 @@
       "notFound": "No workers found",
       "confirmDelete": "Are you sure you want to delete this worker?"
     },
+    "schedulePage": {
+      "title": "Schedule Management",
+      "subtitle": "{name}'s Schedule",
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Saved successfully",
+      "saveError": "Failed to save",
+      "backToWorkers": "Back to Workers",
+      "schedule": "Schedule",
+      "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "available": "Available",
+      "unavailable": "Day Off",
+      "startTime": "Start",
+      "endTime": "End",
+      "timeValidationError": "End time must be after start time"
+    },
     "servicesPage": {
       "title": "Service Management",
       "add": "Add Service",

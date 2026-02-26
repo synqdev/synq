@@ -11,16 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 02.1 (Staff Availability)
-Plan: 1 of 2 complete
-Status: In progress — 02.1-01 complete, PRs open for review
-Last activity: 2026-02-26 - Completed 02.1-01 (Zod schema, server action, i18n)
+Plan: 2 of 2 complete
+Status: Phase complete — all PRs open for review
+Last activity: 2026-02-26 - Completed 02.1-02 (schedule editor UI, workers table link)
 
-Progress: [####____] 50%
+Progress: [########] 100%
 
 ### Open PRs
 
 - PR #44: feat(02.1-01): Zod validation schema for worker schedule
 - PR #45: feat(02.1-01): server action for schedule upsert and i18n translations
+- PR #46: feat(02.1-02): worker schedule page + 7-day editor
+- PR #47: feat(02.1-02): add schedule navigation link to workers table
 
 ## Performance Metrics
 
@@ -34,7 +36,7 @@ Progress: [####____] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-mvp | 14 | 82 min | 6 min |
-| 02.1-staff-availability | 1 | 10 min | 10 min |
+| 02.1-staff-availability | 2 | 12 min | 6 min |
 
 **Recent Trend:**
 - Last 5 plans: 4m, 4m, 1m, 4m, 9m
@@ -111,6 +113,9 @@ Recent decisions affecting current work:
 - findFirst+update/create upsert pattern for WorkerSchedule (no unique constraint on workerId+dayOfWeek) (02.1-01)
 - ZodError returned as discriminated result type; other errors rethrown (02.1-01)
 - isAvailable=false skips Zod time validation (unavailable days don't need valid times) (02.1-01)
+- generateTimeSlots('06:00', '23:30', 30) for select dropdown time options (02.1-02)
+- Hidden input for isAvailable toggle ensures value always submitted in FormData (02.1-02)
+- schedule key added to admin.workersPage namespace to avoid multiple useTranslations calls (02.1-02)
 
 ### Roadmap Evolution
 
@@ -137,5 +142,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02.1-01-PLAN.md — PRs #44 and #45 open for review
-Resume: Merge PRs #44 and #45, then execute 02.1-02 (schedule editor UI)
+Stopped at: Completed 02.1-02-PLAN.md — PRs #44, #45, #46, #47 open for review
+Resume: Merge all 4 PRs (#44, #45, #46, #47) to complete Phase 02.1 (Staff Availability)

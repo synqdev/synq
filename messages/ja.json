@@ -119,8 +119,7 @@
       "title": "スタッフ管理",
       "add": "新規スタッフ追加",
       "notFound": "スタッフがいません",
-      "confirmDelete": "このスタッフを削除しますか？",
-      "schedule": "シフト"
+      "confirmDelete": "このスタッフを削除しますか？"
     },
     "schedulePage": {
       "title": "シフト管理",

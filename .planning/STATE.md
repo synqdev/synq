@@ -5,21 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 3: Payments & Membership
+**Current focus:** Phase 02.1: Staff Availability
 **Phase 2 status:** Complete — merged to main (PR #34, 2026-02-25)
 
 ## Current Position
 
-Phase: 3 of 4 (Payments & Membership)
-Plan: 0 of 6
-Status: Ready to begin — Phase 2 merged to main
-Last activity: 2026-02-25 - Merged PR #34 (phase2 → main), conflicts resolved
+Phase: 02.1 (Staff Availability)
+Plan: 1 of 2 complete
+Status: In progress — 02.1-01 complete, PRs open for review
+Last activity: 2026-02-26 - Completed 02.1-01 (Zod schema, server action, i18n)
 
-Progress: [________] 0%
+Progress: [####____] 50%
 
 ### Open PRs
 
-None
+- PR #44: feat(02.1-01): Zod validation schema for worker schedule
+- PR #45: feat(02.1-01): server action for schedule upsert and i18n translations
 
 ## Performance Metrics
 
@@ -33,6 +34,7 @@ None
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-mvp | 14 | 82 min | 6 min |
+| 02.1-staff-availability | 1 | 10 min | 10 min |
 
 **Recent Trend:**
 - Last 5 plans: 4m, 4m, 1m, 4m, 9m
@@ -106,6 +108,9 @@ Recent decisions affecting current work:
 - auth.signOut uses i18n messages (2026-02-06)
 - Booking calendar uses serviceDuration from API (no hardcoded 60) (2026-02-06)
 - Admin CRM list uses shared Storybook DataTable component for sortable table UI (2026-02-17)
+- findFirst+update/create upsert pattern for WorkerSchedule (no unique constraint on workerId+dayOfWeek) (02.1-01)
+- ZodError returned as discriminated result type; other errors rethrown (02.1-01)
+- isAvailable=false skips Zod time validation (unavailable days don't need valid times) (02.1-01)
 
 ### Roadmap Evolution
 
@@ -131,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: PR #34 merged, Phase 2 complete on main
-Resume: Begin Phase 3 (Payments & Membership) or staff availability page
+Last session: 2026-02-26
+Stopped at: Completed 02.1-01-PLAN.md — PRs #44 and #45 open for review
+Resume: Merge PRs #44 and #45, then execute 02.1-02 (schedule editor UI)

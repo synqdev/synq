@@ -5,23 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 2: Parity
-**Phase 2 status:** In progress (started before finishing Phase 01.1 by explicit priority change)
+**Current focus:** Phase 3: Payments & Membership
+**Phase 2 status:** Complete — merged to main (PR #34, 2026-02-25)
 
 ## Current Position
 
-Phase: 2 of 4 (Parity)
-Plan: 8 of 8 (all complete)
-Status: Phase complete — PR #34 (phase2 → main) open for final merge
-Last activity: 2026-02-19 - All 8 plans merged, post-merge fixes applied (i18n, RLS, dashboard move, test fixes)
+Phase: 3 of 4 (Payments & Membership)
+Plan: 0 of 6
+Status: Ready to begin — Phase 2 merged to main
+Last activity: 2026-02-25 - Merged PR #34 (phase2 → main), conflicts resolved
 
-Progress: [########] 100%
+Progress: [________] 0%
 
 ### Open PRs
 
-| # | Branch | Target | Description |
-|---|--------|--------|-------------|
-| 34 | phase2 | main | Phase 2: Parity (all features) |
+None
 
 ## Performance Metrics
 
@@ -125,8 +123,14 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Merge PR #34 (phase2 → main) | 2026-02-25 | 7ae9792 | [1-merge-pr-34-phase2-main](./quick/1-merge-pr-34-phase2-main/) |
+
 ## Session Continuity
 
-Last session: 2026-02-19
-Stopped at: Phase 2 complete — all 8 plans merged, post-merge fixes applied, PR #34 open
-Resume: Merge PR #34 to main, then begin Phase 3 (or Phase 01.1)
+Last session: 2026-02-25
+Stopped at: PR #34 merged, Phase 2 complete on main
+Resume: Begin Phase 3 (Payments & Membership) or staff availability page

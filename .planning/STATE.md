@@ -5,24 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 02.1: Staff Availability
-**Phase 2 status:** Complete — merged to main (PR #34, 2026-02-25)
+**Current focus:** Phase 3: Payments & Membership
+**Phase 2.1 status:** Complete — all PRs merged (2026-02-26)
 
 ## Current Position
 
-Phase: 02.1 (Staff Availability)
-Plan: 2 of 2 complete
-Status: Phase complete — all PRs open for review
-Last activity: 2026-02-26 - Completed 02.1-02 (schedule editor UI, workers table link)
+Phase: 3 of 4 (Payments & Membership)
+Plan: 0 of 6
+Status: Ready to begin — Phase 2.1 complete
+Last activity: 2026-02-26 - Phase 2.1 Staff Availability complete — verification passed (8/8 must-haves)
 
-Progress: [########] 100%
+Progress: [________] 0%
 
 ### Open PRs
 
-- PR #44: feat(02.1-01): Zod validation schema for worker schedule
-- PR #45: feat(02.1-01): server action for schedule upsert and i18n translations
-- PR #46: feat(02.1-02): worker schedule page + 7-day editor
-- PR #47: feat(02.1-02): add schedule navigation link to workers table
+None
 
 ## Performance Metrics
 
@@ -142,5 +139,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02.1-02-PLAN.md — PRs #44, #45, #46, #47 open for review
-Resume: Merge all 4 PRs (#44, #45, #46, #47) to complete Phase 02.1 (Staff Availability)
+Stopped at: Phase 2.1 complete, verified, all PRs merged
+Resume: Begin Phase 3 (Payments & Membership) — plans already exist

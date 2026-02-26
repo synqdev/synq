@@ -13,7 +13,7 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
 - [x] **Phase 1: MVP** - Foundation, user booking, admin management, tests, email (complete booking system)
 - [ ] **Phase 01.1: Post-MVP UI Enhancements (Inserted)** - Prototype calendar, data table, updated types/exports
 - [x] **Phase 2: Parity** - CRM, customer management, employee KPIs, sales reporting
-- [ ] **Phase 2.1: Staff Availability (INSERTED)** - Staff self-service page to set working hours by day of week
+- [x] **Phase 2.1: Staff Availability (INSERTED)** - Staff self-service page to set working hours by day of week
 - [ ] **Phase 3: Payments & Membership** - Stripe/Apple Pay checkout, membership plans, QR codes, user & admin payment pages
 - [ ] **Phase 4: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
 
@@ -118,8 +118,8 @@ Plans:
 **Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] 02.1-01-PLAN.md — Validation schema, server action, and i18n translations (Wave 1)
-- [ ] 02.1-02-PLAN.md — Schedule editor UI page and workers table navigation (Wave 2)
+- [x] 02.1-01-PLAN.md — Validation schema, server action, and i18n translations (Wave 1)
+- [x] 02.1-02-PLAN.md — Schedule editor UI page and workers table navigation (Wave 2)
 
 ### Phase 3: Payments & Membership
 **Goal**: Prepaid session packs with Stripe one-time checkout, QR code redemption for in-location scanning, user-facing payment pages, admin payment management, backend schema and webhook integration
@@ -173,6 +173,6 @@ Current priority order: 1 -> 2 -> 2.1 -> 3 -> 01.1 -> 4 (01.1 temporarily deferr
 | 1. MVP | 14/14 | Complete | 2026-02-05 |
 | 01.1 Post-MVP UI Enhancements | 0/1 | Deferred | - |
 | 2. Parity | 8/8 | Complete | 2026-02-25 |
-| 2.1 Staff Availability | 0/2 | Planned | - |
+| 2.1 Staff Availability | 2/2 | Complete | 2026-02-26 |
 | 3. Payments & Membership | 0/6 | Planned | - |
 | 4. Differentiation | 0/? | Not started | - |

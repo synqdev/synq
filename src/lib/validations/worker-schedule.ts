@@ -18,11 +18,13 @@ import { z } from 'zod'
  * When isAvailable is true, endTime must be after startTime.
  * When isAvailable is false, start/end times are not validated (worker is off).
  */
+const HHMM_24H_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+
 export const dayScheduleSchema = z
   .object({
     dayOfWeek: z.number().int().min(0).max(6),
-    startTime: z.string().regex(/^\d{2}:\d{2}$/, { message: 'Start time must be in HH:MM format' }),
-    endTime: z.string().regex(/^\d{2}:\d{2}$/, { message: 'End time must be in HH:MM format' }),
+    startTime: z.string().regex(HHMM_24H_REGEX, { message: 'Start time must be in HH:MM format (00:00-23:59)' }),
+    endTime: z.string().regex(HHMM_24H_REGEX, { message: 'End time must be in HH:MM format (00:00-23:59)' }),
     isAvailable: z.boolean(),
   })
   .refine(
@@ -41,7 +43,19 @@ export const dayScheduleSchema = z
  *
  * Expects exactly 7 entries, one per day of the week (0=Sunday through 6=Saturday).
  */
-export const workerScheduleSchema = z.array(dayScheduleSchema).length(7)
+export const workerScheduleSchema = z
+  .array(dayScheduleSchema)
+  .length(7)
+  .superRefine((days, ctx) => {
+    const uniqueDays = new Set(days.map((d) => d.dayOfWeek))
+    if (uniqueDays.size !== 7) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Schedule must include each dayOfWeek exactly once (0-6)',
+        path: [],
+      })
+    }
+  })
 
 export type DayScheduleInput = z.infer<typeof dayScheduleSchema>
 export type WorkerScheduleInput = z.infer<typeof workerScheduleSchema>

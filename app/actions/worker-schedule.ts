@@ -31,10 +31,10 @@ export async function upsertWorkerSchedule(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const isAdmin = await getAdminSession()
-    if (!isAdmin) throw new Error('Unauthorized')
+    if (!isAdmin) return { success: false, error: 'Unauthorized' }
 
     const worker = await prisma.worker.findUnique({ where: { id: workerId } })
-    if (!worker) throw new Error('Worker not found')
+    if (!worker) return { success: false, error: 'Worker not found' }
 
     const schedules = Array.from({ length: 7 }, (_, i) => ({
       dayOfWeek: i,
@@ -45,32 +45,34 @@ export async function upsertWorkerSchedule(
 
     const parsed = workerScheduleSchema.parse(schedules)
 
-    for (const schedule of parsed) {
-      const existing = await prisma.workerSchedule.findFirst({
-        where: { workerId, dayOfWeek: schedule.dayOfWeek, specificDate: null },
-      })
-      if (existing) {
-        await prisma.workerSchedule.update({
-          where: { id: existing.id },
-          data: {
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            isAvailable: schedule.isAvailable,
-          },
+    await prisma.$transaction(async (tx) => {
+      for (const schedule of parsed) {
+        const existing = await tx.workerSchedule.findFirst({
+          where: { workerId, dayOfWeek: schedule.dayOfWeek, specificDate: null },
         })
-      } else {
-        await prisma.workerSchedule.create({
-          data: {
-            workerId,
-            dayOfWeek: schedule.dayOfWeek,
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            isAvailable: schedule.isAvailable,
-            specificDate: null,
-          },
-        })
+        if (existing) {
+          await tx.workerSchedule.update({
+            where: { id: existing.id },
+            data: {
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              isAvailable: schedule.isAvailable,
+            },
+          })
+        } else {
+          await tx.workerSchedule.create({
+            data: {
+              workerId,
+              dayOfWeek: schedule.dayOfWeek,
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              isAvailable: schedule.isAvailable,
+              specificDate: null,
+            },
+          })
+        }
       }
-    }
+    })
 
     revalidatePath('/admin/workers')
     return { success: true }

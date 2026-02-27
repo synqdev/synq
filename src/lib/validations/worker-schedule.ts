@@ -21,8 +21,8 @@ import { z } from 'zod'
 export const dayScheduleSchema = z
   .object({
     dayOfWeek: z.number().int().min(0).max(6),
-    startTime: z.string().regex(/^\d{2}:\d{2}$/, { message: 'Start time must be in HH:MM format' }),
-    endTime: z.string().regex(/^\d{2}:\d{2}$/, { message: 'End time must be in HH:MM format' }),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'Start time must be in HH:MM format (00:00-23:59)' }),
+    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'End time must be in HH:MM format (00:00-23:59)' }),
     isAvailable: z.boolean(),
   })
   .refine(

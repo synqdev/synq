@@ -121,30 +121,6 @@
       "notFound": "スタッフがいません",
       "confirmDelete": "このスタッフを削除しますか？"
     },
-    "schedulePage": {
-      "title": "シフト管理",
-      "subtitle": "{name}のシフト",
-      "save": "保存",
-      "saving": "保存中...",
-      "saved": "保存しました",
-      "saveError": "保存に失敗しました",
-      "backToWorkers": "スタッフ一覧に戻る",
-      "schedule": "シフト",
-      "days": {
-        "0": "日曜日",
-        "1": "月曜日",
-        "2": "火曜日",
-        "3": "水曜日",
-        "4": "木曜日",
-        "5": "金曜日",
-        "6": "土曜日"
-      },
-      "available": "勤務あり",
-      "unavailable": "休み",
-      "startTime": "開始",
-      "endTime": "終了",
-      "timeValidationError": "終了時間は開始時間より後にしてください"
-    },
     "servicesPage": {
       "title": "サービス管理",
       "add": "新規サービス追加",

@@ -10,7 +10,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteWorker } from '@/app/actions/workers'
 import { WorkerForm } from './worker-form'
@@ -29,6 +29,7 @@ interface WorkerTableProps {
 
 export function WorkerTable({ workers }: WorkerTableProps) {
   const router = useRouter()
+  const locale = useLocale()
   const tCommon = useTranslations('common')
   const tWorkers = useTranslations('admin.workersPage')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -99,7 +100,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Link
-                        href={`/admin/workers/${worker.id}/schedule`}
+                        href={`/${locale}/admin/workers/${worker.id}/schedule`}
                         className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:text-primary-800 transition-colors"
                       >
                         {tWorkers('schedule')}

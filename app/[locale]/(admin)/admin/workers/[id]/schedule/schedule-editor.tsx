@@ -85,6 +85,7 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
             <button
               type="button"
               onClick={() => toggleAvailability(i)}
+              aria-pressed={day.isAvailable}
               className={`
                 shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors
                 ${
@@ -155,9 +156,7 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
             <span className="text-sm font-medium text-green-600">{t('saved')}</span>
           )}
           {state?.success === false && (
-            <span className="text-sm font-medium text-red-600">
-              {state.error ?? t('saveError')}
-            </span>
+            <span className="text-sm font-medium text-red-600">{t('saveError')}</span>
           )}
         </div>
       </form>

@@ -17,12 +17,12 @@ interface PageProps {
  * weekly schedule.
  */
 export default async function WorkerSchedulePage({ params }: PageProps) {
+  const { id, locale } = await params
+
   const isAdmin = await getAdminSession()
   if (!isAdmin) {
-    redirect('/admin/login')
+    redirect(`/${locale}/admin/login`)
   }
-
-  const { id } = await params
   const t = await getTranslations('admin.schedulePage')
 
   const worker = await prisma.worker.findUnique({ where: { id } })
@@ -59,7 +59,7 @@ export default async function WorkerSchedulePage({ params }: PageProps) {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link
-          href="/admin/workers"
+          href={`/${locale}/admin/workers`}
           className="text-sm text-primary-600 hover:text-primary-800 hover:underline"
         >
           ← {t('backToWorkers')}

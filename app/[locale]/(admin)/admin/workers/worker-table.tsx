@@ -8,6 +8,7 @@
  */
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -97,6 +98,12 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/workers/${worker.id}/schedule`}
+                        className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:text-primary-800 transition-colors"
+                      >
+                        {tWorkers('schedule')}
+                      </Link>
                       <Button
                         variant="outline"
                         size="sm"

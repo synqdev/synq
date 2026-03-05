@@ -18,23 +18,40 @@ import { z } from 'zod'
  * When isAvailable is true, endTime must be after startTime.
  * When isAvailable is false, start/end times are not validated (worker is off).
  */
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
+
 export const dayScheduleSchema = z
   .object({
     dayOfWeek: z.number().int().min(0).max(6),
-    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'Start time must be in HH:MM 24-hour format' }),
-    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'End time must be in HH:MM 24-hour format' }),
+    startTime: z.string(),
+    endTime: z.string(),
     isAvailable: z.boolean(),
   })
-  .refine(
-    (data) => {
-      if (!data.isAvailable) return true
-      return data.endTime > data.startTime
-    },
-    {
-      message: 'End time must be after start time',
-      path: ['endTime'],
+  .superRefine((data, ctx) => {
+    if (!data.isAvailable) return
+
+    if (!TIME_REGEX.test(data.startTime)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Start time must be in HH:MM 24-hour format',
+        path: ['startTime'],
+      })
     }
-  )
+    if (!TIME_REGEX.test(data.endTime)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'End time must be in HH:MM 24-hour format',
+        path: ['endTime'],
+      })
+    }
+    if (TIME_REGEX.test(data.startTime) && TIME_REGEX.test(data.endTime) && data.endTime <= data.startTime) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'End time must be after start time',
+        path: ['endTime'],
+      })
+    }
+  })
 
 /**
  * Schema for validating a full 7-day weekly schedule.

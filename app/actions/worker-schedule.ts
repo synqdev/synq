@@ -16,8 +16,8 @@ import { ZodError } from 'zod'
 /**
  * Upsert all 7 days of a worker's recurring schedule.
  *
- * Uses the findFirst + update/create pattern since WorkerSchedule has no
- * unique constraint on (workerId, dayOfWeek).
+ * WorkerSchedule has a unique constraint on (workerId, dayOfWeek), so each
+ * day is upserted atomically inside a single transaction.
  *
  * Form fields expected: day_0_startTime, day_0_endTime, day_0_isAvailable, ... day_6_*
  *
@@ -47,30 +47,24 @@ export async function upsertWorkerSchedule(
 
     await prisma.$transaction(async (tx) => {
       for (const schedule of parsed) {
-        const existing = await tx.workerSchedule.findFirst({
-          where: { workerId, dayOfWeek: schedule.dayOfWeek, specificDate: null },
+        await tx.workerSchedule.upsert({
+          where: {
+            workerId_dayOfWeek: { workerId, dayOfWeek: schedule.dayOfWeek },
+          },
+          update: {
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            isAvailable: schedule.isAvailable,
+          },
+          create: {
+            workerId,
+            dayOfWeek: schedule.dayOfWeek,
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            isAvailable: schedule.isAvailable,
+            specificDate: null,
+          },
         })
-        if (existing) {
-          await tx.workerSchedule.update({
-            where: { id: existing.id },
-            data: {
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
-              isAvailable: schedule.isAvailable,
-            },
-          })
-        } else {
-          await tx.workerSchedule.create({
-            data: {
-              workerId,
-              dayOfWeek: schedule.dayOfWeek,
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
-              isAvailable: schedule.isAvailable,
-              specificDate: null,
-            },
-          })
-        }
       }
     })
 

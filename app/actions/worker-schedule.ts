@@ -54,8 +54,8 @@ export async function upsertWorkerSchedule(
           await tx.workerSchedule.update({
             where: { id: existing.id },
             data: {
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
+              startTime: schedule.startTime ?? '09:00',
+              endTime: schedule.endTime ?? '18:00',
               isAvailable: schedule.isAvailable,
             },
           })
@@ -64,8 +64,8 @@ export async function upsertWorkerSchedule(
             data: {
               workerId,
               dayOfWeek: schedule.dayOfWeek,
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
+              startTime: schedule.startTime ?? '09:00',
+              endTime: schedule.endTime ?? '18:00',
               isAvailable: schedule.isAvailable,
               specificDate: null,
             },

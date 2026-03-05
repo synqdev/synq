@@ -17,7 +17,7 @@ interface PageProps {
  * weekly schedule.
  */
 export default async function WorkerSchedulePage({ params }: PageProps) {
-  const { id, locale } = await params
+  const { locale, id } = await params
 
   const isAdmin = await getAdminSession()
   if (!isAdmin) {

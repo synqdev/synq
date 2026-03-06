@@ -462,7 +462,7 @@ export function AdminDashboardPrototypeClient({
         onBarDragEnd={openMoveModal}
         panelContent={panelContent}
         startHour={10}
-        endHour={18}
+        endHour={19}
         currentTimeLabel={currentTimeLabel}
         currentMinute={currentMinute}
         className="h-full"

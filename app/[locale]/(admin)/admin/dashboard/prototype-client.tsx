@@ -12,9 +12,10 @@ import { ServiceForm } from '../services/service-form'
 import { ServiceTable } from '../services/service-table'
 import { ResourceForm } from '../resources/resource-form'
 import { ResourceTable } from '../resources/resource-table'
+import { CustomerList } from '../customers/customer-list'
+import { RevenueDashboard } from '../reports/revenue-dashboard'
 import {
   TimetableWithTabs,
-  type SideActionItem,
   type TimelineBarItem,
   type TimelineStaff,
   type TopTabItem,
@@ -79,14 +80,17 @@ interface AdminDashboardPrototypeClientProps {
   initialServiceCrud: ServiceCrudItem[]
   initialResourceCrud: ResourceCrudItem[]
   initialBookings: PrototypeBooking[]
+  initialCustomerWorkers: Array<{ id: string; name: string }>
 }
 
 const tabs: TopTabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { id: 'customers', label: 'Customers', icon: 'client' },
   { id: 'workers', label: 'Workers', icon: 'user' },
   { id: 'services', label: 'Services', icon: 'services' },
   { id: 'resources', label: 'Resources', icon: 'settings' },
+  { id: 'reports', label: 'Reports', icon: 'analytics' },
   { id: 'logout', label: 'Logout', icon: 'logout' },
 ]
 
@@ -95,18 +99,7 @@ const tabRouteById: Record<string, string> = {
   calendar: '/admin/dashboard',
 }
 
-const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources'])
-
-const sideActions: SideActionItem[] = [
-  { id: 'refresh', icon: 'refresh' },
-  { id: 'home', icon: 'home' },
-  { id: 'calendar', icon: 'calendar' },
-  { id: 'roster', icon: 'user' },
-  { id: 'client', icon: 'client' },
-  { id: 'services', icon: 'services' },
-  { id: 'analytics', icon: 'analytics' },
-  { id: 'settings', icon: 'settings' },
-]
+const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources', 'customers', 'reports'])
 
 function timeToMinute(time: string): number {
   const [hours, minutes] = time.split(':').map(Number)
@@ -196,6 +189,7 @@ export function AdminDashboardPrototypeClient({
   initialServiceCrud,
   initialResourceCrud,
   initialBookings,
+  initialCustomerWorkers,
 }: AdminDashboardPrototypeClientProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -205,7 +199,6 @@ export function AdminDashboardPrototypeClient({
   const [activeTabId, setActiveTabId] = useState(() =>
     tabParam && tabs.some((tab) => tab.id === tabParam) ? tabParam : 'calendar'
   )
-  const [activeSideActionId, setActiveSideActionId] = useState('home')
   const [bars, setBars] = useState<TimelineBarItem[]>(() => toBars(initialBookings))
   const [baselineBars, setBaselineBars] = useState<TimelineBarItem[]>(() => toBars(initialBookings))
   const [dragDraft, setDragDraft] = useState<DragDraft | null>(null)
@@ -427,10 +420,22 @@ export function AdminDashboardPrototypeClient({
         <ResourceTable resources={initialResourceCrud} />
       </CrudPanelSection>
     </div>
+  ) : activeTabId === 'customers' ? (
+    <div className="space-y-4">
+      <CrudPanelSection title="Customers">
+        <CustomerList locale={locale} workers={initialCustomerWorkers} />
+      </CrudPanelSection>
+    </div>
+  ) : activeTabId === 'reports' ? (
+    <div className="space-y-4">
+      <CrudPanelSection title="Reports">
+        <RevenueDashboard locale={locale} />
+      </CrudPanelSection>
+    </div>
   ) : undefined
 
   return (
-    <div className="relative left-1/2 right-1/2 ml-[-50vw] mr-[-50vw] h-[calc(100dvh-140px)] min-h-[640px] w-screen px-3 sm:px-4">
+    <div className="h-[calc(100dvh-16px)] min-h-[640px] w-full px-3 sm:px-4">
       <TimetableWithTabs
         tabs={tabs}
         activeTabId={activeTabId}
@@ -450,9 +455,6 @@ export function AdminDashboardPrototypeClient({
           if (!route) return
           router.push(`/${locale}${route}`)
         }}
-        sideActions={sideActions}
-        activeSideActionId={activeSideActionId}
-        onSideActionChange={setActiveSideActionId}
         staff={effectiveStaff}
         bars={bars}
         onBarsChange={setBars}

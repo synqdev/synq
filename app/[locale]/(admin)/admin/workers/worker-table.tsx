@@ -79,6 +79,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
       setScheduleId(null)
     } else {
       setEditingId(null)
+      setScheduleLoading(true)
       setScheduleId(workerId)
     }
   }

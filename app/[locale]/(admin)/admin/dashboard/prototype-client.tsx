@@ -172,8 +172,8 @@ function getNowLocal() {
 
 function CrudPanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/18 bg-[#c9d2d6]/92 p-4">
-      <h3 className="mb-3 text-lg font-semibold text-[#32444b]">{title}</h3>
+    <section className="rounded-2xl border border-gray-300 bg-white p-5 shadow-sm">
+      <h3 className="mb-3 text-lg font-semibold text-gray-900">{title}</h3>
       {children}
     </section>
   )

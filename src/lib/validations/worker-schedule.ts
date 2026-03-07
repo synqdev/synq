@@ -18,41 +18,57 @@ import { z } from 'zod'
  * When isAvailable is true, endTime must be after startTime.
  * When isAvailable is false, start/end times are not validated (worker is off).
  */
-const HHMM_24H_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 
 export const dayScheduleSchema = z
   .object({
     dayOfWeek: z.number().int().min(0).max(6),
-    startTime: z.string().regex(HHMM_24H_REGEX, { message: 'Start time must be in HH:MM format (00:00-23:59)' }),
-    endTime: z.string().regex(HHMM_24H_REGEX, { message: 'End time must be in HH:MM format (00:00-23:59)' }),
+    startTime: z.string(),
+    endTime: z.string(),
     isAvailable: z.boolean(),
   })
-  .refine(
-    (data) => {
-      if (!data.isAvailable) return true
-      return data.endTime > data.startTime
-    },
-    {
-      error: 'End time must be after start time',
-      path: ['endTime'],
+  .superRefine((data, ctx) => {
+    if (!data.isAvailable) return
+
+    if (!TIME_REGEX.test(data.startTime)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Start time must be in HH:MM 24-hour format',
+        path: ['startTime'],
+      })
     }
-  )
+    if (!TIME_REGEX.test(data.endTime)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'End time must be in HH:MM 24-hour format',
+        path: ['endTime'],
+      })
+    }
+    if (TIME_REGEX.test(data.startTime) && TIME_REGEX.test(data.endTime) && data.endTime <= data.startTime) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'End time must be after start time',
+        path: ['endTime'],
+      })
+    }
+  })
 
 /**
  * Schema for validating a full 7-day weekly schedule.
  *
- * Expects exactly 7 entries, one per day of the week (0=Sunday through 6=Saturday).
+ * Expects exactly 7 entries, one per day of the week (0=Sunday through 6=Saturday),
+ * with each dayOfWeek value appearing exactly once.
  */
 export const workerScheduleSchema = z
   .array(dayScheduleSchema)
   .length(7)
-  .superRefine((days, ctx) => {
-    const uniqueDays = new Set(days.map((d) => d.dayOfWeek))
-    if (uniqueDays.size !== 7) {
+  .superRefine((schedules, ctx) => {
+    const days = schedules.map((s) => s.dayOfWeek)
+    const uniqueDays = new Set(days)
+    if (uniqueDays.size !== 7 || days.some((d) => d < 0 || d > 6)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Schedule must include each dayOfWeek exactly once (0-6)',
-        path: [],
+        code: 'custom',
+        message: 'Schedule must contain each weekday (0–6) exactly once',
       })
     }
   })

@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 03-karte-foundation (Plan 2 of 3)
-Plan: 03-02 complete
-Status: Executing phase 03
-Last activity: 2026-03-07 — Completed 03-02 (Karute Service Layer)
+Phase: 03-karte-foundation (Plan 3 of 3)
+Plan: 03-03 complete
+Status: Phase 03 complete
+Last activity: 2026-03-07 — Completed 03-03 (Server Actions, Upload Route & Service Tests)
 
-Progress: [######__] 67%
+Progress: [########] 100%
 
 ### Open PRs
 
@@ -24,7 +24,7 @@ None
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: 6 min
 - Total execution time: 1.4 hours
 
@@ -34,10 +34,10 @@ None
 |-------|-------|-------|----------|
 | 01-mvp | 14 | 82 min | 6 min |
 | 02.1-staff-availability | 2 | 12 min | 6 min |
-| 03-karte-foundation | 2 | 5 min | 2.5 min |
+| 03-karte-foundation | 3 | 8 min | 2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 1m, 4m, 9m, 3m
+- Last 5 plans: 1m, 4m, 9m, 3m, 3m
 - Trend: stable (Phase 1 MVP complete with frontend refactor)
 
 *Updated after each plan completion*
@@ -120,6 +120,8 @@ Recent decisions affecting current work:
 - Generic 'data' property in KaruteResult<T> for multi-entity service (03-02)
 - Best-effort audio cleanup on delete with warn logging, non-blocking (03-02)
 - Separate lighter include type for list queries (omit recording sessions) (03-02)
+- Server actions follow admin-booking.ts pattern exactly for consistency (03-03)
+- jest.fn() delegation in mock factories to avoid hoisting issues with const (03-03)
 
 ### Roadmap Evolution
 
@@ -147,5 +149,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 03-02-PLAN.md (Karute Service Layer)
-Resume: Continue with 03-03-PLAN.md
+Stopped at: Completed 03-03-PLAN.md (Server Actions, Upload Route & Service Tests)
+Resume: Phase 03 complete. Start next phase.

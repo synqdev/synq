@@ -110,6 +110,7 @@ export default async function AdminDashboardPage({
       initialWorkerCrud={workers}
       initialServiceCrud={services}
       initialResourceCrud={resources}
+      initialCustomerWorkers={workers.map((w) => ({ id: w.id, name: w.name }))}
       initialBookings={bookings.map((booking) => ({
         id: booking.id,
         startsAt: booking.startsAt.toISOString(),

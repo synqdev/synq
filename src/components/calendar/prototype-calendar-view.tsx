@@ -73,7 +73,7 @@ export interface TimetableWithTabsProps {
   tabs: TopTabItem[]
   activeTabId: string
   onTabChange?: (id: string) => void
-  sideActions: SideActionItem[]
+  sideActions?: SideActionItem[]
   activeSideActionId?: string
   onSideActionChange?: (id: string) => void
   staff: TimelineStaff[]
@@ -192,12 +192,14 @@ export function TimetableWithTabs({
 
   return (
     <div className={`relative flex h-full min-h-0 items-start gap-[2px] ${className}`}>
-      <SettingsRail
-        items={sideActions}
-        activeItemId={activeSideActionId}
-        onItemClick={onSideActionChange}
-        className="mt-[44px] h-[calc(100%-44px)] w-[74px] rounded-[28px] pt-5 pb-5"
-      />
+      {sideActions && sideActions.length > 0 && (
+        <SettingsRail
+          items={sideActions}
+          activeItemId={activeSideActionId}
+          onItemClick={onSideActionChange}
+          className="mt-[44px] h-[calc(100%-44px)] w-[74px] rounded-[28px] pt-5 pb-5"
+        />
+      )}
 
       <Timetable
         tabs={mappedTabs}

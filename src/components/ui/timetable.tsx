@@ -218,8 +218,8 @@ export function Timetable({
         })}
       </div>
 
-      <div className="relative flex-1 rounded-[22px] rounded-tl-none rounded-tr-none bg-[#7d9ea7]/88 p-3">
-        <div className="relative flex h-full flex-col rounded-[18px] rounded-tl-none rounded-tr-none border border-white/15 bg-[#78949c]/60 p-1">
+      <div className="relative min-h-0 flex-1 rounded-[22px] rounded-tl-none rounded-tr-none bg-[#7d9ea7]/88 p-3">
+        <div className="relative flex h-full min-h-0 flex-col rounded-[18px] rounded-tl-none rounded-tr-none border border-white/15 bg-[#78949c]/60 p-1">
           {!customBody ? (
             <div className="relative h-[50px] border-b border-white/20">
               <div className="absolute top-[6px] text-[20px] font-semibold text-white/78" style={{ left: `${AVATAR_WIDTH}px` }}>{`${String(startHour).padStart(2, '0')}:00`}</div>

@@ -25,7 +25,8 @@
     "min": "分",
     "minutes": "分",
     "localeJa": "日本語",
-    "localeEn": "English"
+    "localeEn": "English",
+    "schedule": "スケジュール"
   },
   "booking": {
     "title": "予約",

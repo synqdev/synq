@@ -7,7 +7,7 @@
  * Handles slot clicks and navigation to confirmation page.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { EmployeeTimeline } from '@/components/calendar/employee-timeline'
@@ -77,6 +77,23 @@ export function SlotSelectionClient({
     router.push(`/${locale}/booking/preview?${params.toString()}`)
   }
 
+  // Derive display time range from actual slot data
+  const timeRange = useMemo(() => {
+    let earliest = '10:00'
+    let latest = '18:00'
+    for (const worker of workers) {
+      for (const slot of worker.slots) {
+        if (slot.startTime < earliest) earliest = slot.startTime
+        const endMinutes = slot.startTime.split(':').map(Number).reduce((h, m) => h * 60 + m) + slot.duration
+        const endHour = String(Math.floor(endMinutes / 60)).padStart(2, '0')
+        const endMin = String(endMinutes % 60).padStart(2, '0')
+        const endTime = `${endHour}:${endMin}`
+        if (endTime > latest) latest = endTime
+      }
+    }
+    return { start: earliest, end: latest }
+  }, [workers])
+
   // Check if there are any available slots
   const hasAvailableSlots = workers.some(worker => worker.slots.length > 0)
 
@@ -100,7 +117,7 @@ export function SlotSelectionClient({
         mode="user"
         selectedSlot={selectedSlot}
         selectedWorkerId={selectedWorkerId}
-        timeRange={{ start: '10:00', end: '19:00' }}
+        timeRange={timeRange}
         onSlotClick={handleSlotClick}
         className="min-h-[400px]"
       />

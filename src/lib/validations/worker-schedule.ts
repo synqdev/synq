@@ -1,9 +1,3 @@
-/**
- * Worker Schedule Validation Schema
- *
- * Zod schema for validating worker recurring schedule data.
- */
-
 import { z } from 'zod'
 
 /**

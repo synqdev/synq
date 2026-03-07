@@ -1,16 +1,10 @@
 'use client'
 
-import { useState, useActionState, useEffect } from 'react'
+import { useState, useActionState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { upsertWorkerSchedule } from '@/app/actions/worker-schedule'
 import { generateTimeSlots } from '@/lib/utils/time'
-
-interface DaySchedule {
-  dayOfWeek: number
-  startTime: string
-  endTime: string
-  isAvailable: boolean
-}
+import { type DaySchedule } from '@/lib/types/worker-schedule'
 
 interface ScheduleEditorProps {
   workerId: string
@@ -22,7 +16,7 @@ interface ScheduleEditorProps {
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose }: ScheduleEditorProps) {
-  const timeOptions = generateTimeSlots('06:00', '23:30', 30)
+  const timeOptions = useMemo(() => generateTimeSlots('06:00', '23:30', 30), [])
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedules)
 
   const [state, formAction, isPending] = useActionState(
@@ -137,14 +131,14 @@ export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose
             Save Schedule
           </Button>
 
-          {state?.success === true && (
-            <span className="text-sm font-medium text-green-600">Saved</span>
-          )}
-          {state?.success === false && (
-            <span className="text-sm font-medium text-red-600">
-              {state.error ?? 'Save failed'}
-            </span>
-          )}
+          <span aria-live="polite" className="text-sm font-medium">
+            {state?.success === true && (
+              <span className="text-green-600">Saved</span>
+            )}
+            {state?.success === false && (
+              <span className="text-red-600">{state.error ?? 'Save failed'}</span>
+            )}
+          </span>
         </div>
       </form>
     </div>

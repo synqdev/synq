@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { deleteWorker } from '@/app/actions/workers'
 import { WorkerForm } from './worker-form'
 import { ScheduleEditor } from './schedule-editor'
+import { type DaySchedule, DEFAULT_SCHEDULES } from '@/lib/types/worker-schedule'
 
 interface Worker {
   id: string
@@ -16,23 +17,9 @@ interface Worker {
   createdAt: Date
 }
 
-interface DaySchedule {
-  dayOfWeek: number
-  startTime: string
-  endTime: string
-  isAvailable: boolean
-}
-
 interface WorkerTableProps {
   workers: Worker[]
 }
-
-const DEFAULT_SCHEDULES: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
-  dayOfWeek: i,
-  startTime: '09:00',
-  endTime: '18:00',
-  isAvailable: false,
-}))
 
 export function WorkerTable({ workers }: WorkerTableProps) {
   const router = useRouter()
@@ -46,8 +33,9 @@ export function WorkerTable({ workers }: WorkerTableProps) {
 
   useEffect(() => {
     if (!scheduleId) return
+    const controller = new AbortController()
     setScheduleLoading(true)
-    fetch(`/api/admin/workers/${scheduleId}/schedule`)
+    fetch(`/api/admin/workers/${scheduleId}/schedule`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         if (data.schedules) {
@@ -56,8 +44,13 @@ export function WorkerTable({ workers }: WorkerTableProps) {
           setScheduleData(DEFAULT_SCHEDULES)
         }
       })
-      .catch(() => setScheduleData(DEFAULT_SCHEDULES))
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          setScheduleData(DEFAULT_SCHEDULES)
+        }
+      })
       .finally(() => setScheduleLoading(false))
+    return () => controller.abort()
   }, [scheduleId])
 
   const handleDelete = (id: string, name: string) => {
@@ -141,7 +134,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                           onClick={() => toggleSchedule(worker.id)}
                           className={scheduleId === worker.id ? 'bg-primary-50 border-primary-300' : ''}
                         >
-                          Schedule
+                          {tCommon('schedule')}
                         </Button>
                         <Button
                           variant="outline"
@@ -171,7 +164,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                 <tr>
                   <td colSpan={4} className="border-t border-gray-100 bg-gray-50 px-4 py-4">
                     {scheduleLoading ? (
-                      <p className="text-sm text-gray-500">Loading schedule...</p>
+                      <p className="text-sm text-gray-500">{tCommon('loading')}</p>
                     ) : (
                       <ScheduleEditor
                         workerId={worker.id}

@@ -13,6 +13,11 @@ export async function GET(
 
   const { id } = await params
 
+  const worker = await prisma.worker.findUnique({ where: { id } })
+  if (!worker) {
+    return NextResponse.json({ error: 'Worker not found' }, { status: 404 })
+  }
+
   const existing = await prisma.workerSchedule.findMany({
     where: { workerId: id, specificDate: null },
     orderBy: { dayOfWeek: 'asc' },

@@ -60,7 +60,7 @@ export async function upsertWorkerSchedule(
     return { success: true }
   } catch (error) {
     if (error instanceof ZodError) {
-      return { success: false, error: 'Validation failed' }
+      return { success: false, error: error.errors.map((e) => e.message).join('; ') }
     }
     throw error
   }

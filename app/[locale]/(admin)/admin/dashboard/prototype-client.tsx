@@ -385,7 +385,7 @@ export function AdminDashboardPrototypeClient({
   const updateUrlTab = (id: string) => {
     const next = new URLSearchParams(searchParams.toString())
     next.set('tab', id)
-    if (id === 'calendar') {
+    if (embeddedPanelTabs.has(id)) {
       next.set('date', activeDateStr)
     } else {
       next.delete('date')

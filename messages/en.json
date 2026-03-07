@@ -25,7 +25,8 @@
     "min": "min",
     "minutes": "min",
     "localeJa": "日本語",
-    "localeEn": "English"
+    "localeEn": "English",
+    "schedule": "Schedule"
   },
   "booking": {
     "title": "Booking",

@@ -36,10 +36,15 @@ export async function upsertWorkerSchedule(
     const worker = await prisma.worker.findUnique({ where: { id: workerId } })
     if (!worker) return { success: false, error: 'Worker not found' }
 
+    const readString = (key: string, fallback: string) => {
+      const value = formData.get(key)
+      return typeof value === 'string' ? value : fallback
+    }
+
     const schedules = Array.from({ length: 7 }, (_, i) => ({
       dayOfWeek: i,
-      startTime: (formData.get(`day_${i}_startTime`) as string) || '09:00',
-      endTime: (formData.get(`day_${i}_endTime`) as string) || '18:00',
+      startTime: readString(`day_${i}_startTime`, '09:00'),
+      endTime: readString(`day_${i}_endTime`, '18:00'),
       isAvailable: formData.get(`day_${i}_isAvailable`) === 'true',
     }))
 
@@ -68,12 +73,12 @@ export async function upsertWorkerSchedule(
       }
     })
 
-    revalidatePath('/admin/workers')
+    revalidatePath('/[locale]/admin/workers', 'page')
     return { success: true }
   } catch (error) {
     if (error instanceof ZodError) {
       return { success: false, error: 'Validation failed' }
     }
-    throw error
+    return { success: false, error: 'Failed to save schedule' }
   }
 }

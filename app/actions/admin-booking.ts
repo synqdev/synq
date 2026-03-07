@@ -33,7 +33,7 @@ export async function cancelBooking(bookingId: string) {
     data: { status: 'CANCELLED' },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -79,7 +79,7 @@ export async function updateBooking(formData: FormData) {
     data: updateData,
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -125,7 +125,7 @@ export async function blockWorkerTime(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, bookingId: booking.id }
 }
 
@@ -157,7 +157,7 @@ export async function removeBlockedTime(bookingId: string) {
     where: { id: bookingId },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -194,7 +194,7 @@ export async function sendBooking(input: SendBookingInput) {
     },
   })
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -217,6 +217,6 @@ export async function createAdminBooking(input: CreateAdminBookingInput) {
     throw new Error(result.error)
   }
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, bookingId: result.booking.id }
 }

@@ -47,24 +47,24 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
     null
   )
 
-  const toggleAvailability = (dayIndex: number) => {
+  const toggleAvailability = (dayOfWeek: number) => {
     setSchedule((prev) =>
-      prev.map((day, i) =>
-        i === dayIndex ? { ...day, isAvailable: !day.isAvailable } : day
+      prev.map((day) =>
+        day.dayOfWeek === dayOfWeek ? { ...day, isAvailable: !day.isAvailable } : day
       )
     )
   }
 
-  const updateTime = (dayIndex: number, field: 'startTime' | 'endTime', value: string) => {
+  const updateTime = (dayOfWeek: number, field: 'startTime' | 'endTime', value: string) => {
     setSchedule((prev) =>
-      prev.map((day, i) => (i === dayIndex ? { ...day, [field]: value } : day))
+      prev.map((day) => (day.dayOfWeek === dayOfWeek ? { ...day, [field]: value } : day))
     )
   }
 
   return (
     <Card title={t('title')}>
       <form action={formAction} className="space-y-1">
-        {schedule.map((day, i) => (
+        {schedule.map((day) => (
           <div
             key={day.dayOfWeek}
             className="flex flex-wrap items-center gap-3 rounded-lg px-2 py-3 hover:bg-secondary-50 sm:flex-nowrap"
@@ -72,7 +72,7 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
             {/* Hidden inputs — always submitted regardless of availability */}
             <input
               type="hidden"
-              name={`day_${i}_isAvailable`}
+              name={`day_${day.dayOfWeek}_isAvailable`}
               value={day.isAvailable ? 'true' : 'false'}
             />
 
@@ -84,7 +84,7 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
             {/* Availability toggle */}
             <button
               type="button"
-              onClick={() => toggleAvailability(i)}
+              onClick={() => toggleAvailability(day.dayOfWeek)}
               className={`
                 shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors
                 ${
@@ -104,14 +104,14 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
                 day.isAvailable ? 'opacity-100' : 'pointer-events-none opacity-40'
               }`}
             >
-              <label className="sr-only" htmlFor={`day_${i}_startTime`}>
+              <label className="sr-only" htmlFor={`day_${day.dayOfWeek}_startTime`}>
                 {t('startTime')}
               </label>
               <select
-                id={`day_${i}_startTime`}
-                name={`day_${i}_startTime`}
+                id={`day_${day.dayOfWeek}_startTime`}
+                name={`day_${day.dayOfWeek}_startTime`}
                 value={day.startTime}
-                onChange={(e) => updateTime(i, 'startTime', e.target.value)}
+                onChange={(e) => updateTime(day.dayOfWeek, 'startTime', e.target.value)}
                 disabled={!day.isAvailable}
                 className="rounded border border-secondary-300 px-2 py-1 text-sm text-secondary-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
@@ -124,14 +124,14 @@ export function ScheduleEditor({ workerId, initialSchedules }: ScheduleEditorPro
 
               <span className="text-sm text-secondary-400">–</span>
 
-              <label className="sr-only" htmlFor={`day_${i}_endTime`}>
+              <label className="sr-only" htmlFor={`day_${day.dayOfWeek}_endTime`}>
                 {t('endTime')}
               </label>
               <select
-                id={`day_${i}_endTime`}
-                name={`day_${i}_endTime`}
+                id={`day_${day.dayOfWeek}_endTime`}
+                name={`day_${day.dayOfWeek}_endTime`}
                 value={day.endTime}
-                onChange={(e) => updateTime(i, 'endTime', e.target.value)}
+                onChange={(e) => updateTime(day.dayOfWeek, 'endTime', e.target.value)}
                 disabled={!day.isAvailable}
                 className="rounded border border-secondary-300 px-2 py-1 text-sm text-secondary-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >

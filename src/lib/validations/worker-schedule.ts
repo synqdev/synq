@@ -56,9 +56,22 @@ export const dayScheduleSchema = z
 /**
  * Schema for validating a full 7-day weekly schedule.
  *
- * Expects exactly 7 entries, one per day of the week (0=Sunday through 6=Saturday).
+ * Expects exactly 7 entries, one per day of the week (0=Sunday through 6=Saturday),
+ * with each dayOfWeek value appearing exactly once.
  */
-export const workerScheduleSchema = z.array(dayScheduleSchema).length(7)
+export const workerScheduleSchema = z
+  .array(dayScheduleSchema)
+  .length(7)
+  .superRefine((schedules, ctx) => {
+    const days = schedules.map((s) => s.dayOfWeek)
+    const uniqueDays = new Set(days)
+    if (uniqueDays.size !== 7 || days.some((d) => d < 0 || d > 6)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Schedule must contain each weekday (0–6) exactly once',
+      })
+    }
+  })
 
 export type DayScheduleInput = z.infer<typeof dayScheduleSchema>
 export type WorkerScheduleInput = z.infer<typeof workerScheduleSchema>

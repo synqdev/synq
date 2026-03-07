@@ -2,18 +2,18 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-04)
+See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 3: Payments & Membership
-**Phase 2.1 status:** Complete — all PRs merged (2026-02-26)
+**Current focus:** v2.0 SYNQ Karte — AI Electronic Medical Records
+**v1.0 status:** Complete — booking MVP + staff availability shipped
 
 ## Current Position
 
-Phase: 3 of 4 (Payments & Membership)
-Plan: 0 of 6
-Status: Ready to begin — Phase 2.1 complete
-Last activity: 2026-03-06 - Completed quick task 2: Consolidate admin UI navigation and reskin pages
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v2.0 SYNQ Karte
+Last activity: 2026-03-07 — Milestone v2.0 started
 
 Progress: [________] 0%
 

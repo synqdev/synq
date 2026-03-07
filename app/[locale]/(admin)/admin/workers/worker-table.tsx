@@ -1,8 +1,16 @@
 'use client'
 
-import { Fragment, useState, useTransition, useEffect } from 'react'
+/**
+ * Worker Table Component
+ *
+ * Displays workers in a table with edit and delete actions.
+ * Uses modal for editing and confirmation for deletion.
+ */
+
+import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteWorker } from '@/app/actions/workers'
 import { WorkerForm } from './worker-form'
@@ -23,6 +31,7 @@ interface WorkerTableProps {
 
 export function WorkerTable({ workers }: WorkerTableProps) {
   const router = useRouter()
+  const locale = useLocale()
   const tCommon = useTranslations('common')
   const tWorkers = useTranslations('admin.workersPage')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -108,20 +117,40 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                       onCancel={handleEditCancel}
                     />
                   </td>
-                ) : (
-                  <>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {worker.name}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {worker.nameEn || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${worker.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                          }`}
+                  <td className="px-4 py-3 text-secondary-600">
+                    {worker.nameEn || '-'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${worker.isActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}
+                    >
+                      {worker.isActive ? tCommon('active') : tCommon('inactive')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/${locale}/admin/workers/${worker.id}/schedule`}
+                        className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:text-primary-800 transition-colors"
+                      >
+                        {tWorkers('schedule')}
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingId(worker.id)}
+                      >
+                        {tCommon('edit')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(worker.id, worker.name)}
+                        disabled={isPending}
+                        className="text-red-600 hover:bg-red-50"
                       >
                         {worker.isActive ? tCommon('active') : tCommon('inactive')}
                       </span>

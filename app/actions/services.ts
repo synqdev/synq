@@ -46,7 +46,7 @@ export async function createService(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/services')
+  revalidatePath('/[locale]/admin/services', 'page')
   return { success: true, serviceId: service.id }
 }
 
@@ -86,7 +86,7 @@ export async function updateService(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/services')
+  revalidatePath('/[locale]/admin/services', 'page')
   return { success: true }
 }
 
@@ -108,6 +108,6 @@ export async function deleteService(id: string) {
     data: { isActive: false },
   })
 
-  revalidatePath('/admin/services')
+  revalidatePath('/[locale]/admin/services', 'page')
   return { success: true }
 }

@@ -19,6 +19,7 @@
 const mockRecordFindUnique = jest.fn();
 const mockRecordUpdate = jest.fn();
 const mockEntryCreateMany = jest.fn();
+const mockEntryDeleteMany = jest.fn();
 const mockTransaction = jest.fn();
 
 jest.mock('@/lib/db/client', () => ({
@@ -211,6 +212,7 @@ describe('classifyAndStoreEntries (real service, mocked deps)', () => {
           update: (...args: unknown[]) => mockRecordUpdate(...args),
         },
         karuteEntry: {
+          deleteMany: (...args: unknown[]) => mockEntryDeleteMany(...args),
           createMany: (...args: unknown[]) => mockEntryCreateMany(...args),
         },
       };
@@ -218,6 +220,7 @@ describe('classifyAndStoreEntries (real service, mocked deps)', () => {
     });
 
     mockRecordUpdate.mockResolvedValue({});
+    mockEntryDeleteMany.mockResolvedValue({ count: 0 });
     mockEntryCreateMany.mockResolvedValue({ count: 2 });
   });
 

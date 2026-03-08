@@ -5,9 +5,9 @@ let _supabase: SupabaseClient | null = null
 function getSupabase() {
   if (!_supabase) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) {
-      throw new Error('Supabase environment variables not configured')
+      throw new Error('Supabase service-role environment variables not configured')
     }
     _supabase = createClient(url, key)
   }
@@ -20,6 +20,10 @@ export async function uploadRecording(
   recordingId: string,
   file: File
 ): Promise<{ path: string }> {
+  if (file.type !== 'audio/webm') {
+    throw new Error(`Unsupported recording MIME type: ${file.type || 'unknown'}`)
+  }
+
   const path = `${recordingId}.webm`
 
   const { data, error } = await getSupabase().storage

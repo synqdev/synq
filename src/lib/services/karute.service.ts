@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '@/lib/db/client';
+import { withRLSContext } from '@/lib/db/rls-context';
 import { Prisma } from '@prisma/client';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -64,7 +65,7 @@ type KaruteRecordListItem = Prisma.KaruteRecordGetPayload<{
 // ============================================================================
 
 function captureKaruteError(error: unknown, context: Record<string, unknown>) {
-  Sentry.captureException(error);
+  Sentry.captureException(error, { extra: context });
   console.error('[karute.service] operation failed', { error, ...context });
 }
 
@@ -108,14 +109,16 @@ export async function createKaruteRecord(
   const validated = parseResult.data;
 
   try {
-    const record = await prisma.karuteRecord.create({
-      data: {
-        customerId: validated.customerId,
-        workerId: validated.workerId,
-        bookingId: validated.bookingId,
-      },
-      include: recordDetailInclude,
-    });
+    const record = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteRecord.create({
+        data: {
+          customerId: validated.customerId,
+          workerId: validated.workerId,
+          bookingId: validated.bookingId,
+        },
+        include: recordDetailInclude,
+      })
+    );
 
     return { success: true, data: record };
   } catch (error) {
@@ -131,10 +134,12 @@ export async function getKaruteRecord(
   id: string
 ): Promise<KaruteResult<KaruteRecordWithEntries>> {
   try {
-    const record = await prisma.karuteRecord.findUnique({
-      where: { id },
-      include: recordDetailInclude,
-    });
+    const record = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteRecord.findUnique({
+        where: { id },
+        include: recordDetailInclude,
+      })
+    );
 
     if (!record) {
       return { success: false, error: 'Karute record not found' };
@@ -154,11 +159,13 @@ export async function getKaruteRecordsByCustomer(
   customerId: string
 ): Promise<KaruteResult<KaruteRecordListItem[]>> {
   try {
-    const records = await prisma.karuteRecord.findMany({
-      where: { customerId },
-      orderBy: { createdAt: 'desc' },
-      include: recordListInclude,
-    });
+    const records = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteRecord.findMany({
+        where: { customerId },
+        orderBy: { createdAt: 'desc' },
+        include: recordListInclude,
+      })
+    );
 
     return { success: true, data: records };
   } catch (error) {
@@ -181,11 +188,13 @@ export async function updateKaruteRecord(
   const { id, ...data } = parseResult.data;
 
   try {
-    const record = await prisma.karuteRecord.update({
-      where: { id },
-      data,
-      include: recordDetailInclude,
-    });
+    const record = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteRecord.update({
+        where: { id },
+        data,
+        include: recordDetailInclude,
+      })
+    );
 
     return { success: true, data: record };
   } catch (error) {
@@ -204,34 +213,35 @@ export async function deleteKaruteRecord(
   id: string
 ): Promise<KaruteResult<{ id: string }>> {
   try {
-    // Find record with recording sessions to get audio paths
-    const record = await prisma.karuteRecord.findUnique({
-      where: { id },
-      include: { recordingSessions: true },
-    });
+    // Find record with recording sessions to get audio paths for cleanup
+    const record = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteRecord.findUnique({
+        where: { id },
+        include: { recordingSessions: true },
+      })
+    );
 
     if (!record) {
       return { success: false, error: 'Karute record not found' };
     }
 
-    // Best-effort cleanup of audio files from storage
-    for (const session of record.recordingSessions) {
-      if (session.audioStoragePath) {
-        try {
-          await deleteRecording(session.audioStoragePath);
-        } catch (error) {
-          console.warn('[karute.service] Failed to delete audio file', {
-            recordId: id,
-            sessionId: session.id,
-            path: session.audioStoragePath,
-            error,
-          });
-        }
-      }
-    }
+    // Delete record first (cascades to entries and sessions via Prisma schema)
+    await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteRecord.delete({ where: { id } })
+    );
 
-    // Delete record (cascades to entries via Prisma schema)
-    await prisma.karuteRecord.delete({ where: { id } });
+    // Best-effort parallel cleanup of audio files from storage
+    const deletePromises = record.recordingSessions
+      .filter((s) => s.audioStoragePath)
+      .map((session) =>
+        deleteRecording(session.audioStoragePath!).catch((error) => {
+          console.warn('[karute.service] Failed to delete audio file', {
+            operation: 'deleteKaruteRecord',
+            error: formatError(error),
+          });
+        })
+      );
+    await Promise.allSettled(deletePromises);
 
     return { success: true, data: { id } };
   } catch (error) {
@@ -258,15 +268,17 @@ export async function createKaruteEntry(
   const validated = parseResult.data;
 
   try {
-    const entry = await prisma.karuteEntry.create({
-      data: {
-        karuteId: validated.karuteId,
-        category: validated.category,
-        content: validated.content,
-        originalQuote: validated.originalQuote,
-        confidence: validated.confidence,
-      },
-    });
+    const entry = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteEntry.create({
+        data: {
+          karuteId: validated.karuteId,
+          category: validated.category,
+          content: validated.content,
+          originalQuote: validated.originalQuote,
+          confidence: validated.confidence,
+        },
+      })
+    );
 
     return { success: true, data: entry };
   } catch (error) {
@@ -289,10 +301,12 @@ export async function updateKaruteEntry(
   const { id, ...data } = parseResult.data;
 
   try {
-    const entry = await prisma.karuteEntry.update({
-      where: { id },
-      data,
-    });
+    const entry = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteEntry.update({
+        where: { id },
+        data,
+      })
+    );
 
     return { success: true, data: entry };
   } catch (error) {
@@ -308,7 +322,16 @@ export async function deleteKaruteEntry(
   id: string
 ): Promise<KaruteResult<{ id: string }>> {
   try {
-    await prisma.karuteEntry.delete({ where: { id } });
+    const entry = await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteEntry.findUnique({ where: { id } })
+    );
+    if (!entry) {
+      return { success: false, error: 'Karute entry not found' };
+    }
+
+    await withRLSContext({ role: 'admin' }, () =>
+      prisma.karuteEntry.delete({ where: { id } })
+    );
     return { success: true, data: { id } };
   } catch (error) {
     captureKaruteError(error, { operation: 'deleteKaruteEntry', id });

@@ -216,6 +216,7 @@ model KaruteEntry {
   originalQuote String?
   confidence    Float               @default(0.0)
   createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   @@index([karuteId])
   @@index([category])
@@ -243,6 +244,7 @@ model RecordingSession {
   @@index([customerId])
   @@index([karuteRecordId])
   @@index([status])
+  @@index([workerId])
 }
 
 model TranscriptionSegment {

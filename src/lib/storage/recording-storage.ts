@@ -5,9 +5,9 @@ let _supabase: SupabaseClient | null = null
 function getSupabase() {
   if (!_supabase) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) {
-      throw new Error('Supabase environment variables not configured')
+      throw new Error('Supabase service-role key (SUPABASE_SERVICE_ROLE_KEY) is required for server-side admin operations')
     }
     _supabase = createClient(url, key)
   }

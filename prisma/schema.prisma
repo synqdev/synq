@@ -224,7 +224,7 @@ model KaruteEntry {
 model RecordingSession {
   id               String          @id @default(uuid())
   karuteRecordId   String?
-  karuteRecord     KaruteRecord?   @relation(fields: [karuteRecordId], references: [id], onDelete: SetNull)
+  karuteRecord     KaruteRecord?   @relation(fields: [karuteRecordId], references: [id], onDelete: Cascade)
   workerId         String
   worker           Worker          @relation(fields: [workerId], references: [id], onDelete: Restrict)
   customerId       String

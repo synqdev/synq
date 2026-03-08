@@ -214,24 +214,26 @@ export async function deleteKaruteRecord(
       return { success: false, error: 'Karute record not found' };
     }
 
+    // Collect audio paths before deletion
+    const audioPaths = record.recordingSessions
+      .map((s) => s.audioStoragePath)
+      .filter((p): p is string => p !== null);
+
+    // Delete record (cascades to entries and recording sessions via Prisma schema)
+    await prisma.karuteRecord.delete({ where: { id } });
+
     // Best-effort cleanup of audio files from storage
-    for (const session of record.recordingSessions) {
-      if (session.audioStoragePath) {
-        try {
-          await deleteRecording(session.audioStoragePath);
-        } catch (error) {
-          console.warn('[karute.service] Failed to delete audio file', {
-            recordId: id,
-            sessionId: session.id,
-            path: session.audioStoragePath,
-            error,
-          });
-        }
+    for (const path of audioPaths) {
+      try {
+        await deleteRecording(path);
+      } catch (error) {
+        console.warn('[karute.service] Failed to delete audio file', {
+          recordId: id,
+          path,
+          error,
+        });
       }
     }
-
-    // Delete record (cascades to entries via Prisma schema)
-    await prisma.karuteRecord.delete({ where: { id } });
 
     return { success: true, data: { id } };
   } catch (error) {

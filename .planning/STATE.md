@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 04-recording-transcription (Plan 3 of 3)
-Plan: 04-03 complete
-Status: Phase complete
-Last activity: 2026-03-07 — Completed 04-03 (Recording UI Components)
+Phase: 05-ai-classification-karute-ui (Plan 1 of 3)
+Plan: 05-01 complete
+Status: In progress
+Last activity: 2026-03-07 — Completed 05-01 (AI Classification Service)
 
-Progress: [########] 100%
+Progress: [###-----] 33%
 
 ### Open PRs
 
@@ -24,9 +24,9 @@ None
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: 6 min
-- Total execution time: 1.4 hours
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
@@ -36,9 +36,10 @@ None
 | 02.1-staff-availability | 2 | 12 min | 6 min |
 | 03-karte-foundation | 3 | 8 min | 2.7 min |
 | 04-recording-transcription | 3 | 7 min | 2.3 min |
+| 05-ai-classification-karute-ui | 1 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 3m, 3m, 2m, 2m, 3m
+- Last 5 plans: 3m, 2m, 2m, 3m, 7m
 - Trend: stable
 
 *Updated after each plan completion*
@@ -130,6 +131,9 @@ Recent decisions affecting current work:
 - Defensive parsing of diarized_json response (handle both speakers and segments fields) (04-02)
 - Pipeline orchestration in RecordingPanel: session create -> record -> upload -> transcribe -> fetch segments (04-03)
 - Segments API route added as deviation (component needed GET endpoint for transcription segments) (04-03)
+- z.toJSONSchema() with target draft-7 for OpenAI structured outputs (Zod v4 incompatible with zodResponseFormat) (05-01)
+- Collect segments from all recording sessions via flatMap for classification (05-01)
+- Long-running AI operations use API routes (not server actions) for timeout tolerance (05-01)
 
 ### Roadmap Evolution
 
@@ -157,5 +161,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 04-03-PLAN.md (Recording UI Components)
-Resume: Phase 04 complete. Ready for next phase.
+Stopped at: Completed 05-01-PLAN.md (AI Classification Service)
+Resume: Continue with 05-02 (Karute Editor UI).

@@ -24,19 +24,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (
-    typeof body !== 'object' ||
-    body === null ||
-    typeof (body as Record<string, unknown>).recordingSessionId !== 'string' ||
-    !(body as Record<string, unknown>).recordingSessionId
-  ) {
+  const recordingSessionId =
+    body && typeof body === 'object'
+      ? (body as { recordingSessionId?: unknown }).recordingSessionId
+      : undefined
+
+  if (typeof recordingSessionId !== 'string' || !recordingSessionId.trim()) {
     return NextResponse.json(
       { error: 'recordingSessionId is required' },
       { status: 400 }
     )
   }
-
-  const { recordingSessionId } = body as { recordingSessionId: string }
 
   try {
     const result = await transcribeRecording(recordingSessionId)

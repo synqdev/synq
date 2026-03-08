@@ -56,9 +56,9 @@ export const KaruteClassificationSchema = z.object({
         'OTHER',
       ]),
       content: z.string(),
-      confidence: z.number(),
+      confidence: z.number().min(0).max(1),
       originalQuote: z.string(),
-      segmentIndices: z.array(z.number()),
+      segmentIndices: z.array(z.number().int().nonnegative()),
     })
   ),
 });
@@ -139,33 +139,46 @@ export async function classifyAndStoreEntries(
       target: 'draft-7',
     });
 
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
-        { role: 'user', content: transcript },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'karute_classification',
-          strict: true,
-          schema: jsonSchema,
+    const response = await getOpenAI().chat.completions.create(
+      {
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
+          { role: 'user', content: transcript },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'karute_classification',
+            strict: true,
+            schema: jsonSchema,
+          },
         },
       },
-    });
+      { timeout: 60000 } // 60 second timeout for long transcripts
+    );
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
       return { success: false, error: 'Empty classification response' };
     }
 
-    const classification = KaruteClassificationSchema.parse(
-      JSON.parse(content)
-    );
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return { success: false, error: 'Invalid JSON in classification response' };
+    }
 
-    // 4. Store in transaction: update summary + create entries
+    const classification = KaruteClassificationSchema.parse(parsed);
+
+    // 4. Store in transaction: delete existing entries (idempotent), update summary, create new entries.
+    // Deleting before creating ensures retries don't produce duplicate rows.
     await prisma.$transaction(async (tx) => {
+      await tx.karuteEntry.deleteMany({
+        where: { karuteId: karuteRecordId },
+      });
+
       await tx.karuteRecord.update({
         where: { id: karuteRecordId },
         data: { aiSummary: classification.summary },

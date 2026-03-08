@@ -175,23 +175,27 @@ export async function deleteRecordingSession(
   id: string
 ): Promise<RecordingResult<{ id: string }>> {
   try {
-    // Find session to get audio path for cleanup
+    // Find session to get audio path before deletion
     const session = await withRLSContext({ role: 'admin' }, () =>
-      prisma.recordingSession.findUnique({ where: { id } })
+      prisma.recordingSession.findUnique({
+        where: { id },
+        select: { id: true, audioStoragePath: true },
+      })
     );
 
     if (!session) {
       return { success: false, error: 'Recording session not found' };
     }
 
-    const audioStoragePath = session.audioStoragePath;
+    const { audioStoragePath } = session;
 
-    // Delete session (cascades to segments via Prisma schema)
+    // Delete DB record first (cascades to segments via Prisma schema).
+    // Storage cleanup happens after to ensure DB delete is not rolled back.
     await withRLSContext({ role: 'admin' }, () =>
       prisma.recordingSession.delete({ where: { id } })
     );
 
-    // Best-effort cleanup of audio file from storage
+    // Best-effort cleanup of audio file from storage (after successful DB delete)
     if (audioStoragePath) {
       try {
         await deleteRecording(audioStoragePath);

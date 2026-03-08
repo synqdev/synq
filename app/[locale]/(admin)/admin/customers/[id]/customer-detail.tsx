@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { useChatContext } from '@/components/chat'
 import { IntakeUpload } from './intake-upload'
+import { KaruteHistory } from '@/components/karute'
 
 interface WorkerOption {
   id: string
@@ -109,6 +110,7 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
     fetcher
   )
 
+  const [activeTab, setActiveTab] = useState<'details' | 'karute'>('details')
   const [notes, setNotes] = useState('')
   const [notesChanged, setNotesChanged] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -206,7 +208,7 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         &larr; {t('backToList')}
       </Link>
 
-      {/* Customer Info */}
+      {/* Customer Info (always visible) */}
       <section className="rounded-lg border border-secondary-200 p-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-secondary-900">{customer.name}</h2>
@@ -265,6 +267,37 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         </div>
       </section>
 
+      {/* Tab Navigation */}
+      <div className="flex border-b border-secondary-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('details')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'details'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-secondary-500 hover:text-secondary-700'
+          }`}
+        >
+          {t('detailsTab')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('karute')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'karute'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-secondary-500 hover:text-secondary-700'
+          }`}
+        >
+          {t('karuteTab')}
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'karute' ? (
+        <KaruteHistory customerId={customerId} locale={locale} />
+      ) : (
+      <>
       {/* Notes */}
       <section className="rounded-lg border border-secondary-200 p-4">
         <h3 className="mb-3 text-lg font-semibold text-secondary-900">{t('notes')}</h3>
@@ -343,6 +376,8 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         <h3 className="mb-3 text-lg font-semibold text-secondary-900">{t('medicalRecords')}</h3>
         <IntakeUpload customerId={customerId} locale={locale} />
       </section>
+      </>
+      )}
     </div>
   )
 }

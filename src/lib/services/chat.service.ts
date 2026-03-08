@@ -126,6 +126,38 @@ export async function getOrCreateConversation(
   }
 }
 
+/**
+ * Gets the most recent conversation for a customer (read-only, does not create).
+ * Returns null if no conversation exists.
+ */
+export async function getConversation(
+  customerId: string
+): Promise<ChatResult<{
+  id: string
+  customerId: string | null
+  title: string | null
+  createdAt: Date
+  updatedAt: Date
+  messages: { id: string; role: string; content: string; citations: unknown; tokenCount: number | null; createdAt: Date }[]
+} | null>> {
+  try {
+    const conversation = await prisma.chatConversation.findFirst({
+      where: { customerId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    })
+
+    return { success: true, data: conversation }
+  } catch (error) {
+    captureChatError(error, { operation: 'getConversation', customerId })
+    return { success: false, error: formatError(error) }
+  }
+}
+
 // ============================================================================
 // CHAT HISTORY
 // ============================================================================

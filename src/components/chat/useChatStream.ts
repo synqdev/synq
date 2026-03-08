@@ -84,48 +84,58 @@ export function useChatStream({
         const decoder = new TextDecoder()
         let buffer = ''
 
+        /**
+         * Parse and apply a single SSE event string (everything between \n\n delimiters).
+         */
+        const processEvent = (event: string) => {
+          if (!event.trim()) return
+
+          for (const line of event.split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6)
+
+            if (data === '[DONE]') continue
+
+            try {
+              const parsed = JSON.parse(data) as {
+                content?: string
+                conversationId?: string
+                usage?: unknown
+              }
+
+              if (parsed.conversationId) {
+                receivedConversationId = parsed.conversationId
+              }
+
+              if (parsed.content) {
+                accumulated += parsed.content
+                setStreamingContent(accumulated)
+              }
+              // usage event is informational, no UI action needed
+            } catch {
+              // Skip unparseable lines
+            }
+          }
+        }
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
+          // Normalize CRLF to LF so event splitting works regardless of server line endings
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
           const events = buffer.split('\n\n')
           // Keep last incomplete chunk in buffer
           buffer = events.pop() || ''
 
           for (const event of events) {
-            if (!event.trim()) continue
-
-            for (const line of event.split('\n')) {
-              if (!line.startsWith('data: ')) continue
-              const data = line.slice(6)
-
-              if (data === '[DONE]') {
-                // Stream complete
-                continue
-              }
-
-              try {
-                const parsed = JSON.parse(data) as {
-                  content?: string
-                  conversationId?: string
-                  usage?: unknown
-                }
-
-                if (parsed.conversationId) {
-                  receivedConversationId = parsed.conversationId
-                }
-
-                if (parsed.content) {
-                  accumulated += parsed.content
-                  setStreamingContent(accumulated)
-                }
-                // usage event is informational, no UI action needed
-              } catch {
-                // Skip unparseable lines
-              }
-            }
+            processEvent(event)
           }
+        }
+
+        // Drain any remaining buffered data that lacked a trailing blank line
+        if (buffer.trim()) {
+          processEvent(buffer)
         }
 
         // Streaming complete

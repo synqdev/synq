@@ -57,6 +57,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stopResolveRef = useRef<((blob: Blob) => void) | null>(null);
   const stopRejectRef = useRef<((err: Error) => void) | null>(null);
+  // Guards against stale async work continuing after unmount or a newer start call.
+  const disposedRef = useRef(false);
+  const startRequestIdRef = useRef(0);
 
   /**
    * Releases all media resources: stops tracks, closes AudioContext, clears timer.
@@ -115,6 +118,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       return;
     }
 
+    // Stamp this invocation so we can cancel it if unmount or a newer call arrives.
+    const requestId = ++startRequestIdRef.current;
+
     try {
       setError(null);
       setAudioBlob(null);
@@ -123,6 +129,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       // Get microphone stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Bail out if the component unmounted or a newer start call superseded this one.
+      if (disposedRef.current || requestId !== startRequestIdRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
 
       // Set up Web Audio API for waveform analysis
@@ -132,6 +144,15 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // Resume if suspended (browser autoplay policy)
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
+      }
+
+      // Check again after the async resume.
+      if (disposedRef.current || requestId !== startRequestIdRef.current) {
+        void audioContext.close();
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        audioContextRef.current = null;
+        return;
       }
 
       const source = audioContext.createMediaStreamSource(stream);
@@ -231,9 +252,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     chunksRef.current = [];
   }, [cleanup]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount: mark disposed so any in-flight startRecording bails out.
   useEffect(() => {
+    disposedRef.current = false;
     return () => {
+      disposedRef.current = true;
+      startRequestIdRef.current += 1;
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }

@@ -68,6 +68,10 @@ export function ChatPanel() {
 
   const handleSend = useCallback(
     (message: string) => {
+      // Guard: do not add a new optimistic bubble if a stream is already active.
+      // sendMessage() would no-op in that case, leaving an orphaned message.
+      if (isStreaming) return
+
       const optimisticId = `user-${Date.now()}`
       optimisticIdRef.current = optimisticId
       // Add user message to the list immediately
@@ -82,7 +86,7 @@ export function ChatPanel() {
       ])
       sendMessage(message, customerId, conversationId, locale)
     },
-    [sendMessage, customerId, conversationId, locale, setMessages]
+    [sendMessage, customerId, conversationId, locale, setMessages, isStreaming]
   )
 
   const handleQuickAction = useCallback(

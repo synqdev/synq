@@ -191,6 +191,22 @@
       "exportBookings": "Export Bookings CSV",
       "exporting": "Exporting..."
     },
+    "recording": {
+      "startRecording": "Start Recording",
+      "pauseRecording": "Pause",
+      "resumeRecording": "Resume",
+      "stopRecording": "Stop Recording",
+      "uploading": "Uploading...",
+      "transcribing": "Transcribing...",
+      "transcriptionComplete": "Transcription Complete",
+      "noSegments": "No transcription segments",
+      "speaker": "Speaker {label}",
+      "errorPermission": "Microphone access denied",
+      "errorNoMic": "No microphone found",
+      "errorUpload": "Upload failed",
+      "errorTranscription": "Transcription failed",
+      "recordingComplete": "Recording Complete"
+    },
     "customerDetail": {
       "title": "Customer Detail",
       "backToList": "Back to Customer List",

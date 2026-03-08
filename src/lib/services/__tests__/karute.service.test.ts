@@ -15,6 +15,8 @@ const mockKaruteRecordFindMany = jest.fn()
 const mockKaruteRecordUpdate = jest.fn()
 const mockKaruteRecordDelete = jest.fn()
 const mockKaruteEntryCreate = jest.fn()
+const mockKaruteEntryFindUnique = jest.fn()
+const mockKaruteEntryUpdate = jest.fn()
 const mockKaruteEntryDelete = jest.fn()
 
 jest.mock('@/lib/db/client', () => ({
@@ -28,6 +30,8 @@ jest.mock('@/lib/db/client', () => ({
     },
     karuteEntry: {
       create: (...args: unknown[]) => mockKaruteEntryCreate(...args),
+      findUnique: (...args: unknown[]) => mockKaruteEntryFindUnique(...args),
+      update: (...args: unknown[]) => mockKaruteEntryUpdate(...args),
       delete: (...args: unknown[]) => mockKaruteEntryDelete(...args),
     },
   },
@@ -50,6 +54,7 @@ import {
   updateKaruteRecord,
   deleteKaruteRecord,
   createKaruteEntry,
+  updateKaruteEntry,
   deleteKaruteEntry,
 } from '../karute.service'
 
@@ -277,8 +282,61 @@ describe('karute.service', () => {
     })
   })
 
+  describe('updateKaruteEntry', () => {
+    it('returns success with updated entry', async () => {
+      const mockEntry = {
+        id: 'entry-1',
+        karuteId: 'record-1',
+        category: 'TREATMENT',
+        content: 'Updated content',
+        confidence: 0.9,
+      }
+      mockKaruteEntryUpdate.mockResolvedValue(mockEntry)
+
+      const result = await updateKaruteEntry({
+        id: 'entry-1',
+        content: 'Updated content',
+        confidence: 0.9,
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.id).toBe('entry-1')
+        expect(result.data.content).toBe('Updated content')
+      }
+      expect(mockKaruteEntryUpdate).toHaveBeenCalledWith({
+        where: { id: 'entry-1' },
+        data: expect.objectContaining({ content: 'Updated content', confidence: 0.9 }),
+      })
+    })
+
+    it('returns error when validation fails (empty id)', async () => {
+      const result = await updateKaruteEntry({ id: '' })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain('Entry ID is required')
+      }
+      expect(mockKaruteEntryUpdate).not.toHaveBeenCalled()
+    })
+
+    it('returns error and calls Sentry when Prisma throws', async () => {
+      mockKaruteEntryUpdate.mockRejectedValue(new Error('DB error'))
+
+      const result = await updateKaruteEntry({ id: 'entry-1', content: 'new content' })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('DB error')
+      }
+      expect(mockCaptureException).toHaveBeenCalled()
+    })
+  })
+
   describe('deleteKaruteEntry', () => {
     it('returns success with deleted entry ID', async () => {
+      const mockEntry = { id: 'entry-1', karuteId: 'record-1', category: 'SYMPTOM', content: 'test' }
+      mockKaruteEntryFindUnique.mockResolvedValue(mockEntry)
       mockKaruteEntryDelete.mockResolvedValue({ id: 'entry-1' })
 
       const result = await deleteKaruteEntry('entry-1')
@@ -287,6 +345,18 @@ describe('karute.service', () => {
       if (result.success) {
         expect(result.data.id).toBe('entry-1')
       }
+    })
+
+    it('returns error when entry not found', async () => {
+      mockKaruteEntryFindUnique.mockResolvedValue(null)
+
+      const result = await deleteKaruteEntry('nonexistent')
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Karute entry not found')
+      }
+      expect(mockKaruteEntryDelete).not.toHaveBeenCalled()
     })
   })
 })

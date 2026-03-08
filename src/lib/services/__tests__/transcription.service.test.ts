@@ -12,6 +12,7 @@
 
 const mockSessionFindUnique = jest.fn()
 const mockSessionUpdate = jest.fn()
+const mockSessionUpdateMany = jest.fn()
 const mockSegmentCreateMany = jest.fn()
 
 jest.mock('@/lib/db/client', () => ({
@@ -19,10 +20,12 @@ jest.mock('@/lib/db/client', () => ({
     recordingSession: {
       findUnique: (...args: unknown[]) => mockSessionFindUnique(...args),
       update: (...args: unknown[]) => mockSessionUpdate(...args),
+      updateMany: (...args: unknown[]) => mockSessionUpdateMany(...args),
     },
     transcriptionSegment: {
       createMany: (...args: unknown[]) => mockSegmentCreateMany(...args),
     },
+    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   },
 }))
 
@@ -88,11 +91,13 @@ describe('transcription.service', () => {
       'https://storage.example.com/signed-url'
     )
     mockFetch.mockResolvedValue({
+      ok: true,
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
     })
     mockTranscriptionsCreate.mockResolvedValue(MOCK_DIARIZED_RESPONSE)
     mockSegmentCreateMany.mockResolvedValue({ count: 3 })
     mockSessionUpdate.mockResolvedValue({})
+    mockSessionUpdateMany.mockResolvedValue({ count: 1 })
   })
 
   describe('successful transcription', () => {
@@ -107,8 +112,8 @@ describe('transcription.service', () => {
       }
 
       // Verify status transitions
-      expect(mockSessionUpdate).toHaveBeenCalledWith({
-        where: { id: 'session-1' },
+      expect(mockSessionUpdateMany).toHaveBeenCalledWith({
+        where: { id: 'session-1', status: 'RECORDING' },
         data: { status: 'PROCESSING' },
       })
       expect(mockSessionUpdate).toHaveBeenCalledWith({
@@ -128,6 +133,7 @@ describe('transcription.service', () => {
           model: 'gpt-4o-transcribe-diarize',
           language: 'ja',
           response_format: 'diarized_json',
+          chunking_strategy: 'auto',
         })
       )
     })
@@ -180,6 +186,12 @@ describe('transcription.service', () => {
         expect(result.error).toBe('OpenAI API rate limit exceeded')
       }
 
+      // Verify atomic claim was attempted
+      expect(mockSessionUpdateMany).toHaveBeenCalledWith({
+        where: { id: 'session-1', status: 'RECORDING' },
+        data: { status: 'PROCESSING' },
+      })
+
       // Verify status set to FAILED
       expect(mockSessionUpdate).toHaveBeenCalledWith({
         where: { id: 'session-1' },
@@ -188,6 +200,64 @@ describe('transcription.service', () => {
 
       // Verify Sentry capture
       expect(mockCaptureException).toHaveBeenCalled()
+    })
+  })
+
+  describe('signed URL error', () => {
+    it('updates status to FAILED when getRecordingSignedUrl throws', async () => {
+      mockSessionFindUnique.mockResolvedValue(MOCK_SESSION)
+      mockGetRecordingSignedUrl.mockRejectedValue(new Error('Storage error'))
+
+      const result = await transcribeRecording('session-1')
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Storage error')
+      }
+      expect(mockSessionUpdate).toHaveBeenCalledWith({
+        where: { id: 'session-1' },
+        data: { status: 'FAILED' },
+      })
+      expect(mockTranscriptionsCreate).not.toHaveBeenCalled()
+      expect(mockSegmentCreateMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('audio download error', () => {
+    it('updates status to FAILED when fetch rejects', async () => {
+      mockSessionFindUnique.mockResolvedValue(MOCK_SESSION)
+      mockFetch.mockRejectedValue(new Error('Network error'))
+
+      const result = await transcribeRecording('session-1')
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Network error')
+      }
+      expect(mockSessionUpdate).toHaveBeenCalledWith({
+        where: { id: 'session-1' },
+        data: { status: 'FAILED' },
+      })
+      expect(mockTranscriptionsCreate).not.toHaveBeenCalled()
+      expect(mockSegmentCreateMany).not.toHaveBeenCalled()
+    })
+
+    it('updates status to FAILED when fetch returns non-OK response', async () => {
+      mockSessionFindUnique.mockResolvedValue(MOCK_SESSION)
+      mockFetch.mockResolvedValue({ ok: false, status: 403, statusText: 'Forbidden' })
+
+      const result = await transcribeRecording('session-1')
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain('403')
+      }
+      expect(mockSessionUpdate).toHaveBeenCalledWith({
+        where: { id: 'session-1' },
+        data: { status: 'FAILED' },
+      })
+      expect(mockTranscriptionsCreate).not.toHaveBeenCalled()
+      expect(mockSegmentCreateMany).not.toHaveBeenCalled()
     })
   })
 

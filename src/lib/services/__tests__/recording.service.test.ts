@@ -38,6 +38,7 @@ jest.mock('@sentry/nextjs', () => ({
 import {
   createRecordingSession,
   getRecordingSession,
+  updateRecordingSession,
   deleteRecordingSession,
 } from '../recording.service'
 
@@ -96,6 +97,23 @@ describe('recording.service', () => {
       }
       expect(mockSessionCreate).not.toHaveBeenCalled()
     })
+
+    it('returns error and captures to Sentry when Prisma throws', async () => {
+      const dbError = new Error('Connection timeout')
+      mockSessionCreate.mockRejectedValue(dbError)
+
+      const result = await createRecordingSession({
+        customerId: 'cust-1',
+        workerId: 'worker-1',
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Connection timeout')
+      }
+      expect(mockSessionCreate).toHaveBeenCalled()
+      expect(mockCaptureException).toHaveBeenCalledWith(dbError, expect.anything())
+    })
   })
 
   describe('getRecordingSession', () => {
@@ -141,6 +159,44 @@ describe('recording.service', () => {
     })
   })
 
+  describe('updateRecordingSession', () => {
+    it('returns success with updated session', async () => {
+      const mockSession = {
+        id: 'session-1',
+        audioStoragePath: 'session-1.webm',
+        customer: {},
+        worker: {},
+        karuteRecord: null,
+      }
+      mockSessionUpdate.mockResolvedValue(mockSession)
+
+      const result = await updateRecordingSession({
+        id: 'session-1',
+        audioStoragePath: 'session-1.webm',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.id).toBe('session-1')
+      }
+      expect(mockSessionUpdate).toHaveBeenCalledWith({
+        where: { id: 'session-1' },
+        data: expect.objectContaining({ audioStoragePath: 'session-1.webm' }),
+        include: expect.objectContaining({ customer: true, worker: true }),
+      })
+    })
+
+    it('returns error when validation fails (empty id)', async () => {
+      const result = await updateRecordingSession({ id: '' })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain('Session ID is required')
+      }
+      expect(mockSessionUpdate).not.toHaveBeenCalled()
+    })
+  })
+
   describe('deleteRecordingSession', () => {
     it('returns success and deletes audio from storage', async () => {
       const mockSession = {
@@ -175,6 +231,25 @@ describe('recording.service', () => {
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).not.toHaveBeenCalled()
+    })
+
+    it('still deletes session when audio cleanup fails (best-effort)', async () => {
+      const mockSession = {
+        id: 'session-3',
+        audioStoragePath: 'session-3.webm',
+      }
+      mockSessionFindUnique.mockResolvedValue(mockSession)
+      mockSessionDelete.mockResolvedValue(mockSession)
+      mockDeleteRecording.mockRejectedValue(new Error('storage down'))
+
+      const result = await deleteRecordingSession('session-3')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.id).toBe('session-3')
+      }
+      expect(mockSessionDelete).toHaveBeenCalledWith({ where: { id: 'session-3' } })
+      expect(mockDeleteRecording).toHaveBeenCalledWith('session-3.webm')
     })
   })
 })

@@ -87,6 +87,7 @@ model WorkerSchedule {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  @@unique([workerId, dayOfWeek])
   @@index([workerId, dayOfWeek, startTime, endTime])
   @@index([workerId, specificDate])
 }
@@ -220,6 +221,7 @@ model KaruteEntry {
   segmentIndices Int[]               @default([])
   displayOrder   Int                 @default(0)
   createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([karuteId])
   @@index([category])
@@ -228,7 +230,7 @@ model KaruteEntry {
 model RecordingSession {
   id               String          @id @default(uuid())
   karuteRecordId   String?
-  karuteRecord     KaruteRecord?   @relation(fields: [karuteRecordId], references: [id], onDelete: SetNull)
+  karuteRecord     KaruteRecord?   @relation(fields: [karuteRecordId], references: [id], onDelete: Cascade)
   workerId         String
   worker           Worker          @relation(fields: [workerId], references: [id], onDelete: Restrict)
   customerId       String
@@ -247,6 +249,7 @@ model RecordingSession {
   @@index([customerId])
   @@index([karuteRecordId])
   @@index([status])
+  @@index([workerId])
 }
 
 model TranscriptionSegment {
@@ -262,7 +265,7 @@ model TranscriptionSegment {
   createdAt    DateTime         @default(now())
 
   @@index([recordingId])
-  @@index([recordingId, segmentIndex])
+  @@unique([recordingId, segmentIndex])
 }
 
 // ============================================================================

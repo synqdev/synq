@@ -12,6 +12,8 @@ import { getSupportedMimeType, AUDIO_CHUNK_INTERVAL } from '@/lib/utils/audio';
 
 type RecordingStatus = 'idle' | 'recording' | 'paused' | 'stopped';
 
+export type RecordingErrorCode = 'ERROR_PERMISSION' | 'ERROR_NO_MIC' | 'ERROR_UNKNOWN';
+
 export interface UseAudioRecorderReturn {
   status: RecordingStatus;
   startRecording: () => Promise<void>;
@@ -21,7 +23,7 @@ export interface UseAudioRecorderReturn {
   audioBlob: Blob | null;
   analyserNode: AnalyserNode | null;
   elapsedSeconds: number;
-  error: string | null;
+  error: RecordingErrorCode | null;
   resetRecorder: () => void;
 }
 
@@ -46,13 +48,15 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RecordingErrorCode | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopResolveRef = useRef<((blob: Blob) => void) | null>(null);
+  const stopRejectRef = useRef<((err: Error) => void) | null>(null);
 
   /**
    * Releases all media resources: stops tracks, closes AudioContext, clears timer.
@@ -63,7 +67,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       timerRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
       streamRef.current = null;
     }
     if (audioContextRef.current) {
@@ -96,8 +102,18 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, []);
 
   const startRecording = useCallback(async () => {
+    // Re-entry guard: prevent overwriting live resources
+    if (
+      mediaRecorderRef.current?.state === 'recording' ||
+      mediaRecorderRef.current?.state === 'paused'
+    ) {
+      throw new Error('Recording already in progress.');
+    }
+
     try {
       setError(null);
+      setAudioBlob(null);
+      setElapsedSeconds(0);
       chunksRef.current = [];
 
       // Get microphone stream
@@ -132,24 +148,42 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         }
       };
 
+      // Shared onstop handler — runs whether stop() is called explicitly or by the browser
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
+        setAudioBlob(blob);
+        setStatus('stopped');
+        cleanup();
+        stopResolveRef.current?.(blob);
+        stopResolveRef.current = null;
+        stopRejectRef.current = null;
+      };
+
+      // Shared onerror handler — handles unexpected recorder failures
+      mediaRecorder.onerror = () => {
+        cleanup();
+        setError('ERROR_UNKNOWN');
+        setStatus('idle');
+        stopRejectRef.current?.(new Error('An unexpected recording error occurred.'));
+        stopResolveRef.current = null;
+        stopRejectRef.current = null;
+      };
+
       mediaRecorder.start(AUDIO_CHUNK_INTERVAL);
       startTimer();
       setStatus('recording');
     } catch (err) {
       cleanup();
+      let code: RecordingErrorCode = 'ERROR_UNKNOWN';
       if (err instanceof DOMException) {
         if (err.name === 'NotAllowedError') {
-          setError('Microphone access was denied. Please allow microphone permissions and try again.');
+          code = 'ERROR_PERMISSION';
         } else if (err.name === 'NotFoundError') {
-          setError('No microphone found. Please connect a microphone and try again.');
-        } else {
-          setError(`Microphone error: ${err.message}`);
+          code = 'ERROR_NO_MIC';
         }
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred while starting recording.');
       }
+      setError(code);
+      throw err;
     }
   }, [cleanup, startTimer]);
 
@@ -177,18 +211,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         return;
       }
 
-      mediaRecorder.onstop = () => {
-        const mimeType = mediaRecorder.mimeType;
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
-        setStatus('stopped');
-        cleanup();
-        resolve(blob);
-      };
-
+      stopResolveRef.current = resolve;
+      stopRejectRef.current = reject;
       mediaRecorder.stop();
     });
-  }, [status, cleanup]);
+  }, [status]);
 
   const resetRecorder = useCallback(() => {
     cleanup();

@@ -38,7 +38,7 @@ export async function createResource(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/resources')
+  revalidatePath('/[locale]/admin/resources', 'page')
   return { success: true, resourceId: resource.id }
 }
 
@@ -70,7 +70,7 @@ export async function updateResource(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/resources')
+  revalidatePath('/[locale]/admin/resources', 'page')
   return { success: true }
 }
 
@@ -92,6 +92,6 @@ export async function deleteResource(id: string) {
     data: { isActive: false },
   })
 
-  revalidatePath('/admin/resources')
+  revalidatePath('/[locale]/admin/resources', 'page')
   return { success: true }
 }

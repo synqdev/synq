@@ -260,5 +260,5 @@ model TranscriptionSegment {
   createdAt    DateTime         @default(now())
 
   @@index([recordingId])
-  @@index([recordingId, segmentIndex])
+  @@unique([recordingId, segmentIndex])
 }

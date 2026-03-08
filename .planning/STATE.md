@@ -23,10 +23,10 @@ None
 
 ## Performance Metrics
 
-**Velocity:**
-- Total plans completed: 18
-- Average duration: 6 min
-- Total execution time: 1.4 hours
+**Velocity:** *(derived from phase table below)*
+- Total plans completed: 20
+- Average duration: 5.2 min
+- Total execution time: 1.73 hours (104 min)
 
 **By Phase:**
 

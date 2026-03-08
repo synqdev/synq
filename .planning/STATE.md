@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 03-karte-foundation (Plan 1 of 3)
-Plan: 03-01 complete
+Phase: 03-karte-foundation (Plan 2 of 3)
+Plan: 03-02 complete
 Status: Executing phase 03
-Last activity: 2026-03-07 — Completed 03-01 (Schema & Storage Foundation)
+Last activity: 2026-03-07 — Completed 03-02 (Karute Service Layer)
 
-Progress: [###_____] 33%
+Progress: [######__] 67%
 
 ### Open PRs
 
@@ -24,7 +24,7 @@ None
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 6 min
 - Total execution time: 1.4 hours
 
@@ -34,10 +34,10 @@ None
 |-------|-------|-------|----------|
 | 01-mvp | 14 | 82 min | 6 min |
 | 02.1-staff-availability | 2 | 12 min | 6 min |
-| 03-karte-foundation | 1 | 2 min | 2 min |
+| 03-karte-foundation | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 4m, 1m, 4m, 9m
+- Last 5 plans: 4m, 1m, 4m, 9m, 3m
 - Trend: stable (Phase 1 MVP complete with frontend refactor)
 
 *Updated after each plan completion*
@@ -117,6 +117,9 @@ Recent decisions affecting current work:
 - Flat storage path ({recordingId}.webm) for single-shop simplicity (03-01)
 - Admin-only RLS on all karute tables, no customer self-service (03-01)
 - Per-bucket storage modules with singleton Supabase client pattern (03-01)
+- Generic 'data' property in KaruteResult<T> for multi-entity service (03-02)
+- Best-effort audio cleanup on delete with warn logging, non-blocking (03-02)
+- Separate lighter include type for list queries (omit recording sessions) (03-02)
 
 ### Roadmap Evolution
 
@@ -144,5 +147,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 03-01-PLAN.md (Schema & Storage Foundation)
-Resume: Continue with 03-02-PLAN.md (Karute Service Layer)
+Stopped at: Completed 03-02-PLAN.md (Karute Service Layer)
+Resume: Continue with 03-03-PLAN.md

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   const bookings = await prisma.booking.findMany({
     where: {
       startsAt: { gte: startOfDay, lt: endOfDay },
-      status: { not: 'CANCELLED' },
+      status: { notIn: ['CANCELLED', 'NOSHOW'] },
     },
     include: {
       customer: {
@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
       },
       karuteRecords: {
         select: { id: true, status: true },
+        orderBy: { createdAt: 'desc' },
         take: 1,
       },
     },

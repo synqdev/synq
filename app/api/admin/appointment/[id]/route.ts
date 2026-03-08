@@ -62,6 +62,7 @@ export async function GET(
           id: true,
           status: true,
           createdAt: true,
+          aiSummary: true,
         },
       },
       recordingSessions: {
@@ -70,6 +71,9 @@ export async function GET(
           id: true,
           status: true,
           startedAt: true,
+          endedAt: true,
+          audioStoragePath: true,
+          durationSeconds: true,
         },
       },
     },

@@ -5,11 +5,11 @@ subsystem: data-layer
 tags: [api, prisma, i18n, settings]
 key-files:
   created:
-    - prisma/schema.prisma (AdminSettings model added)
     - app/api/admin/appointment/[id]/route.ts
     - app/api/admin/appointment/today/route.ts
     - app/api/admin/settings/route.ts
   modified:
+    - prisma/schema.prisma (AdminSettings model added)
     - messages/ja.json
     - messages/en.json
 decisions:

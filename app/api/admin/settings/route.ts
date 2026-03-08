@@ -12,10 +12,10 @@ import { z } from 'zod'
 
 const settingsSchema = z.object({
   aiProvider: z.string().min(1),
-  businessType: z.string().min(1),
+  businessType: z.enum(['general', 'salon', 'clinic']),
   autoTranscribe: z.boolean(),
-  recordingLang: z.string().min(1),
-  audioQuality: z.string().min(1),
+  recordingLang: z.enum(['ja', 'en']),
+  audioQuality: z.enum(['standard', 'high']),
 })
 
 /**

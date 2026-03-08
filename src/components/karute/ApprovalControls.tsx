@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from './StatusBadge'
 import { updateKaruteStatusAction } from '@/app/actions/karute'
+import type { KaruteStatus } from './constants'
 
 interface ApprovalControlsProps {
-  status: string
+  status: KaruteStatus
   recordId: string
   onUpdate: () => void
 }
@@ -16,9 +18,10 @@ interface ApprovalControlsProps {
  * Draft -> Review -> Approved, with ability to reopen.
  */
 export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControlsProps) {
+  const t = useTranslations('admin.karuteEditor')
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
-  const handleTransition = async (newStatus: 'DRAFT' | 'REVIEW' | 'APPROVED') => {
+  const handleTransition = async (newStatus: KaruteStatus) => {
     setIsLoading(newStatus)
     try {
       await updateKaruteStatusAction(recordId, newStatus)
@@ -42,7 +45,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
           loading={isLoading === 'REVIEW'}
           className="!border-yellow-500 !text-yellow-700 hover:!bg-yellow-50"
         >
-          レビューに提出
+          {t('submitReview')}
         </Button>
       )}
 
@@ -55,7 +58,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
             loading={isLoading === 'APPROVED'}
             className="!border-green-500 !text-green-700 hover:!bg-green-50"
           >
-            承認
+            {t('approve')}
           </Button>
           <Button
             size="sm"
@@ -63,7 +66,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
             onClick={() => handleTransition('DRAFT')}
             loading={isLoading === 'DRAFT'}
           >
-            下書きに戻す
+            {t('backToDraft')}
           </Button>
         </>
       )}
@@ -75,7 +78,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
           onClick={() => handleTransition('DRAFT')}
           loading={isLoading === 'DRAFT'}
         >
-          再開
+          {t('reopen')}
         </Button>
       )}
     </div>

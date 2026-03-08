@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import useSWR from 'swr'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
@@ -54,10 +55,14 @@ interface KaruteRecordData {
 // HELPERS
 // ============================================================================
 
-const fetcher = (url: string) => fetch(url).then((r) => {
-  if (!r.ok) throw new Error('Failed to fetch')
+const fetcher = async (url: string) => {
+  const r = await fetch(url)
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}))
+    throw new Error(body.error || `Failed to fetch: ${r.status}`)
+  }
   return r.json()
-})
+}
 
 // ============================================================================
 // COMPONENT
@@ -74,6 +79,7 @@ interface KaruteEditorProps {
  * clobbering inline edits.
  */
 export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
+  const t = useTranslations('admin.karuteEditor')
   const { data, error, isLoading, mutate } = useSWR<KaruteRecordData>(
     `/api/admin/karute/${recordId}`,
     fetcher,
@@ -82,6 +88,7 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
 
   const [activeSegmentIndices, setActiveSegmentIndices] = useState<number[]>([])
   const [isClassifying, setIsClassifying] = useState(false)
+  const [classifyError, setClassifyError] = useState<string | null>(null)
 
   const handleUpdate = () => {
     mutate()
@@ -92,30 +99,34 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
 
     // If entries exist, confirm re-classification
     if (data.entries.length > 0) {
-      const confirmed = confirm(
-        locale === 'en'
-          ? 'Existing entries will be deleted. Reclassify?'
-          : '既存のエントリが削除されます。再分類しますか？'
-      )
+      const confirmed = confirm(t('reclassifyConfirm'))
       if (!confirmed) return
     }
 
     setIsClassifying(true)
+    setClassifyError(null)
     try {
       const res = await fetch(`/api/admin/karute/${recordId}/classify`, {
         method: 'POST',
       })
-      if (!res.ok) throw new Error('Classification failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Classification failed: ${res.status}`)
+      }
       mutate()
     } catch (error) {
       console.error('Classification failed', error)
+      setClassifyError(error instanceof Error ? error.message : 'Classification failed')
     } finally {
       setIsClassifying(false)
     }
   }
 
   // Collect all segments from all recording sessions
-  const allSegments = data?.recordingSessions.flatMap((s) => s.segments) ?? []
+  const allSegments = useMemo(
+    () => data?.recordingSessions.flatMap((s) => s.segments) ?? [],
+    [data?.recordingSessions]
+  )
 
   // Loading state
   if (isLoading) {
@@ -131,7 +142,7 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
     return (
       <div className="flex h-64 items-center justify-center">
         <p className="text-red-500">
-          {locale === 'en' ? 'Failed to load karute record' : 'カルテの読み込みに失敗しました'}
+          {error?.message || 'Failed to load karute record'}
         </p>
       </div>
     )
@@ -147,13 +158,13 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3 text-sm text-secondary-600">
-            <span>{locale === 'en' ? 'Customer' : '顧客'}: <strong>{data.customer.name}</strong></span>
-            <span>{locale === 'en' ? 'Practitioner' : '施術者'}: <strong>{data.worker.name}</strong></span>
-            <span>{locale === 'en' ? 'Date' : '日付'}: <strong>{dateStr}</strong></span>
+            <span>{t('customer')}: <strong>{data.customer.name}</strong></span>
+            <span>{t('practitioner')}: <strong>{data.worker.name}</strong></span>
+            <span>{t('date')}: <strong>{dateStr}</strong></span>
           </div>
         </div>
         <ApprovalControls
-          status={data.status}
+          status={data.status as 'DRAFT' | 'REVIEW' | 'APPROVED'}
           recordId={recordId}
           onUpdate={handleUpdate}
         />
@@ -163,7 +174,7 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
       {data.aiSummary && (
         <div className="rounded-lg border border-secondary-200 bg-secondary-50 p-3">
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-secondary-500">
-            {locale === 'en' ? 'Summary' : 'サマリー'}
+            {t('summary')}
           </h3>
           <p className="text-sm text-secondary-700">{data.aiSummary}</p>
         </div>
@@ -174,7 +185,7 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
         {/* Left: Transcript */}
         <div>
           <h3 className="mb-2 text-sm font-semibold text-secondary-700">
-            {locale === 'en' ? 'Transcript' : 'トランスクリプト'}
+            {t('transcript')}
           </h3>
           <div className="max-h-[600px]">
             <TranscriptPanel
@@ -188,7 +199,7 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-secondary-700">
-              {locale === 'en' ? 'Entries' : 'エントリ'}
+              {t('entries')}
               {data.entries.length > 0 && (
                 <span className="ml-1 text-secondary-400">({data.entries.length})</span>
               )}
@@ -200,17 +211,21 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
               loading={isClassifying}
             >
               {isClassifying
-                ? (locale === 'en' ? 'Classifying...' : '分類中...')
+                ? t('classifying')
                 : data.entries.length > 0
-                  ? (locale === 'en' ? 'Reclassify' : '再分類')
-                  : (locale === 'en' ? 'Run AI Classification' : 'AI分類を実行')
+                  ? t('reclassify')
+                  : t('classify')
               }
             </Button>
           </div>
 
+          {classifyError && (
+            <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{classifyError}</p>
+          )}
+
           {data.entries.length === 0 ? (
             <p className="mb-4 text-sm text-gray-400">
-              {locale === 'en' ? 'No entries yet' : 'エントリがありません'}
+              {t('noEntries')}
             </p>
           ) : (
             <div className="mb-4 space-y-3">

@@ -13,6 +13,7 @@ import {
   createKaruteRecord,
   updateKaruteRecord,
   deleteKaruteRecord,
+  getKaruteRecord,
   createKaruteEntry,
   updateKaruteEntry,
   deleteKaruteEntry,
@@ -49,7 +50,7 @@ export async function createKaruteRecordAction(input: CreateKaruteRecordInput) {
   const result = await createKaruteRecord(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -67,7 +68,7 @@ export async function updateKaruteRecordAction(input: UpdateKaruteRecordInput) {
   const result = await updateKaruteRecord(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -85,7 +86,7 @@ export async function deleteKaruteRecordAction(id: string) {
   const result = await deleteKaruteRecord(id)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -107,7 +108,7 @@ export async function createKaruteEntryAction(input: CreateKaruteEntryInput) {
   const result = await createKaruteEntry(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -125,7 +126,7 @@ export async function updateKaruteEntryAction(input: UpdateKaruteEntryInput) {
   const result = await updateKaruteEntry(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -143,7 +144,7 @@ export async function deleteKaruteEntryAction(id: string) {
   const result = await deleteKaruteEntry(id)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -166,11 +167,23 @@ export async function updateKaruteStatusAction(
   const isAdmin = await getAdminSession()
   if (!isAdmin) throw new Error('Unauthorized')
 
+  const current = await getKaruteRecord(recordId)
+  if (!current.success) throw new Error('Karute record not found')
+
+  const allowedTransitions: Record<string, string[]> = {
+    DRAFT: ['REVIEW'],
+    REVIEW: ['APPROVED', 'DRAFT'],
+    APPROVED: ['DRAFT'],
+  }
+  if (!allowedTransitions[current.data.status]?.includes(status)) {
+    throw new Error(`Invalid status transition: ${current.data.status} → ${status}`)
+  }
+
   const result = await updateKaruteRecord({ id: recordId, status })
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath(`/admin/karute/${recordId}`)
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/karute/[id]', 'page')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -192,7 +205,7 @@ export async function createRecordingSessionAction(input: CreateRecordingSession
   const result = await createRecordingSession(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -210,7 +223,7 @@ export async function updateRecordingSessionAction(input: UpdateRecordingSession
   const result = await updateRecordingSession(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -228,6 +241,6 @@ export async function deleteRecordingSessionAction(id: string) {
   const result = await deleteRecordingSession(id)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }

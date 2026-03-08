@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface TranscriptionSegmentData {
   id: string
@@ -21,13 +22,15 @@ interface TranscriptPanelProps {
  * Highlighted segments scroll into view when indices change.
  */
 export function TranscriptPanel({ segments, highlightedIndices }: TranscriptPanelProps) {
+  const t = useTranslations('admin.karuteEditor')
+  const tRecording = useTranslations('admin.recording')
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (highlightedIndices.length === 0) return
 
     const firstIndex = highlightedIndices[0]
-    const element = document.getElementById(`segment-${firstIndex}`)
+    const element = containerRef.current?.querySelector(`#segment-${firstIndex}`)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
@@ -36,7 +39,7 @@ export function TranscriptPanel({ segments, highlightedIndices }: TranscriptPane
   if (segments.length === 0) {
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-secondary-200 bg-secondary-50 p-8">
-        <p className="text-sm text-gray-400">トランスクリプトがありません</p>
+        <p className="text-sm text-gray-400">{t('noTranscript')}</p>
       </div>
     )
   }
@@ -58,7 +61,7 @@ export function TranscriptPanel({ segments, highlightedIndices }: TranscriptPane
           >
             {segment.speakerLabel && (
               <span className="mb-1 inline-block rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">
-                話者 {segment.speakerLabel}
+                {tRecording('speaker', { label: segment.speakerLabel })}
               </span>
             )}
             <p className="text-sm text-secondary-800">{segment.content}</p>

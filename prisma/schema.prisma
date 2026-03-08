@@ -295,3 +295,17 @@ model ChatMessage {
   @@index([conversationId])
   @@index([createdAt])
 }
+
+// ============================================================================
+// ADMIN SETTINGS
+// ============================================================================
+
+model AdminSettings {
+  id             String   @id @default("default")
+  aiProvider     String   @default("openai")
+  businessType   String   @default("general")
+  autoTranscribe Boolean  @default(true)
+  recordingLang  String   @default("ja")
+  audioQuality   String   @default("standard")
+  updatedAt      DateTime @updatedAt
+}

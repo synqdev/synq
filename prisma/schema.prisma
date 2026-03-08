@@ -208,14 +208,17 @@ model KaruteRecord {
 }
 
 model KaruteEntry {
-  id            String              @id @default(uuid())
-  karuteId      String
-  karute        KaruteRecord        @relation(fields: [karuteId], references: [id], onDelete: Cascade)
-  category      KaruteEntryCategory
-  content       String
-  originalQuote String?
-  confidence    Float               @default(0.0)
-  createdAt     DateTime            @default(now())
+  id             String              @id @default(uuid())
+  karuteId       String
+  karute         KaruteRecord        @relation(fields: [karuteId], references: [id], onDelete: Cascade)
+  category       KaruteEntryCategory
+  content        String
+  originalQuote  String?
+  confidence     Float               @default(0.0)
+  tags           String[]            @default([])
+  segmentIndices Int[]               @default([])
+  displayOrder   Int                 @default(0)
+  createdAt      DateTime            @default(now())
 
   @@index([karuteId])
   @@index([category])

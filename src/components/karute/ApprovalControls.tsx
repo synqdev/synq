@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from './StatusBadge'
 import { updateKaruteStatusAction } from '@/app/actions/karute'
+import type { KaruteStatus } from './constants'
 
 interface ApprovalControlsProps {
-  status: string
+  status: KaruteStatus
   recordId: string
   onUpdate: () => void
 }
@@ -16,14 +18,19 @@ interface ApprovalControlsProps {
  * Draft -> Review -> Approved, with ability to reopen.
  */
 export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControlsProps) {
+  const t = useTranslations('admin.karuteEditor')
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [transitionError, setTransitionError] = useState<string | null>(null)
 
-  const handleTransition = async (newStatus: 'DRAFT' | 'REVIEW' | 'APPROVED') => {
+  const handleTransition = async (newStatus: KaruteStatus) => {
     setIsLoading(newStatus)
+    setTransitionError(null)
     try {
       await updateKaruteStatusAction(recordId, newStatus)
       onUpdate()
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update status'
+      setTransitionError(message)
       console.error('Failed to update status', error)
     } finally {
       setIsLoading(null)
@@ -31,7 +38,8 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
   }
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 flex-wrap">
       <StatusBadge status={status} />
 
       {status === 'DRAFT' && (
@@ -40,9 +48,10 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
           variant="outline"
           onClick={() => handleTransition('REVIEW')}
           loading={isLoading === 'REVIEW'}
+          disabled={isLoading !== null}
           className="!border-yellow-500 !text-yellow-700 hover:!bg-yellow-50"
         >
-          レビューに提出
+          {t('submitReview')}
         </Button>
       )}
 
@@ -53,17 +62,19 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
             variant="outline"
             onClick={() => handleTransition('APPROVED')}
             loading={isLoading === 'APPROVED'}
+            disabled={isLoading !== null}
             className="!border-green-500 !text-green-700 hover:!bg-green-50"
           >
-            承認
+            {t('approve')}
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => handleTransition('DRAFT')}
             loading={isLoading === 'DRAFT'}
+            disabled={isLoading !== null}
           >
-            下書きに戻す
+            {t('backToDraft')}
           </Button>
         </>
       )}
@@ -74,9 +85,14 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
           variant="ghost"
           onClick={() => handleTransition('DRAFT')}
           loading={isLoading === 'DRAFT'}
+          disabled={isLoading !== null}
         >
-          再開
+          {t('reopen')}
         </Button>
+      )}
+      </div>
+      {transitionError && (
+        <p className="text-sm text-red-600">{transitionError}</p>
       )}
     </div>
   )

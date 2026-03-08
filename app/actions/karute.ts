@@ -9,6 +9,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { getAdminSession } from '@/lib/auth/admin'
+import { prisma } from '@/lib/db/client'
 import {
   createKaruteRecord,
   updateKaruteRecord,
@@ -49,7 +50,7 @@ export async function createKaruteRecordAction(input: CreateKaruteRecordInput) {
   const result = await createKaruteRecord(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -67,7 +68,7 @@ export async function updateKaruteRecordAction(input: UpdateKaruteRecordInput) {
   const result = await updateKaruteRecord(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -85,7 +86,7 @@ export async function deleteKaruteRecordAction(id: string) {
   const result = await deleteKaruteRecord(id)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -107,7 +108,7 @@ export async function createKaruteEntryAction(input: CreateKaruteEntryInput) {
   const result = await createKaruteEntry(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -125,7 +126,7 @@ export async function updateKaruteEntryAction(input: UpdateKaruteEntryInput) {
   const result = await updateKaruteEntry(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -143,7 +144,7 @@ export async function deleteKaruteEntryAction(id: string) {
   const result = await deleteKaruteEntry(id)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -166,11 +167,31 @@ export async function updateKaruteStatusAction(
   const isAdmin = await getAdminSession()
   if (!isAdmin) throw new Error('Unauthorized')
 
-  const result = await updateKaruteRecord({ id: recordId, status })
-  if (!result.success) throw new Error(result.error)
+  // Allowed transitions: maps each target status to the set of statuses it can be reached from.
+  // Using an atomic updateMany with a WHERE on the current status avoids TOCTOU races
+  // when two admins update the same record simultaneously.
+  const allowedFromStatuses: Record<string, ('DRAFT' | 'REVIEW' | 'APPROVED')[]> = {
+    REVIEW: ['DRAFT'],
+    APPROVED: ['REVIEW'],
+    DRAFT: ['REVIEW', 'APPROVED'],
+  }
 
-  revalidatePath(`/admin/karute/${recordId}`)
-  revalidatePath('/admin/dashboard')
+  const validFromStatuses = allowedFromStatuses[status]
+  if (!validFromStatuses) {
+    throw new Error(`Invalid target status: ${status}`)
+  }
+
+  const { count } = await prisma.karuteRecord.updateMany({
+    where: { id: recordId, status: { in: validFromStatuses } },
+    data: { status },
+  })
+
+  if (count === 0) {
+    throw new Error(`Invalid status transition to ${status} — record not found or transition not allowed`)
+  }
+
+  revalidatePath('/[locale]/admin/karute/[id]', 'page')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -184,7 +205,8 @@ export async function updateKaruteStatusAction(
  */
 export async function updateKaruteEntryTagsAction(
   entryId: string,
-  tags: string[]
+  tags: string[],
+  recordId?: string
 ) {
   const isAdmin = await getAdminSession()
   if (!isAdmin) throw new Error('Unauthorized')
@@ -192,7 +214,10 @@ export async function updateKaruteEntryTagsAction(
   const result = await updateKaruteEntry({ id: entryId, tags })
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  if (recordId) {
+    revalidatePath('/[locale]/admin/karute/[id]', 'page')
+  }
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 
@@ -214,7 +239,7 @@ export async function createRecordingSessionAction(input: CreateRecordingSession
   const result = await createRecordingSession(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -232,7 +257,7 @@ export async function updateRecordingSessionAction(input: UpdateRecordingSession
   const result = await updateRecordingSession(input)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -250,6 +275,6 @@ export async function deleteRecordingSessionAction(id: string) {
   const result = await deleteRecordingSession(id)
   if (!result.success) throw new Error(result.error)
 
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }

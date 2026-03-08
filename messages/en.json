@@ -272,7 +272,9 @@
         "LIFESTYLE": "Lifestyle",
         "NEXT_VISIT": "Next Visit",
         "OTHER": "Other"
-      }
+      },
+      "exportPDF": "Export PDF",
+      "exportText": "Export Text"
     },
     "customerDetail": {
       "title": "Customer Detail",
@@ -297,6 +299,12 @@
       "medicalRecords": "Medical Records",
       "comingSoon": "Coming soon",
       "notFound": "Customer not found",
+      "karuteTab": "Karute",
+      "detailsTab": "Details",
+      "karuteLoadError": "Failed to load data",
+      "noKaruteRecords": "No karute records",
+      "entries": "entries",
+      "viewKarute": "View Karute",
       "intake": {
         "dropzone": "Drop files here or click to upload (PDF, JPG, PNG, WEBP, max 10MB)",
         "uploading": "Uploading...",

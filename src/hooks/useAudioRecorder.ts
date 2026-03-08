@@ -86,6 +86,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
    * Starts a timer that increments elapsedSeconds every second.
    */
   const startTimer = useCallback(() => {
+    // Clear any existing timer before starting a new one
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     timerRef.current = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
@@ -107,7 +112,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       mediaRecorderRef.current?.state === 'recording' ||
       mediaRecorderRef.current?.state === 'paused'
     ) {
-      throw new Error('Recording already in progress.');
+      return;
     }
 
     try {

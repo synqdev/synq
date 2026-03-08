@@ -214,11 +214,11 @@ export async function deleteKaruteRecord(
   id: string
 ): Promise<KaruteResult<{ id: string }>> {
   try {
-    // Find record with recording sessions to get audio paths for cleanup
+    // Find record with recording sessions to get audio paths before deletion
     const record = await withRLSContext({ role: 'admin' }, () =>
       prisma.karuteRecord.findUnique({
         where: { id },
-        include: { recordingSessions: true },
+        include: { recordingSessions: { select: { id: true, audioStoragePath: true } } },
       })
     );
 
@@ -226,17 +226,18 @@ export async function deleteKaruteRecord(
       return { success: false, error: 'Karute record not found' };
     }
 
-    // Collect audio paths before deletion
+    // Collect audio paths before deleting
     const audioPaths = record.recordingSessions
       .map((s) => s.audioStoragePath)
       .filter((p): p is string => p !== null);
 
-    // Delete record (cascades to entries and recording sessions via Prisma schema)
+    // Delete DB record first — cascades to entries, sessions, segments via Prisma schema.
+    // Storage cleanup happens after to ensure the DB delete is not rolled back.
     await withRLSContext({ role: 'admin' }, () =>
       prisma.karuteRecord.delete({ where: { id } })
     );
 
-    // Best-effort cleanup of audio files from storage
+    // Best-effort cleanup of audio files from storage (after successful DB delete)
     for (const path of audioPaths) {
       try {
         await deleteRecording(path);
@@ -282,6 +283,9 @@ export async function createKaruteEntry(
           content: validated.content,
           originalQuote: validated.originalQuote,
           confidence: validated.confidence,
+          tags: validated.tags ?? [],
+          segmentIndices: validated.segmentIndices ?? [],
+          displayOrder: validated.displayOrder ?? 0,
         },
       })
     );

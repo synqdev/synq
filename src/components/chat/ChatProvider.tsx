@@ -6,17 +6,13 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
+  type Dispatch,
+  type SetStateAction,
 } from 'react'
 import useSWR from 'swr'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  citations?: { karuteId: string; label: string }[]
-  createdAt: string
-}
+import type { Message } from './types'
 
 interface ChatContextValue {
   isOpen: boolean
@@ -24,7 +20,7 @@ interface ChatContextValue {
   customerId: string | null
   setCustomerId: (id: string | null) => void
   messages: Message[]
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+  setMessages: Dispatch<SetStateAction<Message[]>>
   conversationId: string | null
   setConversationId: (id: string | null) => void
   refreshHistory: () => void
@@ -32,7 +28,13 @@ interface ChatContextValue {
 
 const ChatContext = createContext<ChatContextValue | null>(null)
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch: ${res.status}`)
+  }
+  return res.json()
+}
 
 interface HistoryResponse {
   conversation: {
@@ -71,12 +73,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [data])
 
-  // Reset messages when customerId changes to null (global mode)
+  // Clear previous conversation when scope changes, but skip if SWR already
+  // has data for the new scope (avoids clobbering the sync effect above).
+  const prevCustomerIdRef = useRef<string | null | undefined>(undefined)
   useEffect(() => {
-    if (customerId === null) {
-      setMessages([])
-      setConversationId(null)
+    if (prevCustomerIdRef.current !== undefined && prevCustomerIdRef.current !== customerId) {
+      // Scope actually changed — only clear if there's no cached data yet.
+      // data is captured from the current render; if SWR returned a cached
+      // response the sync effect (above) will have already set messages.
+      if (!data) {
+        setMessages([])
+        setConversationId(null)
+      }
     }
+    prevCustomerIdRef.current = customerId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId])
 
   const refreshHistory = useCallback(() => {

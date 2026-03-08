@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 interface UseChatStreamOptions {
   onComplete: (content: string, conversationId: string) => void
@@ -33,6 +33,14 @@ export function useChatStream({
   const [streamingContent, setStreamingContent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const isStreamingRef = useRef(false)
+
+  // Abort any in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   const sendMessage = useCallback(
     async (
@@ -41,9 +49,10 @@ export function useChatStream({
       conversationId: string | null,
       locale: string
     ) => {
-      // Prevent sending while already streaming
-      if (isStreaming) return
+      // Prevent sending while already streaming (ref avoids stale closure)
+      if (isStreamingRef.current) return
 
+      isStreamingRef.current = true
       setIsStreaming(true)
       setStreamingContent('')
       setError(null)
@@ -75,48 +84,58 @@ export function useChatStream({
         const decoder = new TextDecoder()
         let buffer = ''
 
+        /**
+         * Parse and apply a single SSE event string (everything between \n\n delimiters).
+         */
+        const processEvent = (event: string) => {
+          if (!event.trim()) return
+
+          for (const line of event.split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6)
+
+            if (data === '[DONE]') continue
+
+            try {
+              const parsed = JSON.parse(data) as {
+                content?: string
+                conversationId?: string
+                usage?: unknown
+              }
+
+              if (parsed.conversationId) {
+                receivedConversationId = parsed.conversationId
+              }
+
+              if (parsed.content) {
+                accumulated += parsed.content
+                setStreamingContent(accumulated)
+              }
+              // usage event is informational, no UI action needed
+            } catch {
+              // Skip unparseable lines
+            }
+          }
+        }
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
+          // Normalize CRLF to LF so event splitting works regardless of server line endings
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
           const events = buffer.split('\n\n')
           // Keep last incomplete chunk in buffer
           buffer = events.pop() || ''
 
           for (const event of events) {
-            if (!event.trim()) continue
-
-            for (const line of event.split('\n')) {
-              if (!line.startsWith('data: ')) continue
-              const data = line.slice(6)
-
-              if (data === '[DONE]') {
-                // Stream complete
-                continue
-              }
-
-              try {
-                const parsed = JSON.parse(data) as {
-                  content?: string
-                  conversationId?: string
-                  usage?: unknown
-                }
-
-                if (parsed.conversationId) {
-                  receivedConversationId = parsed.conversationId
-                }
-
-                if (parsed.content) {
-                  accumulated += parsed.content
-                  setStreamingContent(accumulated)
-                }
-                // usage event is informational, no UI action needed
-              } catch {
-                // Skip unparseable lines
-              }
-            }
+            processEvent(event)
           }
+        }
+
+        // Drain any remaining buffered data that lacked a trailing blank line
+        if (buffer.trim()) {
+          processEvent(buffer)
         }
 
         // Streaming complete
@@ -126,12 +145,13 @@ export function useChatStream({
           setError((err as Error).message || 'Stream failed')
         }
       } finally {
+        isStreamingRef.current = false
         setIsStreaming(false)
         setStreamingContent(null)
         abortRef.current = null
       }
     },
-    [isStreaming, onComplete]
+    [onComplete]
   )
 
   return { sendMessage, isStreaming, streamingContent, error }

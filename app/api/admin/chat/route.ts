@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
+import { prisma } from '@/lib/db/client'
 import { sendMessageSchema } from '@/lib/validations/chat'
 import {
   getOrCreateConversation,
@@ -45,25 +46,35 @@ export async function POST(request: Request) {
   const { message, customerId, conversationId: requestedConversationId, locale } = parseResult.data
 
   try {
-    // Get or create conversation
-    let conversationId = requestedConversationId
-    if (!conversationId) {
+    // Determine the conversation and its authoritative customer scope.
+    let conversationId: string
+    let contextCustomerId: string | null
+
+    if (requestedConversationId) {
+      // Re-use an existing conversation. Derive the customer scope from the
+      // persisted row so a stale client cannot mix another customer's context.
+      const existing = await prisma.chatConversation.findUnique({
+        where: { id: requestedConversationId },
+        select: { id: true, customerId: true },
+      })
+      if (!existing) {
+        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+      }
+      conversationId = existing.id
+      contextCustomerId = existing.customerId
+    } else {
       const convResult = await getOrCreateConversation(customerId ?? null)
       if (!convResult.success) {
         return NextResponse.json({ error: convResult.error }, { status: 500 })
       }
       conversationId = convResult.data.id
+      contextCustomerId = customerId ?? null
     }
 
-    // Save user message
-    const saveResult = await saveMessage(conversationId, 'user', message)
-    if (!saveResult.success) {
-      return NextResponse.json({ error: saveResult.error }, { status: 500 })
-    }
-
-    // Build context and get history
+    // Build context and get history BEFORE saving the user message
+    // to avoid including the new user message twice in the OpenAI context
     const [contextResult, historyResult] = await Promise.all([
-      buildChatContext(customerId ?? null, locale),
+      buildChatContext(contextCustomerId, locale),
       getChatHistory(conversationId),
     ])
 
@@ -72,6 +83,12 @@ export async function POST(request: Request) {
     }
     if (!historyResult.success) {
       return NextResponse.json({ error: historyResult.error }, { status: 500 })
+    }
+
+    // Save user message after fetching history (history won't include this message)
+    const saveResult = await saveMessage(conversationId, 'user', message)
+    if (!saveResult.success) {
+      return NextResponse.json({ error: saveResult.error }, { status: 500 })
     }
 
     const systemPrompt = contextResult.data
@@ -128,18 +145,21 @@ export async function POST(request: Request) {
           }
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
 
           // Save assistant response after streaming completes
           // Parse citations from the response
           const citations = parseCitations(fullContent)
-          await saveMessage(
+          const saveResult = await saveMessage(
             conversationId!,
             'assistant',
             fullContent,
             citations.length > 0 ? citations : undefined,
             totalTokens
           )
+          if (!saveResult.success) {
+            console.error('[chat/route] Failed to save assistant message', { conversationId, error: saveResult.error })
+          }
+          controller.close()
         } catch (error) {
           console.error('[chat/route] Streaming error', { error })
           controller.error(error)
@@ -151,7 +171,6 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
       },
     })
   } catch (error) {

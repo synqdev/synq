@@ -14,6 +14,7 @@ import { getAdminSession } from '@/lib/auth/admin'
 import { sendMessageSchema } from '@/lib/validations/chat'
 import {
   getOrCreateConversation,
+  getConversationById,
   getChatHistory,
   buildChatContext,
   saveMessage,
@@ -53,15 +54,18 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: convResult.error }, { status: 500 })
       }
       conversationId = convResult.data.id
+    } else {
+      // Validate that the provided conversationId actually exists
+      const validateResult = await getConversationById(conversationId)
+      if (!validateResult.success) {
+        return NextResponse.json({ error: validateResult.error }, { status: 500 })
+      }
+      if (!validateResult.data.exists) {
+        return NextResponse.json({ error: 'Conversation not found' }, { status: 400 })
+      }
     }
 
-    // Save user message
-    const saveResult = await saveMessage(conversationId, 'user', message)
-    if (!saveResult.success) {
-      return NextResponse.json({ error: saveResult.error }, { status: 500 })
-    }
-
-    // Build context and get history
+    // Get history BEFORE saving the new user message to avoid duplication
     const [contextResult, historyResult] = await Promise.all([
       buildChatContext(customerId ?? null, locale),
       getChatHistory(conversationId),
@@ -72,6 +76,12 @@ export async function POST(request: Request) {
     }
     if (!historyResult.success) {
       return NextResponse.json({ error: historyResult.error }, { status: 500 })
+    }
+
+    // Save user message after history has been fetched
+    const saveResult = await saveMessage(conversationId, 'user', message)
+    if (!saveResult.success) {
+      return NextResponse.json({ error: saveResult.error }, { status: 500 })
     }
 
     const systemPrompt = contextResult.data
@@ -127,19 +137,23 @@ export async function POST(request: Request) {
             }
           }
 
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
-
-          // Save assistant response after streaming completes
-          // Parse citations from the response
+          // Save assistant response before signaling completion
           const citations = parseCitations(fullContent)
-          await saveMessage(
+          const assistantSaveResult = await saveMessage(
             conversationId!,
             'assistant',
             fullContent,
             citations.length > 0 ? citations : undefined,
             totalTokens
           )
+          if (!assistantSaveResult.success) {
+            console.error('[chat/route] Failed to save assistant message', {
+              error: assistantSaveResult.error,
+            })
+          }
+
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          controller.close()
         } catch (error) {
           console.error('[chat/route] Streaming error', { error })
           controller.error(error)

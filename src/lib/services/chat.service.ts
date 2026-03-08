@@ -66,6 +66,57 @@ function estimateTokens(text: string): number {
 // ============================================================================
 
 /**
+ * Read-only lookup for the most recent conversation belonging to a customer.
+ * Returns null data (not an error) when no conversation exists.
+ */
+export async function getConversation(
+  customerId: string
+): Promise<ChatResult<{
+  id: string
+  customerId: string | null
+  title: string | null
+  createdAt: Date
+  updatedAt: Date
+  messages: { id: string; role: string; content: string; citations: unknown; tokenCount: number | null; createdAt: Date }[]
+} | null>> {
+  try {
+    const conversation = await prisma.chatConversation.findFirst({
+      where: { customerId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: 50,
+        },
+      },
+    })
+    return { success: true, data: conversation }
+  } catch (error) {
+    captureChatError(error, { operation: 'getConversation', customerId })
+    return { success: false, error: formatError(error) }
+  }
+}
+
+/**
+ * Validates that a conversation with the given ID exists.
+ * Returns { exists: true } or { exists: false }.
+ */
+export async function getConversationById(
+  conversationId: string
+): Promise<ChatResult<{ exists: boolean }>> {
+  try {
+    const conversation = await prisma.chatConversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true },
+    })
+    return { success: true, data: { exists: conversation !== null } }
+  } catch (error) {
+    captureChatError(error, { operation: 'getConversationById', conversationId })
+    return { success: false, error: formatError(error) }
+  }
+}
+
+/**
  * Gets or creates a conversation for a customer (or global if null).
  * Auto-creates a new conversation if none exists or if last message was >24h ago.
  */
@@ -146,7 +197,7 @@ export async function getChatHistory(
     return {
       success: true,
       data: messages.map((m) => ({
-        role: m.role as 'user' | 'assistant',
+        role: m.role,
         content: m.content,
       })),
     }
@@ -196,8 +247,6 @@ async function buildCustomerContext(
           notes: true,
           visitCount: true,
           lastVisitDate: true,
-          email: true,
-          phone: true,
         },
       }),
       prisma.karuteRecord.findMany({
@@ -344,8 +393,6 @@ function formatCustomerProfile(customer: {
   notes: string | null
   visitCount: number
   lastVisitDate: Date | null
-  email: string
-  phone: string | null
 }): string {
   const lines = [
     `お客様: ${customer.name}`,
@@ -425,20 +472,18 @@ export async function saveMessage(
       updatedAt: new Date(),
     }
 
-    // Set title from first user message
-    if (role === 'user') {
-      const messageCount = await prisma.chatMessage.count({
-        where: { conversationId, role: 'user' },
-      })
-      if (messageCount === 1) {
-        updateData.title = content.slice(0, 50)
-      }
-    }
-
     await prisma.chatConversation.update({
       where: { id: conversationId },
       data: updateData,
     })
+
+    // Atomically set title from first user message (only if not already set)
+    if (role === 'user') {
+      await prisma.chatConversation.updateMany({
+        where: { id: conversationId, title: null },
+        data: { title: content.slice(0, 50) },
+      })
+    }
 
     return { success: true, data: message }
   } catch (error) {

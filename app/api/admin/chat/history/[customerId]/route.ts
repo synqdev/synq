@@ -10,7 +10,7 @@
 
 import { NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { getOrCreateConversation } from '@/lib/services/chat.service'
+import { getConversation } from '@/lib/services/chat.service'
 
 export async function GET(
   _request: Request,
@@ -24,9 +24,16 @@ export async function GET(
   const { customerId } = await params
 
   try {
-    const result = await getOrCreateConversation(customerId)
+    const result = await getConversation(customerId)
 
     if (!result.success) {
+      return NextResponse.json(
+        { conversation: null, messages: [] },
+        { status: 200 }
+      )
+    }
+
+    if (!result.data) {
       return NextResponse.json(
         { conversation: null, messages: [] },
         { status: 200 }

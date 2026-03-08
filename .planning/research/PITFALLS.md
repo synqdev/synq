@@ -1,1635 +1,650 @@
-# Domain Pitfalls: Wellness Booking Systems
+# Domain Pitfalls: AI-Powered Karte (Electronic Medical Records)
 
-**Domain:** Reservation/Booking Systems (Wellness/Spa)
-**Researched:** 2026-02-04
-**Stack Context:** Next.js 15 + Supabase + Prisma + SWR
-**Confidence:** MEDIUM-HIGH (verified with multiple 2025-2026 sources, some stack-specific details extrapolated)
+**Domain:** Live transcription, AI recording, and treatment records for Japanese wellness businesses
+**Researched:** 2026-03-07
+**Stack Context:** Next.js 15 + Supabase + Prisma + existing SYNQ booking app
+**Confidence:** MEDIUM-HIGH (verified across multiple sources; Japan-specific wellness regulations have LOW confidence due to limited English-language sources)
+
+---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data corruption, or major customer-facing issues.
+Mistakes that cause rewrites, data loss, regulatory violations, or major user-facing failures.
 
 ---
 
-### Pitfall 1: Race Conditions Leading to Double-Booking
+### Pitfall 1: Mobile Safari Audio Recording Format Incompatibility
 
 **What goes wrong:**
-Multiple users simultaneously booking the same timeslot results in overbooking. The classic scenario: two users check availability at the same time, both see "available," both proceed to book, system accepts both reservations. One person shows up to find their appointment doesn't exist or conflicts with another customer.
+Audio recording works on desktop Chrome during development but fails silently or produces unusable files on iOS Safari -- the primary device practitioners will use (tablets/phones during treatments). iPhone Safari produces `audio/webm;codecs=opus` while other browsers may produce different formats. Transcription APIs reject the audio with encoding errors, or the audio plays back garbled.
 
 **Why it happens:**
-- Using simple "SELECT then INSERT" without atomic operations
-- Insufficient transaction isolation levels (READ COMMITTED allows phantom reads)
-- Client-side availability checks without server-side locking
-- Optimistic UI updates before server confirmation
-- Missing unique constraints at database level
+- Developers test exclusively on desktop Chrome
+- Assuming `MediaRecorder` produces the same format everywhere
+- Hardcoding MIME types like `audio/webm` or `audio/wav`
+- Not checking `MediaRecorder.isTypeSupported()` at runtime
+- Safari has historically lagged on MediaRecorder support and has platform-specific quirks
 
 **Consequences:**
-- Customer no-shows due to conflicting bookings
-- Reputation damage and lost trust
-- Manual intervention required to resolve conflicts
-- Refund/compensation costs
-- Worker schedules become unreliable
+- Complete failure of core recording feature on the primary target device (iPad/iPhone)
+- Audio files that can't be transcribed, wasting API costs
+- Users lose trust after recording a full treatment session only to find it didn't work
+- Silent failures where recording appears to work but produces empty or corrupted data
 
 **Prevention:**
 
-**For Supabase/Prisma stack specifically:**
-
-1. **Database-level unique constraints** (first line of defense):
-```sql
--- Ensure no overlapping bookings for same worker/resource
-CREATE UNIQUE INDEX idx_no_overlap ON bookings (
-  worker_id,
-  (tstzrange(start_time, end_time, '[)'))
-) WHERE status != 'cancelled';
-```
-
-2. **Use Prisma interactive transactions with SERIALIZABLE isolation**:
+1. **Always probe supported formats at runtime:**
 ```typescript
-await prisma.$transaction(
-  async (tx) => {
-    // Check availability
-    const conflict = await tx.booking.findFirst({
-      where: {
-        workerId: workerId,
-        startTime: { lt: endTime },
-        endTime: { gt: startTime },
-        status: { not: 'cancelled' }
-      }
-    });
+const PREFERRED_TYPES = [
+  'audio/webm;codecs=opus',
+  'audio/webm',
+  'audio/mp4',
+  'audio/ogg;codecs=opus',
+];
 
-    if (conflict) throw new Error('Slot unavailable');
-
-    // Create booking
-    return await tx.booking.create({ data: bookingData });
-  },
-  {
-    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-    timeout: 5000
+function getSupportedMimeType(): string {
+  for (const type of PREFERRED_TYPES) {
+    if (MediaRecorder.isTypeSupported(type)) return type;
   }
-);
-```
-
-3. **Implement idempotency keys** to prevent duplicate submissions from network retries:
-```typescript
-// Store idempotency key with each booking attempt
-const idempotencyKey = `booking-${userId}-${timestamp}-${hash}`;
-```
-
-4. **Use PostgreSQL advisory locks** for critical sections via Supabase:
-```sql
--- Acquire lock before checking availability
-SELECT pg_advisory_xact_lock(hashtext(worker_id || resource_id));
-```
-
-5. **Row-level locking with FOR UPDATE**:
-```typescript
-// In Prisma raw query when checking resource availability
-await prisma.$queryRaw`
-  SELECT * FROM resources
-  WHERE id = ${resourceId}
-  FOR UPDATE NOWAIT
-`;
-```
-
-**Detection warning signs:**
-- Multiple bookings with identical or overlapping timestamps
-- Database constraint violation errors in logs (503 errors)
-- Customer complaints about "booking disappeared"
-- Workers reporting conflicting appointments on their calendars
-
-**Phase mapping:** Must be addressed in Phase 1 (Core booking flow). Not deferrable.
-
-**Sources:**
-- [Building a Ticketing System: Concurrency, Locks, and Race Conditions](https://codefarm0.medium.com/building-a-ticketing-system-concurrency-locks-and-race-conditions-182e0932d962)
-- [How to Solve Race Conditions in a Booking System](https://hackernoon.com/how-to-solve-race-conditions-in-a-booking-system)
-- [Preventing Race Conditions with SERIALIZABLE Isolation in Supabase](https://github.com/orgs/supabase/discussions/30334)
-- [Prisma Transaction Patterns That Avoid Deadlocks](https://medium.com/@connect.hashblock/10-prisma-transaction-patterns-that-avoid-deadlocks-4f52a174760b)
-
----
-
-### Pitfall 2: Timezone and Date Handling Errors (Japan-Specific)
-
-**What goes wrong:**
-Dates displayed or stored incorrectly due to timezone confusion. Common scenarios:
-- User in Tokyo books "Jan 1st 9am" but system stores as UTC, worker sees Dec 31st midnight
-- Frontend shows availability in user's timezone, but backend checks worker's timezone
-- Business hours logic fails because Japan doesn't observe DST but logic assumes it does
-- Japanese imperial calendar (Reiwa 7年) vs Western calendar (2025) mismatches on forms
-
-**Why it happens:**
-- Storing dates as local time instead of UTC
-- Using JavaScript Date objects without timezone context
-- Comparing datetimes in different timezone representations
-- Assuming all users are in same timezone as server
-- Not accounting for Japan Standard Time (JST = UTC+9, no DST)
-- Mixing imperial calendar (wareki) and Western calendar (seireki) in different parts of UI
-
-**Consequences:**
-- Bookings appear at wrong times
-- Availability calculations show wrong slots
-- Automated reminders sent at wrong times
-- Business hours validation fails
-- Government forms rejected (if requiring wareki format)
-- B2B contracts with date format mismatches
-
-**Prevention:**
-
-1. **Always store timestamps in UTC with timezone-aware types**:
-```typescript
-// Prisma schema
-model Booking {
-  startTime DateTime @db.Timestamptz  // PostgreSQL timezone-aware
-  endTime   DateTime @db.Timestamptz
+  throw new Error('No supported audio MIME type found');
 }
 ```
 
-2. **Use date-fns-tz or Temporal API (not plain Date objects)**:
-```typescript
-import { formatInTimeZone, zonedTimeToUtc } from 'date-fns-tz';
+2. **Server-side format normalization:** Convert all uploaded audio to a single format (e.g., WAV or MP3) before sending to transcription APIs. Use ffmpeg/ffprobe on the server to handle any input format.
 
-const JST = 'Asia/Tokyo';
+3. **Test on real iOS devices from day one.** Simulators don't fully replicate MediaRecorder behavior. Budget for BrowserStack or physical device testing.
 
-// User selects "2026-02-05 14:00" in their UI
-const userInput = '2026-02-05T14:00:00';
-const utcTime = zonedTimeToUtc(userInput, JST);  // Convert to UTC for storage
+4. **Store the original MIME type with the recording** so the server knows how to decode it.
 
-// Display to worker
-const workerDisplay = formatInTimeZone(utcTime, JST, 'yyyy-MM-dd HH:mm');
-```
+**Detection:** Recording works on Chrome desktop but fails on iOS Safari. Audio files from different browsers have different extensions or sizes for the same duration.
 
-3. **Store business hours with timezone context**:
-```typescript
-interface BusinessHours {
-  timezone: 'Asia/Tokyo';  // Explicit timezone
-  hours: {
-    monday: { open: '09:00', close: '18:00' },
-    // ...
-  }
-}
-```
+**Phase to address:** Phase 1 (Audio Recording foundation). This must work before anything else.
 
-4. **Japanese calendar handling**:
-```typescript
-// Allow both formats but store internally as ISO
-// Detect format from input
-const isWareki = input.includes('令和');  // "Reiwa"
-const isoDate = isWareki
-  ? convertWarekiToISO(input)  // Reiwa 7 → 2025
-  : parseISO(input);
-
-// Display based on context
-const displayDate = context === 'government'
-  ? formatToWareki(isoDate)    // 令和7年2月4日
-  : format(isoDate, 'yyyy年MM月dd日');  // 2025年2月4日
-```
-
-5. **Never rely on server timezone**:
-```typescript
-// BAD: new Date().toLocaleDateString()  // Uses server TZ
-// GOOD: Store user's timezone preference
-const userTZ = user.timezone || 'Asia/Tokyo';
-```
-
-6. **Validation for Japanese date conventions**:
-- Support both 24-hour format (preferred for business) and 12-hour with 午前/午後
-- Allow extended hours (25:00 = 1am next day) for businesses open past midnight
-- Weekday in parentheses: `2025年4月16日(水)` not `2025年4月16日 水曜日`
-
-**Detection warning signs:**
-- Bookings appearing 9 hours off (JST/UTC offset)
-- Availability shown for wrong date
-- Email confirmations with incorrect times
-- Customer complaints: "I booked for tomorrow but system says today"
-- Failed validation on government forms
-
-**Phase mapping:** Phase 1 (Core booking). Must handle before launch since it affects all timestamps.
+**Confidence:** HIGH -- well-documented across MDN, WebKit blog, and developer forums.
 
 **Sources:**
-- [How to Handle Date and Time Correctly to Avoid Timezone Bugs](https://dev.to/kcsujeet/how-to-handle-date-and-time-correctly-to-avoid-timezone-bugs-4o03)
-- [Japanese Business Date Formats Guide](https://www.japanconvert.com/blog/japanese-business-date-formats-guide)
-- [Date and time notation in Japan - Wikipedia](https://en.wikipedia.org/wiki/Date_and_time_notation_in_Japan)
-- [Japanese Date Format Explained](https://wakokujp.com/japanese-date-format/)
+- [MediaRecorder Safari support](https://www.buildwithmatija.com/blog/iphone-safari-mediarecorder-audio-recording-transcription)
+- [Safari ALAC/PCM codec support](https://blog.addpipe.com/record-high-quality-audio-in-safari-with-alac-and-pcm-support-via-mediarecorder/)
+- [Cross-browser compatible recording](https://media-codings.com/articles/recording-cross-browser-compatible-media)
+- [Can I Use MediaRecorder](https://caniuse.com/mediarecorder)
 
 ---
 
-### Pitfall 3: Missing Row-Level Security (RLS) in Supabase
+### Pitfall 2: iOS Safari getUserMedia Permission and Audio Routing Quirks
 
 **What goes wrong:**
-Database exposed without proper RLS policies. Users can read/modify other users' bookings, view worker schedules they shouldn't access, or even delete records. This is a **critical security vulnerability** that has affected 170+ production apps in 2025.
+Safari repeatedly prompts for microphone permission even after the user has already granted it, interrupting treatment sessions. Additionally, when `getUserMedia()` activates the microphone, iOS forcibly routes audio output to the built-in speakers instead of connected Bluetooth headphones, surprising users.
 
 **Why it happens:**
-- Developers assume authentication = authorization
-- RLS disabled during development, forgotten before deployment
-- Misunderstanding that Supabase security depends on RLS, not just API keys
-- Copy-pasting queries without considering who can execute them
-- Service role key used client-side (bypasses RLS entirely)
+- Safari's permissions are the least persistent among browsers -- they can reset between page navigations in SPAs, when the hash changes, or when the app is reopened
+- iOS enforces autoplay policies that require explicit user gesture to resume `AudioContext`
+- `getUserMedia()` triggers iOS audio routing changes that developers can't control
+- HTTPS is strictly required (no HTTP, no `file://`)
 
 **Consequences:**
-- **Data breach:** Private customer data exposed (names, emails, phone numbers, booking history)
-- **CVE-2025-48757:** 83% of exposed Supabase databases involve RLS misconfigurations
-- Regulatory violations (GDPR, Japan APPI)
-- Competitor access to business data
-- Malicious users canceling others' bookings
-- Reputation destruction, potential lawsuits
+- Practitioners interrupted mid-treatment by permission dialogs
+- Audio routing to speakers causes privacy concerns (client can hear playback)
+- Recording fails silently if AudioContext isn't in "running" state
+- Users abandon the feature after frustrating permission experiences
 
 **Prevention:**
 
-1. **Enable RLS on ALL tables immediately**:
-```sql
-ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE workers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE availability ENABLE ROW LEVEL SECURITY;
-```
+1. **Request permissions early with clear UX:** Show a "prepare recording" button before the session starts. Don't lazy-request mid-treatment.
 
-2. **Implement least-privilege policies**:
-```sql
--- Users can only see their own bookings
-CREATE POLICY "Users view own bookings"
-  ON bookings FOR SELECT
-  USING (auth.uid() = user_id);
-
--- Workers see bookings assigned to them
-CREATE POLICY "Workers view assigned bookings"
-  ON bookings FOR SELECT
-  USING (worker_id IN (
-    SELECT id FROM workers WHERE user_id = auth.uid()
-  ));
-
--- Only authenticated users can create bookings
-CREATE POLICY "Authenticated users create bookings"
-  ON bookings FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated' AND auth.uid() = user_id);
-```
-
-3. **Never expose service role key client-side**:
+2. **Resume AudioContext on user gesture:**
 ```typescript
-// BAD: Using service role in browser
-const supabase = createClient(url, SERVICE_ROLE_KEY);  // ❌
-
-// GOOD: Use anon key, rely on RLS
-const supabase = createClient(url, ANON_KEY);  // ✅
-```
-
-4. **Test RLS policies thoroughly**:
-```typescript
-// Create test suite that attempts unauthorized access
-describe('RLS Security', () => {
-  it('prevents user from viewing others bookings', async () => {
-    const { data } = await supabaseAsUserA
-      .from('bookings')
-      .select()
-      .eq('user_id', userB.id);  // Try to access userB's data
-
-    expect(data).toEqual([]);  // Should return empty, not userB's bookings
-  });
+const audioContext = new AudioContext();
+// AudioContext starts in 'suspended' state on iOS
+startButton.addEventListener('click', async () => {
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+  // Now start recording
 });
 ```
 
-5. **Audit checklist before deployment**:
-- [ ] RLS enabled on all tables
-- [ ] Service role key only in server/backend code
-- [ ] Policies tested for each user role
-- [ ] No `USING (true)` policies (allows all access)
-- [ ] Admin access uses service role from backend, not RLS bypass
+3. **Warn users about audio routing:** If Bluetooth headphones are detected, show a notice that audio may switch to speakers during recording.
 
-**Detection warning signs:**
-- Unauthenticated users can fetch data via direct API calls
-- Supabase dashboard shows tables without RLS shield icon
-- Security scanner reports show exposed endpoints
-- Users reporting they can see other people's appointments
+4. **Maintain a single long-lived MediaStream** rather than repeatedly calling `getUserMedia()` per recording chunk.
 
-**Phase mapping:** Must be configured in Phase 1. Not negotiable. Security is not a feature you add later.
+5. **Add `playsinline` and `muted` attributes** to any audio/video elements to avoid autoplay policy blocks.
+
+**Detection:** Permission prompts appearing repeatedly on iOS. Users reporting audio suddenly playing from speakers. Recording failing without error messages.
+
+**Phase to address:** Phase 1 (Audio Recording foundation).
+
+**Confidence:** HIGH -- confirmed via WebKit bug tracker, Apple Developer Forums, and MDN documentation.
 
 **Sources:**
-- [Supabase Row Level Security Complete Guide 2026](https://vibeappscanner.com/supabase-row-level-security)
-- [Row Level Security | Supabase Docs](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Supabase RLS with Real Examples](https://medium.com/@jigsz6391/supabase-row-level-security-explained-with-real-examples-6d06ce8d221c)
+- [getUserMedia recurring permission prompts](https://bugs.webkit.org/show_bug.cgi?id=215884)
+- [iOS Safari getUserMedia guide 2026](https://blog.addpipe.com/getusermedia-getting-started/)
+- [iOS audio routing issue](https://medium.com/@python-javascript-php-html-css/ios-safari-forces-audio-output-to-speakers-when-using-getusermedia-2615196be6fe)
 
 ---
 
-### Pitfall 4: Email Notification Delivery Failures
+### Pitfall 3: WebSocket/SSE Incompatibility with Vercel Serverless Deployment
 
 **What goes wrong:**
-Booking confirmation emails never arrive. Customer books appointment, receives no confirmation, forgets about booking, doesn't show up. Or worse: customer thinks booking failed (no email received) so books again, creating duplicate appointments.
+Developers build real-time streaming transcription with WebSockets, then discover Vercel's serverless functions don't support WebSocket connections. Or they use SSE but the route handler buffers the entire response before sending, resulting in no streaming at all.
 
 **Why it happens:**
-- SPF/DKIM/DMARC not configured properly
-- Emails flagged as spam by recipient mail servers
-- SendGrid/Postmark sender reputation issues
-- Email service rate limiting exceeded during peak times
-- Invalid sender addresses (e.g., noreply@vercel.app instead of verified domain)
-- Bounce handling not implemented
-- Email queues not monitored, failures go unnoticed
+- Serverless functions are ephemeral -- they spin up and down, incompatible with persistent WebSocket connections
+- Next.js App Router route handlers don't expose the raw `res` object needed for WebSocket upgrade
+- SSE in route handlers has a subtle bug: if you `await` an async loop before returning the Response, Next.js buffers everything until completion
+- Edge Runtime has a 300-second execution limit and must begin sending a response within 25 seconds
 
 **Consequences:**
-- High no-show rates (customers forget without reminder)
-- Duplicate bookings (customers retry when no confirmation received)
-- Customer service overhead (manual confirmation calls)
-- Lost revenue from missed appointments
-- Poor customer experience
+- Complete streaming failure on Vercel deployment
+- Transcription results arrive only after recording ends (defeats the purpose of "live" transcription)
+- Timeouts kill long recording sessions (treatments can be 60-90 minutes)
+- Major architecture rewrite needed if discovered late
 
 **Prevention:**
 
-1. **Use transactional email service with proper domain setup**:
+1. **Use SSE, not WebSockets, for Vercel deployment.** SSE works with serverless functions when implemented correctly.
+
+2. **Return the Response immediately, stream after:**
 ```typescript
-// Use Resend, SendGrid, or Postmark with verified domain
-// NOT: Gmail SMTP or unverified sender addresses
-
-// Configure DNS records:
-// SPF: v=spf1 include:sendgrid.net ~all
-// DKIM: Add provided keys
-// DMARC: v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com
-```
-
-2. **Implement email queue with retry logic**:
-```typescript
-// Don't send email directly in booking transaction
-// Use queue to handle failures gracefully
-
-interface EmailJob {
-  type: 'booking_confirmation';
-  to: string;
-  bookingId: string;
-  attempts: number;
+// WRONG - buffers everything
+export async function GET() {
+  const stream = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of transcribe()) {
+        controller.enqueue(chunk); // Buffered!
+      }
+      controller.close();
+    }
+  });
+  return new Response(stream, { headers: sseHeaders });
 }
 
-// Exponential backoff retry
-const retryDelays = [1000, 5000, 30000];  // 1s, 5s, 30s
-```
-
-3. **Store email delivery status**:
-```typescript
-model EmailLog {
-  id          String   @id @default(cuid())
-  bookingId   String
-  type        EmailType
-  recipient   String
-  status      EmailStatus  // pending, sent, failed, bounced
-  provider    String       // sendgrid, resend, etc
-  providerId  String?      // Message ID from provider
-  attempts    Int          @default(0)
-  lastError   String?
-  sentAt      DateTime?
-  createdAt   DateTime     @default(now())
-}
-```
-
-4. **Fallback mechanisms**:
-```typescript
-// If email fails after retries, escalate
-if (emailFailed && attempts > 3) {
-  // Send SMS backup notification
-  await sendSMS(booking.phone, confirmationMessage);
-
-  // Alert staff to manually confirm
-  await notifyStaff({
-    type: 'email_failure',
-    bookingId: booking.id,
-    action: 'manual_confirmation_needed'
+// RIGHT - returns immediately, streams incrementally
+export async function GET() {
+  const stream = new ReadableStream({
+    start(controller) {
+      // Non-async start, return Response immediately
+      processTranscription(controller); // fire and forget
+    }
+  });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
   });
 }
 ```
 
-5. **Webhook monitoring for email events**:
-```typescript
-// Set up webhooks for bounces, spam reports
-// POST /api/webhooks/email-status
+3. **Set `export const dynamic = 'force-dynamic'`** on SSE route handlers to prevent Vercel caching.
 
-export async function POST(req: Request) {
-  const event = await req.json();
+4. **For sessions longer than 5 minutes:** Use chunked architecture -- client sends audio in segments, each gets transcribed independently, results are assembled client-side. Don't maintain a single 60-minute SSE connection.
 
-  if (event.type === 'bounce' || event.type === 'spam') {
-    await prisma.emailLog.update({
-      where: { providerId: event.messageId },
-      data: {
-        status: event.type === 'bounce' ? 'bounced' : 'spam_reported',
-        lastError: event.reason
-      }
-    });
+5. **Consider a separate WebSocket server** (on Fly.io, Railway, etc.) if true bidirectional communication is needed. Proxy through SYNQ's domain for CORS simplicity.
 
-    // Flag user email as problematic
-    await flagInvalidEmail(event.recipient);
-  }
-}
-```
+**Detection:** Streaming works in `next dev` but breaks on Vercel deployment. Transcription results appear all at once instead of incrementally.
 
-6. **Test with real email providers in staging**:
-- Don't rely on console.log email testing
-- Send test emails to Gmail, Outlook, Yahoo
-- Check spam scores with mail-tester.com
-- Verify SPF/DKIM alignment
+**Phase to address:** Phase 2 (Streaming Transcription). Must be architecture-decided before implementation begins.
 
-7. **User-facing email debugging**:
-```typescript
-// Allow users to resend confirmation
-// "Didn't receive email? Click here to resend"
-
-// Show email status in dashboard
-// "Confirmation sent to user@example.com on Feb 4, 2026 at 2:30pm"
-```
-
-**Detection warning signs:**
-- High no-show rates (>15% for wellness bookings)
-- Customer support tickets: "I never got a confirmation"
-- Email logs showing consistent failures to certain domains
-- Bounce rate >5%
-- SendGrid/Postmark reputation score dropping
-
-**Phase mapping:** Must be in Phase 1. Email confirmation is table-stakes for booking systems.
+**Confidence:** HIGH -- well-documented Vercel limitation, confirmed in Next.js GitHub discussions.
 
 **Sources:**
-- [Booking email notifications NOT WORKING - Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/5647141/booking-email-notifications-not-working)
-- [Email notifications problems - Salon Booking System](https://salonbookingsystem.helpscoutdocs.com/article/126-email-notifications-problems)
-- [Email Notification Settings - BookingPress](https://www.bookingpressplugin.com/documents/notifications-settings/)
+- [Next.js WebSocket discussion #58698](https://github.com/vercel/next.js/discussions/58698)
+- [Fixing slow SSE in Next.js](https://medium.com/@oyetoketoby80/fixing-slow-sse-server-sent-events-streaming-in-next-js-and-vercel-99f42fbdb996)
+- [Vercel Edge Runtime limits](https://vercel.com/docs/functions/runtimes/edge)
+- [Vercel streaming for serverless](https://vercel.com/blog/streaming-for-serverless-node-js-and-edge-runtimes-with-vercel-functions)
+
+---
+
+### Pitfall 4: Japan APPI Compliance for Treatment Records (Sensitive Personal Information)
+
+**What goes wrong:**
+Treatment records containing health/body condition data are classified as "Special Care-Required Personal Information" (要配慮個人情報) under Japan's APPI. Handling them like regular booking data -- without explicit consent workflows, proper security measures, or data handling policies -- creates regulatory risk and potential penalties.
+
+**Why it happens:**
+- Developers treat treatment notes the same as booking metadata
+- Confusion about whether "wellness" (non-medical) data falls under APPI's medical provisions
+- Audio recordings of treatment sessions capture health discussions, automatically elevating data sensitivity
+- No awareness of APPI's explicit consent requirements for sensitive data acquisition
+
+**Consequences:**
+- Administrative penalties under APPI (upcoming 2026-2027 reforms introduce monetary surcharges)
+- Loss of business client trust (salons won't adopt a tool that creates liability)
+- Mandatory breach notification requirements if data is leaked
+- Cannot use opt-out mechanisms for sharing sensitive data with third parties (e.g., AI providers)
+
+**Prevention:**
+
+1. **Explicit consent flow before first recording:** Users (both practitioners and clients) must explicitly consent to recording and AI processing of treatment-related information. This is not optional -- APPI prohibits acquisition of sensitive personal information without prior consent.
+
+2. **Data classification in the schema:**
+```
+- Booking data: regular personal information (standard APPI rules)
+- Treatment notes/karte: Special Care-Required (heightened rules)
+- Audio recordings: Special Care-Required (contains health discussions)
+- AI-generated summaries: Special Care-Required (derived from health data)
+```
+
+3. **Implement security safeguards required by APPI:**
+   - Organizational: assign a data handling officer, establish handling rules
+   - Technical: encrypt at rest and in transit, access controls per practitioner
+   - Physical: restrict which devices can access karte data
+   - Personnel: train business owners on data handling obligations
+
+4. **Restrict cross-border data transfer:** If using US-based AI APIs (OpenAI, Deepgram), you're transferring Japanese sensitive personal information cross-border. APPI requires either: (a) consent from the data subject, (b) the recipient country has equivalent protections, or (c) the recipient has an appropriate data handling framework. Document this in your privacy policy.
+
+5. **Data retention policies:** Implement configurable retention periods. Don't store audio recordings indefinitely. Allow businesses to set their own retention policies.
+
+6. **Audit logging:** Log who accessed what karte data and when. APPI requires you to be able to respond to data subject access requests.
+
+**Detection:** No consent flow exists before recording. Audio files stored without encryption. No privacy policy addressing AI processing of health data. No data retention configuration.
+
+**Phase to address:** Phase 1 (before any data collection begins). Privacy architecture must be designed upfront.
+
+**Confidence:** MEDIUM -- APPI requirements are well-documented, but the specific classification of wellness (non-medical) treatment records under "Special Care-Required" categories is a gray area. Seitai, massage, and beauty treatments are not "medical" per se, but recordings discussing body conditions likely qualify. Recommend legal review.
+
+**Sources:**
+- [APPI 2025-2026 Japan overview](https://iclg.com/practice-areas/data-protection-laws-and-regulations/japan)
+- [Japan APPI Compliance Guide 2026](https://secureprivacy.ai/blog/appi-japan-privacy-compliance)
+- [Data Protection & Privacy 2025 Japan](https://practiceguides.chambers.com/practice-guides/data-protection-privacy-2025/japan/trends-and-developments)
+- [Digital Health Laws Japan 2025-2026](https://iclg.com/practice-areas/digital-health-laws-and-regulations/japan)
+
+---
+
+### Pitfall 5: Whisper API Has No Native Streaming -- Fake "Real-Time" Causes Terrible UX
+
+**What goes wrong:**
+Developers assume OpenAI's Whisper API supports real-time streaming transcription. It doesn't. Whisper is batch-only, processing uploaded audio files with a 25MB limit (~30 minutes). Attempting to simulate streaming by sending small chunks produces fragmented, context-less transcriptions with high error rates, especially for Japanese.
+
+**Why it happens:**
+- Confusing OpenAI's Realtime API (voice conversation) with Whisper (transcription)
+- Marketing materials blur the line between "fast" and "real-time"
+- Whisper processes audio in 30-second internal chunks, losing context between API calls
+- Japanese transcription is particularly affected because context is essential for correct kanji selection
+
+**Consequences:**
+- Transcription quality degrades severely when audio is chunked into small segments
+- Japanese homophones resolved incorrectly without surrounding context (e.g., 橋/箸/端 all pronounced "hashi")
+- Latency of 2-5 seconds per chunk, creating a choppy "live" experience
+- Users see garbled text appearing intermittently instead of smooth streaming
+
+**Prevention:**
+
+1. **Use Deepgram for streaming transcription.** Deepgram Nova models support true WebSocket-based streaming with sub-300ms latency and better multilingual support. Price is competitive ($4.30/1000 min vs Whisper's $6.00/1000 min).
+
+2. **If using OpenAI, use GPT-4o Transcribe** (not legacy Whisper) which offers better accuracy at the same price, or GPT-4o Mini Transcribe at $3.00/1000 min for cost-sensitive use.
+
+3. **Hybrid architecture:** Use streaming provider (Deepgram) for live display, then run a final Whisper pass on the complete audio for a polished transcript. Display the streaming version as "draft" and the final version as "complete."
+
+4. **If forced to chunk Whisper:** Overlap chunks by 5-10 seconds and deduplicate on the server. Send the previous chunk's last sentence as a "prompt" parameter for context continuity.
+
+5. **For Japanese specifically:** Always set `language: 'ja'` explicitly. Don't rely on auto-detection, which wastes the first few seconds detecting language and may default to English for ambiguous audio.
+
+**Detection:** Transcription text appears in large blocks with delays instead of word-by-word. Japanese transcription has frequent wrong kanji. Users describe the feature as "slow" or "broken."
+
+**Phase to address:** Phase 2 (Streaming Transcription). Provider selection is an architecture decision.
+
+**Confidence:** HIGH -- Whisper's batch-only nature is confirmed in OpenAI's documentation. Deepgram comparison data from their benchmarks (inherent bias, but latency claims are independently verified).
+
+**Sources:**
+- [Whisper vs Deepgram comparison](https://deepgram.com/learn/whisper-vs-deepgram)
+- [OpenAI pricing](https://platform.openai.com/docs/pricing)
+- [Why enterprises are moving to streaming](https://deepgram.com/learn/why-enterprises-are-moving-to-streaming-and-why-whisper-can-t-keep-up)
+- [Whisper Japanese transcription issues](https://github.com/openai/whisper/discussions/2151)
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause delays, technical debt, or user experience issues but are recoverable.
+Mistakes that cause significant rework, performance issues, or user dissatisfaction.
 
 ---
 
-### Pitfall 5: Calendar UI Breaks on Mobile
+### Pitfall 6: Audio File Size Explosion Consuming Supabase Storage
 
 **What goes wrong:**
-Desktop calendar looks great, but on mobile: tap targets too small, calendar doesn't fit screen, scrolling is janky, date picker hidden behind keyboard, or UI breaks entirely on iOS Safari vs Android Chrome.
+A 60-minute treatment session recorded as uncompressed WAV at 44.1kHz/16-bit produces ~300MB. Even compressed, a busy salon with 10 practitioners doing 8 sessions/day generates 2.4GB-24GB daily. Storage costs explode within weeks, and Supabase's free tier (1GB storage) fills immediately.
 
 **Why it happens:**
-- Desktop-first design approach
-- Using fixed pixel widths instead of responsive units
-- Insufficient touch target sizing (< 44px)
-- Not testing on actual devices, only browser DevTools
-- CSS that works on Chrome desktop but breaks on iOS Safari
-- Ignoring mobile-specific interactions (pinch-zoom, swipe)
-
-**Consequences:**
-- Users can't complete bookings on mobile (60%+ of traffic)
-- High abandonment rate during date selection
-- Frustration leads to calling instead of booking online (defeats purpose)
-- Accessibility issues for users with motor impairments
+- Recording in high-quality uncompressed format "just in case"
+- No audio compression before upload
+- Storing both the original audio AND the transcription without a cleanup strategy
+- Not setting per-bucket file size limits in Supabase
+- Supabase standard uploads are designed for files under 6MB
 
 **Prevention:**
 
-1. **Mobile-first design philosophy**:
-```typescript
-// Design for 375px width first, scale up
-// Not desktop design that "squishes down"
+1. **Compress on the client side** before upload. Use Opus codec (via MediaRecorder) at 32kbps for voice -- produces ~15MB per hour with excellent quality for speech.
+
+2. **Chunked upload for files over 6MB:** Use Supabase's resumable upload (TUS protocol) for reliability on mobile networks.
+
+3. **Implement a retention lifecycle:**
+   - Recording → Transcription complete → Keep audio for 7-30 days → Delete audio, keep transcript
+   - Make retention configurable per business
+
+4. **Set Supabase bucket limits:**
+```sql
+-- Create bucket with file size limit
+INSERT INTO storage.buckets (id, name, file_size_limit)
+VALUES ('karte-audio', 'karte-audio', 52428800); -- 50MB max per file
 ```
 
-2. **Minimum touch target sizes**:
-```css
-/* Each calendar date cell must be tappable */
-.calendar-day {
-  min-width: 44px;   /* Apple HIG minimum */
-  min-height: 44px;
-  /* Add padding, not just size on the element */
-  padding: 12px;
-}
+5. **Compress server-side as a fallback:** Run ffmpeg to convert any uploaded audio to Opus/OGG before permanent storage.
 
-/* Space between interactive elements */
-.time-slots {
-  gap: 8px;  /* Prevent accidental taps */
-}
-```
+6. **Budget calculation:** At Opus 32kbps, 1 hour = ~14MB. Supabase Pro plan ($25/mo) includes 100GB. That's ~7,000 hours of audio. For most small wellness businesses, this is sufficient.
 
-3. **Use native mobile date pickers when appropriate**:
-```typescript
-// For simple date selection, use native picker
-<input
-  type="date"
-  value={selectedDate}
-  onChange={handleDateChange}
-  // Native picker on mobile, custom on desktop
-  className="native-date-input"
-/>
+**Detection:** Supabase storage usage growing much faster than expected. Upload failures on mobile. Storage costs exceeding budget within the first month.
 
-// For complex scheduling (multi-resource, recurring), use custom UI
-```
+**Phase to address:** Phase 1 (Audio Recording). Storage strategy must be decided with recording implementation.
 
-4. **Test on real devices, not just simulators**:
-- iOS Safari has different rendering than Chrome
-- Test on older devices (iPhone SE size, not just latest)
-- Check both portrait and landscape orientations
-- Test with keyboard open (viewport height changes)
-
-5. **Responsive calendar component strategy**:
-```typescript
-// Show different views based on screen size
-const isMobile = useMediaQuery('(max-width: 768px)');
-
-return isMobile ? (
-  <MobileCalendarView />  // Vertical scroll, larger targets
-) : (
-  <DesktopCalendarView />  // Month grid view
-);
-```
-
-6. **Handle mobile keyboard interactions**:
-```typescript
-// Scroll input into view when keyboard appears
-useEffect(() => {
-  const input = inputRef.current;
-  input?.addEventListener('focus', () => {
-    setTimeout(() => {
-      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);  // Wait for keyboard animation
-  });
-}, []);
-```
-
-7. **Avoid calendar pattern mismatches**:
-- Don't use month-picker for selecting date of birth (too many clicks)
-- Do use year-dropdown for DOB, month-view for appointments
-- Don't require multiple taps to change year (Japanese wellness customer base skews older)
-
-**Detection warning signs:**
-- Analytics showing high mobile abandonment at calendar step
-- User feedback: "Can't select date on my phone"
-- Mobile conversion rate << desktop conversion rate
-- Heat maps showing missed taps on calendar cells
-
-**Phase mapping:** Address in Phase 1 during calendar UI implementation. Mobile is not optional in Japan (90%+ mobile usage for local services).
+**Confidence:** HIGH -- file size calculations are deterministic; Supabase limits are documented.
 
 **Sources:**
-- [Time Picker UX: Best Practices for 2025](https://www.eleken.co/blog-posts/time-picker-ux)
-- [Top UI/UX Mistakes in Travel Booking Apps](https://miracuves.com/blog/top-ui-ux-mistakes-travel-booking-platforms/)
-- [Calendar UI Design Struggle](https://yourbrandmate.agency/blog/the-calendar-ui-design-struggle-why-are-we-still-doing-this)
-- [Best Practices for Calendar Design](https://medium.com/design-bootcamp/best-practices-for-calendar-design-fix-ux-dc57b62d9bb7)
+- [Supabase storage file limits](https://supabase.com/docs/guides/storage/uploads/file-limits)
+- [Supabase storage scaling](https://supabase.com/docs/guides/storage/production/scaling)
 
 ---
 
-### Pitfall 6: Stale Availability Data with SWR Polling
+### Pitfall 7: Japanese Transcription Accuracy -- Domain-Specific Vocabulary Fails
 
 **What goes wrong:**
-User sees slot as "available" in calendar, clicks to book, gets error "Slot no longer available." Another user booked it 30 seconds ago but SWR hasn't revalidated yet. Or worse: user books successfully but sees old data, thinks booking failed, tries again, creates duplicate.
+General-purpose transcription models consistently mis-transcribe wellness/treatment-specific Japanese terminology. Terms like 筋膜リリース (kinmaku release / myofascial release), 骨盤矯正 (kotsuban kyousei / pelvic correction), or チャクラ (chakra) are transcribed as phonetically similar but meaningless words.
 
 **Why it happens:**
-- Polling interval too long (refreshInterval: 30000 = 30s)
-- Not revalidating on focus/visibility change
-- Optimistic updates without rollback mechanism
-- Cache showing stale data during booking flow
-- No real-time synchronization for multi-user scenarios
-- `revalidateIfStale: false` preventing necessary updates
+- Whisper and Deepgram are trained on general conversation, not wellness/medical terminology
+- Japanese has many homophones that require domain context to resolve correctly
+- Practitioner speech during treatments is often mumbled, fast, or spoken while working with hands
+- Background music/ambient sounds common in wellness settings degrade accuracy
 
 **Consequences:**
-- Poor UX: "Available" slots that aren't actually available
-- User frustration and lost bookings
-- Duplicate booking attempts
-- Customers lose trust in system accuracy
-- Support burden: "Why did I get an error?"
+- Karte records contain meaningless or incorrect terminology
+- Practitioners must manually correct every transcript, negating the time savings
+- Users lose trust in AI features and abandon them
+- Incorrect treatment records could lead to wrong follow-up treatments
 
 **Prevention:**
 
-1. **Aggressive revalidation for availability data**:
+1. **Build a domain-specific vocabulary/glossary:** Create a curated list of wellness terms per business type (seitai, massage, hair salon, yoga). Pass this as context/prompt to the transcription API.
+
+2. **Post-processing correction layer:** After transcription, run a text replacement pass using the domain glossary to fix common mistranscriptions.
+
+3. **Per-business-type prompt templates:**
 ```typescript
-// Availability should be near-real-time
-const { data: availability } = useSWR(
-  `/api/availability?worker=${workerId}&date=${date}`,
-  fetcher,
-  {
-    refreshInterval: 5000,  // 5s, not 30s
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 2000,
-  }
-);
-```
-
-2. **Revalidate after mutations**:
-```typescript
-const { mutate } = useSWRConfig();
-
-async function createBooking(bookingData) {
-  try {
-    const result = await fetch('/api/bookings', {
-      method: 'POST',
-      body: JSON.stringify(bookingData),
-    });
-
-    // Immediately revalidate availability
-    await mutate(`/api/availability?worker=${bookingData.workerId}`);
-
-    // Also revalidate user's bookings list
-    await mutate('/api/bookings/my-bookings');
-
-    return result;
-  } catch (error) {
-    // On error, still revalidate to show current state
-    mutate(`/api/availability?worker=${bookingData.workerId}`);
-    throw error;
-  }
-}
-```
-
-3. **Optimistic updates with rollback**:
-```typescript
-const { data: bookings, mutate } = useSWR('/api/bookings');
-
-async function optimisticBooking(newBooking) {
-  // Optimistically add to UI
-  const optimisticData = [...bookings, { ...newBooking, id: 'temp', status: 'pending' }];
-
-  mutate(optimisticData, false);  // Update UI without revalidation
-
-  try {
-    const result = await fetch('/api/bookings', {
-      method: 'POST',
-      body: JSON.stringify(newBooking),
-    });
-
-    const confirmedBooking = await result.json();
-
-    // Replace temp booking with confirmed one
-    mutate();  // Revalidate to get server state
-  } catch (error) {
-    // Rollback optimistic update on error
-    mutate();  // Revalidate to restore accurate state
-
-    toast.error('Slot no longer available. Please select another time.');
-  }
-}
-```
-
-4. **Visual feedback for stale data**:
-```typescript
-const { data, isValidating } = useSWR('/api/availability');
-
-return (
-  <div className="calendar">
-    {isValidating && (
-      <div className="revalidating-indicator">
-        Checking for updates...
-      </div>
-    )}
-
-    <CalendarGrid
-      slots={data}
-      isStale={isValidating}  // Dim or show spinner on stale slots
-    />
-  </div>
-);
-```
-
-5. **Consider WebSocket for high-value slots**:
-```typescript
-// For popular resources (star therapist), upgrade to WebSocket
-useEffect(() => {
-  const ws = new WebSocket(`wss://api.synq.jp/availability/${workerId}`);
-
-  ws.onmessage = (event) => {
-    const update = JSON.parse(event.data);
-
-    // Update SWR cache with real-time data
-    mutate(
-      `/api/availability?worker=${workerId}`,
-      (current) => ({ ...current, ...update }),
-      false  // Don't revalidate, WS data is fresh
-    );
-  };
-
-  return () => ws.close();
-}, [workerId]);
-```
-
-6. **Server-side double-check before booking**:
-```typescript
-// Always verify availability server-side
-// Client cache is NEVER source of truth
-
-export async function POST(req: Request) {
-  const { workerId, startTime, endTime } = await req.json();
-
-  // Real-time check at booking time
-  const conflict = await prisma.booking.findFirst({
-    where: {
-      workerId,
-      startTime: { lt: endTime },
-      endTime: { gt: startTime },
-      status: { not: 'cancelled' }
-    }
-  });
-
-  if (conflict) {
-    return NextResponse.json(
-      { error: 'Slot no longer available' },
-      { status: 409 }  // Conflict
-    );
-  }
-
-  // Proceed with booking...
-}
-```
-
-7. **Adjust polling based on user activity**:
-```typescript
-// Pause polling when user navigates away
-const { data } = useSWR(
-  url,
-  fetcher,
-  {
-    refreshInterval: isPageVisible ? 5000 : 0,  // Stop polling when hidden
-    isPaused: () => !isPageVisible,
-  }
-);
-```
-
-**Detection warning signs:**
-- Users report seeing available slots that error on booking
-- High rate of 409 Conflict errors in booking API
-- Customer feedback: "Calendar keeps changing"
-- Booking attempts that fail due to "slot unavailable"
-
-**Phase mapping:** Must be addressed in Phase 1 during availability/booking implementation. Don't launch with 30s polling.
-
-**Sources:**
-- [SWR Data Fetching Library (Stale-While-Revalidate)](https://medium.com/@sparkyingjie/swr-data-fetching-library-stale-while-revalidate-8ecb75cc8f41)
-- [Using SWR with HTTP long-polling](https://github.com/vercel/swr/discussions/1856)
-- [SWR API Documentation](https://swr.vercel.app/docs/api)
-
----
-
-### Pitfall 7: Poor No-Show and Cancellation Policy Implementation
-
-**What goes wrong:**
-Customers book appointments then don't show up (no-shows) or cancel at the last minute, leaving unfillable gaps in worker schedules. No deposit required, no penalty for cancellation, no reminder system. Business loses revenue from empty slots.
-
-**Why it happens:**
-- No cancellation policy defined or enforced
-- No deposit/prepayment collection
-- No automated reminders sent
-- Policy buried in ToS, customers unaware
-- No penalties for no-shows, so no incentive to cancel properly
-- Manual enforcement (staff calling to confirm) is inconsistent
-
-**Consequences:**
-- Revenue loss: Empty slots that could have been booked
-- Worker time wasted preparing for no-shows
-- Customers who wanted that slot were turned away
-- Wellness businesses operate on thin margins, high no-show rate (>15%) is unsustainable
-- Staff demoralization
-
-**Prevention:**
-
-1. **Clear, visible cancellation policy**:
-```typescript
-// Show policy at multiple touchpoints
-// 1. On booking page BEFORE user selects time
-// 2. In booking confirmation UI
-// 3. In email confirmation
-// 4. In reminder emails
-
-const CANCELLATION_POLICY = {
-  window: 24,  // hours before appointment
-  penalty: 'full_charge',  // or 'deposit_forfeit' or 'none'
-  reschedule: 'free_if_24hr_notice'
-};
-
-// Display prominently
-<PolicyBanner>
-  Cancellations within 24 hours of appointment will be charged 100%.
-  Rescheduling is free with 24hr+ notice.
-</PolicyBanner>
-```
-
-2. **Require deposit or prepayment**:
-```typescript
-// Collect deposit at booking time
-// Studies show: guests who pay online are 4x less likely to no-show
-
-interface BookingPayment {
-  type: 'deposit' | 'full_payment';
-  amount: number;
-  stripePaymentIntentId: string;
-}
-
-// For high-value services (90min massage = ¥15,000), require prepayment
-// For lower-value (30min = ¥5,000), 50% deposit acceptable
-const depositAmount = booking.totalAmount * 0.5;
-```
-
-3. **Automated reminder system**:
-```typescript
-// Send reminders at strategic intervals
-// Research: Both phone + automated reminders = highest show rate
-
-const REMINDER_SCHEDULE = [
-  { timing: '24_hours_before', channels: ['email', 'sms'] },
-  { timing: '2_hours_before', channels: ['sms'] },  // Final reminder
-];
-
-// Include easy reschedule/cancel link in reminders
-const reminderEmail = {
-  subject: '[明日 2pm] マッサージのご予約確認',  // Tomorrow 2pm Massage Booking Confirmation
-  body: `
-    ご予約日時: 2026年2月5日(水) 14:00
-
-    変更・キャンセル (24時間前まで無料):
-    ${generateRescheduleToken(booking.id)}
-
-    キャンセルポリシー: 24時間以内のキャンセルは全額チャージされます。
-  `
+const BUSINESS_PROMPTS: Record<BusinessType, string> = {
+  seitai: '整体施術の記録。用語：筋膜リリース、骨盤矯正、姿勢改善、可動域...',
+  massage: 'マッサージ施術の記録。用語：指圧、リンパ、もみほぐし...',
+  hairSalon: '美容室カルテ。用語：カラーリング、トリートメント、パーマ...',
 };
 ```
 
-4. **Easy reschedule flow**:
+4. **Allow practitioners to add custom vocabulary** to their account settings. Feed these into transcription prompts.
+
+5. **Show confidence indicators** on transcribed text. Highlight low-confidence segments so practitioners know what to review.
+
+6. **Set user expectations clearly:** Position as "AI-assisted" not "AI-automated." The AI drafts, the practitioner reviews and approves.
+
+**Detection:** Practitioners reporting frequent transcription errors. Domain-specific terms consistently wrong. Users spending more time correcting transcripts than typing from scratch.
+
+**Phase to address:** Phase 2 (Transcription) and Phase 3 (Templates). Vocabulary system is iterative.
+
+**Confidence:** MEDIUM -- Japanese transcription challenges are well-documented, but the specific accuracy for wellness terminology hasn't been benchmarked. Recommend building a test corpus early.
+
+**Sources:**
+- [Whisper Japanese transcription discussion](https://github.com/openai/whisper/discussions/2151)
+- [Speech to text accuracy guide 2025](https://medium.com/@isabelleradcliffe/speech-to-text-accuracy-my-2025-guide-to-getting-the-most-from-voice-transcription-99fc9e8e9228)
+
+---
+
+### Pitfall 8: AI API Cost Runaway -- No Rate Limits or Usage Tracking
+
+**What goes wrong:**
+A single practitioner recording 8 hours/day of audio, sending each to transcription, then translation, then summarization, then auto-tagging generates $5-15/day in API costs per user. A salon with 5 practitioners could cost $75/day ($2,250/month) before the business even pays for the subscription. A bug or retry loop can 10x this overnight.
+
+**Why it happens:**
+- No per-user or per-business usage caps
+- Retry logic without exponential backoff sends the same audio multiple times
+- Translation running on every sentence in real-time instead of batched
+- No caching of repeated translations (common wellness phrases appear in every session)
+- Running multiple AI providers in parallel "for comparison" during development
+
+**Consequences:**
+- API costs exceed subscription revenue
+- A single rogue user or bug can drain the monthly budget
+- No visibility into which features consume the most API spend
+- Unable to offer competitive pricing because cost floor is too high
+
+**Prevention:**
+
+1. **Implement usage metering from day one:**
 ```typescript
-// Make it EASY for users to cancel/reschedule
-// Don't hide the cancel button
-// Friction = no-shows instead of proper cancellations
-
-<BookingCard>
-  <RescheduleButton
-    href={`/bookings/${booking.id}/reschedule`}
-    disabled={isWithin24Hours(booking.startTime)}
-  >
-    日時変更 (Change Date/Time)
-  </RescheduleButton>
-
-  <CancelButton
-    onClick={handleCancel}
-    showWarning={isWithin24Hours(booking.startTime)}
-  >
-    キャンセル (Cancel)
-  </CancelButton>
-</BookingCard>
+interface UsageRecord {
+  businessId: string;
+  feature: 'transcription' | 'translation' | 'summarization' | 'tagging';
+  inputTokens: number;
+  outputTokens: number;
+  audioDurationSeconds: number;
+  cost: number;
+  timestamp: Date;
+}
 ```
 
-5. **Enforce policy with clear consequences**:
+2. **Set hard limits per business tier:**
+   - Free: 30 min recording/month
+   - Basic: 10 hours/month
+   - Pro: 50 hours/month
+   - Enterprise: custom
+
+3. **Cache aggressively:**
+   - Common phrases in translation (greetings, session openers/closers)
+   - Template-based summaries (only diff the unique content)
+   - Tag suggestions based on previous similar sessions
+
+4. **Batch operations:** Don't translate sentence-by-sentence in real-time. Translate the final transcript in one API call.
+
+5. **Use the cheapest model that works:** GPT-4o Mini for tagging and summarization. Reserve expensive models for translation quality.
+
+6. **Alert on anomalies:** If a single business exceeds 3x their historical daily usage, pause and notify.
+
+**Detection:** Monthly AI API bill exceeding projections. Certain businesses consuming disproportionate resources. Retry loops in error logs.
+
+**Phase to address:** Phase 2 (Transcription). Usage metering should be built alongside the first AI integration.
+
+**Confidence:** HIGH -- API pricing is published; cost calculations are straightforward.
+
+---
+
+### Pitfall 9: Waveform Visualization Janking on Mobile Devices
+
+**What goes wrong:**
+Real-time waveform visualization using Canvas and `requestAnimationFrame` consumes significant CPU/GPU resources. On older iPads and phones (common in salons), this causes the UI to become unresponsive, recording to stutter, and battery to drain rapidly during hour-long sessions.
+
+**Why it happens:**
+- Drawing every audio frame to Canvas on the main thread
+- Using `AnalyserNode.getByteTimeDomainData()` at 60fps when 15fps would suffice
+- Canvas resolution not accounting for device pixel ratio (blurry on Retina, or rendering at 2x-3x resolution unnecessarily)
+- Not pausing visualization when the app is backgrounded (wasting battery)
+
+**Prevention:**
+
+1. **Throttle visualization to 15-20fps** for waveforms. Human eyes can't perceive waveform differences above ~20fps.
+
+2. **Use OffscreenCanvas in a Web Worker** if available (not supported in Safari as of 2025 -- degrade gracefully to throttled main thread Canvas).
+
+3. **Pause rendering when not visible:**
 ```typescript
-async function cancelBooking(bookingId: string) {
-  const booking = await getBooking(bookingId);
-  const hoursUntil = differenceInHours(booking.startTime, new Date());
-
-  if (hoursUntil < CANCELLATION_POLICY.window) {
-    // Within penalty window
-    if (booking.paymentIntentId) {
-      // Charge cancellation fee (don't refund deposit)
-      await stripe.paymentIntents.capture(booking.paymentIntentId);
-    }
-
-    return {
-      cancelled: true,
-      refund: 0,
-      message: 'Cancelled within 24hr window. Deposit charged per policy.'
-    };
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    cancelAnimationFrame(animationId);
   } else {
-    // Outside penalty window
-    if (booking.paymentIntentId) {
-      await stripe.refunds.create({ payment_intent: booking.paymentIntentId });
-    }
-
-    return {
-      cancelled: true,
-      refund: booking.depositAmount,
-      message: 'Booking cancelled. Full refund processed.'
-    };
+    startVisualization();
   }
-}
+});
 ```
 
-6. **Track and analyze no-show patterns**:
-```typescript
-// Measure and monitor no-show rate
-interface NoShowMetrics {
-  rate: number;  // Target: <10% for wellness
-  bySource: Record<string, number>;  // Phone vs online bookings
-  byPaymentType: {
-    prepaid: number;  // Should be much lower
-    payAtVenue: number;
-  };
-  byRemindersSent: number;
-}
+4. **Simplify the visualization on low-end devices.** Detect performance issues and fall back to a simple pulsing indicator instead of a full waveform.
 
-// Flag repeat offenders
-if (user.noShowCount > 2) {
-  requirePrepayment = true;  // Force prepayment for unreliable users
-}
-```
+5. **Pre-calculate waveform data for playback.** Don't re-analyze audio in real-time during playback. Generate waveform data once and render from cache.
 
-7. **Waitlist for cancellations**:
-```typescript
-// Don't just lose the revenue
-// Offer cancelled slots to waitlist customers
+**Detection:** UI stuttering during recording on iPad. Battery drain complaints. Recording audio has gaps or glitches.
 
-async function handleCancellation(booking: Booking) {
-  await cancelBooking(booking.id);
+**Phase to address:** Phase 1 (Audio Recording UI). Waveform is a UX feature, not a core feature -- can be simplified.
 
-  // Check waitlist for this service/time
-  const waitlisted = await prisma.waitlist.findMany({
-    where: {
-      serviceId: booking.serviceId,
-      preferredTime: {
-        gte: subHours(booking.startTime, 2),
-        lte: addHours(booking.startTime, 2),
-      }
-    }
-  });
-
-  // Notify waitlist customers
-  for (const customer of waitlisted) {
-    await sendSMS(customer.phone,
-      `空きが出ました！${format(booking.startTime, 'MM/dd HH:mm')} ご希望の場合は即ご予約を。`
-      // "Slot opened! [time] Book now if interested."
-    );
-  }
-}
-```
-
-**Detection warning signs:**
-- No-show rate >15% (wellness industry benchmark: 8-12%)
-- High volume of last-minute cancellations
-- Workers reporting many empty slots
-- Revenue projections not meeting actuals due to no-shows
-
-**Phase mapping:** Must be in Phase 1. Cancellation policy and reminders are table stakes. Prepayment can be Phase 2 after validating with initial users.
+**Confidence:** HIGH -- Canvas performance on mobile is well-understood.
 
 **Sources:**
-- [How to Create a Cancellation Policy](https://acuityscheduling.com/learn/how-to-create-a-cancellation-policy)
-- [Crafting a No-Show Policy for Your Spa: Best Practices](https://www.ascpskincare.com/updates/blog-posts/crafting-no-show-policy-your-spa)
-- [How to Reduce Hotel No-Shows](https://sevenrooms.com/blog/reduce-handle-hotel-no-shows/)
-- [Should You Charge for No-Shows?](https://zandahealth.com/blog/us/cancellation-fee-for-no-shows/)
+- [MDN Web Audio Visualizations](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API)
 
 ---
 
-### Pitfall 8: Security Vulnerabilities in Booking Systems
+### Pitfall 10: Translation Pipeline Latency Making "Live" Translation Unusable
 
 **What goes wrong:**
-Booking system becomes target for attacks: credential stuffing (automated login attempts), payment data theft, DDoS attacks during peak booking times, or injection attacks via booking form inputs. In 2025, 60% of hospitality cyberattacks stem from connected devices and booking systems.
+The pipeline of audio → transcription → translation creates compounding latency. If transcription takes 1-3 seconds and translation takes 0.5-1 second per segment, the translated text lags 2-4 seconds behind speech. For a "live" feature, this feels broken.
 
 **Why it happens:**
-- Weak authentication (no MFA, shared passwords)
-- PCI-DSS non-compliance for payment handling
-- SQL injection vulnerabilities in search/filter queries
-- No rate limiting on API endpoints
-- Unpatched dependencies
-- IoT devices (booking tablets, kiosks) left insecure
-- Staff training insufficient (phishing, social engineering)
-
-**Consequences:**
-- Data breach: customer PII exposed (names, emails, phone, booking history)
-- Payment card data theft (PCI-DSS v4.0 violations = fines)
-- Ransomware: system locked, can't process bookings
-- DDoS: website down during peak hours
-- Reputational damage and loss of customer trust
-- Regulatory penalties (Japan APPI, GDPR for EU customers)
+- Serial pipeline: wait for transcription to complete, then send to translation
+- Translating sentence-by-sentence instead of streaming partial results
+- Using full LLM (GPT-4) for translation when a specialized service (DeepL) would be faster
+- Not distinguishing between "live preview" quality and "final" quality
 
 **Prevention:**
 
-1. **Never store payment card data directly**:
-```typescript
-// Use Stripe/PayPal, not custom payment handling
-// PCI-DSS compliance is HARD, let Stripe handle it
+1. **Use DeepL for real-time translation, not LLMs.** DeepL has lower latency (~200ms) and better Japanese-English quality than GPT for straightforward translation. Reserve LLMs for context-aware medical/wellness terminology translation in the final pass.
 
-// BAD: ❌
-interface Booking {
-  cardNumber: string;  // NEVER store this
-  cvv: string;         // NEVER store this
-}
+2. **Parallel, not serial:** Start translating partial transcription segments as soon as they arrive, don't wait for complete sentences.
 
-// GOOD: ✅
-interface Booking {
-  stripePaymentIntentId: string;  // Reference only
-  stripeCustomerId: string;
-}
-```
+3. **Two-tier translation:**
+   - **Live tier:** Fast, good-enough translation displayed during session (DeepL API)
+   - **Final tier:** High-quality, context-aware translation generated post-session (LLM with full transcript context)
 
-2. **Parameterized queries (prevent SQL injection)**:
-```typescript
-// Prisma handles this by default, but if using raw queries:
+4. **Set UX expectations:** Label live translation as "draft" with a visual indicator. Show polished translation after session ends.
 
-// BAD: ❌
-const results = await prisma.$queryRaw`
-  SELECT * FROM bookings WHERE user_id = ${userId}
-`;  // Vulnerable if userId comes from user input
+5. **Cache common phrases:** Wellness sessions have repetitive patterns. Pre-translate common phrases and template language.
 
-// GOOD: ✅
-const results = await prisma.booking.findMany({
-  where: { userId }  // Prisma auto-parameterizes
-});
+**Detection:** Users complaining translation is "always behind." Visible delay between Japanese speech and English text appearance.
 
-// If must use raw SQL:
-const results = await prisma.$queryRaw`
-  SELECT * FROM bookings WHERE user_id = ${Prisma.sql([userId])}
-`;  // Explicitly parameterized
-```
+**Phase to address:** Phase 3 (Translation). Comes after transcription is stable.
 
-3. **Rate limiting on critical endpoints**:
-```typescript
-// Prevent brute force and DDoS
-
-import { ratelimit } from '@/lib/redis';
-
-export async function POST(req: Request) {
-  const ip = req.headers.get('x-forwarded-for');
-
-  const { success, remaining } = await ratelimit.limit(
-    `booking_${ip}`,
-    {
-      rate: 10,      // 10 requests
-      interval: 60,  // per 60 seconds
-    }
-  );
-
-  if (!success) {
-    return NextResponse.json(
-      { error: 'Too many booking attempts. Please try again later.' },
-      { status: 429 }
-    );
-  }
-
-  // Process booking...
-}
-```
-
-4. **Input validation and sanitization**:
-```typescript
-// Validate all user inputs
-import { z } from 'zod';
-
-const bookingSchema = z.object({
-  name: z.string().min(1).max(100).regex(/^[\p{L}\s]+$/u),  // Letters and spaces only
-  email: z.string().email(),
-  phone: z.string().regex(/^[0-9\-+() ]+$/),  // Numbers and phone formatting only
-  serviceId: z.string().uuid(),
-  notes: z.string().max(500),  // Limit length
-});
-
-// Sanitize HTML to prevent XSS
-import DOMPurify from 'isomorphic-dompurify';
-const safeNotes = DOMPurify.sanitize(userInput.notes);
-```
-
-5. **Implement MFA for admin/worker accounts**:
-```typescript
-// Use Supabase Auth MFA
-const { data, error } = await supabase.auth.mfa.enroll({
-  factorType: 'totp',
-  issuer: 'SYNQ',
-});
-
-// Require MFA for accounts with booking management permissions
-if (user.role === 'admin' || user.role === 'worker') {
-  requireMFA = true;
-}
-```
-
-6. **Keep dependencies updated**:
-```bash
-# Automated security audits
-npm audit
-
-# Use Dependabot or Snyk for automated PR updates
-# Critical: Update Prisma, Next.js, Supabase client regularly
-```
-
-7. **Secure API routes**:
-```typescript
-// Verify authentication on all mutations
-export async function POST(req: Request) {
-  const supabase = createServerClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
-  // Additional authorization check
-  const booking = await getBooking(bookingId);
-  if (booking.userId !== session.user.id && session.user.role !== 'admin') {
-    return NextResponse.json(
-      { error: 'Forbidden' },
-      { status: 403 }
-    );
-  }
-
-  // Process request...
-}
-```
-
-8. **Security headers**:
-```typescript
-// next.config.js
-module.exports = {
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'geolocation=(), microphone=(), camera=()',
-          },
-        ],
-      },
-    ];
-  },
-};
-```
-
-9. **Logging and monitoring**:
-```typescript
-// Log security-relevant events
-await auditLog({
-  action: 'booking_created',
-  userId: session.user.id,
-  ip: req.headers.get('x-forwarded-for'),
-  timestamp: new Date(),
-  details: { bookingId, serviceId },
-});
-
-// Monitor for anomalies
-// - Spike in failed login attempts
-// - Unusual booking patterns (100 bookings in 1 minute)
-// - API 401/403 errors from same IP
-```
-
-**Detection warning signs:**
-- Unusual traffic patterns (DDoS)
-- Failed login attempts spike
-- Security scanner reports (npm audit, Snyk)
-- Customers reporting phishing emails
-- Unusual bookings (same customer booking 50 slots)
-
-**Phase mapping:** Security must be in Phase 1. Not deferrable.
-
-**Sources:**
-- [Top Hospitality Cybersecurity Threats for 2025](https://udtonline.com/hospitality-cybersecurity-threats-2025/)
-- [Top Security Concerns with Online Booking Systems](https://schedly.io/top-security-concerns-with-online-booking-systems-and-how-to-address-them/)
-- [Booking Application Security: Top Threats](https://mohasoftware.com/blog/booking-application-security-top-threats-and-how-to-mitigate-them)
-- [Peak Season, Peak Risk: 2025 State of Hospitality Cyber Report](https://www.vikingcloud.com/resources/peak-season-peak-risk-the-2025-state-of-hospitality-cyber-report)
+**Confidence:** MEDIUM -- latency estimates based on published API performance. Real-world performance depends on network conditions in Japanese salons.
 
 ---
 
 ## Minor Pitfalls
 
-Mistakes that cause annoyance but are relatively easy to fix.
+Mistakes that cause friction, tech debt, or minor user experience issues.
 
 ---
 
-### Pitfall 9: Japanese Localization Missteps
+### Pitfall 11: Over-Engineering Multi-Provider AI Abstraction
 
 **What goes wrong:**
-UI text is poorly translated or uses wrong conventions. Dates shown in wrong format (MM/DD/YYYY instead of YYYY/MM/DD), address fields require postal code user doesn't have, Japanese fonts are huge (slow load times), or UI breaks because Japanese text is longer than English.
-
-**Why it happens:**
-- Machine translation without native speaker review
-- Assuming Western UI patterns work for Japanese users
-- Fixed-width UI elements that break with longer Japanese text
-- Not supporting Japanese input methods (IME)
-- Using wrong calendar format (ignoring wareki)
-- Large font files not optimized
-
-**Consequences:**
-- Professional credibility loss (poor Japanese = untrustworthy)
-- Users can't complete signup (postal code requirement blocks foreigners)
-- Slow page loads (Japanese fonts are 2-5MB unoptimized)
-- Form validation errors (expecting katakana, user enters kanji)
-- Government form rejections (wareki required, seireki provided)
+Developers build a complex provider abstraction layer before knowing which providers will actually be used. The abstraction doesn't match real provider differences (streaming vs. batch, different auth models, different response formats), resulting in a leaky abstraction that's harder to maintain than direct integrations.
 
 **Prevention:**
 
-1. **Date format localization**:
+1. **Start with one provider per function.** Deepgram for transcription, DeepL for translation, OpenAI for summarization.
+
+2. **Abstract only when you actually add a second provider.** The abstraction will be better because you'll know the real differences.
+
+3. **Use a simple strategy pattern, not a framework:**
 ```typescript
-// Use correct Japanese date format
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
-
-// Japanese standard: YYYY年MM月DD日(weekday)
-const formattedDate = format(date, 'yyyy年MM月dd日(E)', { locale: ja });
-// → 2026年2月4日(火)
-
-// For government/B2B contexts, support wareki
-const isGovernmentForm = context === 'official';
-const displayDate = isGovernmentForm
-  ? '令和7年2月4日'  // Reiwa 7
-  : '2026年2月4日';   // Western calendar
-```
-
-2. **Address field flexibility**:
-```typescript
-// Don't REQUIRE Japanese postal code for signup
-interface AddressForm {
-  postalCode?: string;  // Optional, not required
-  prefecture: string;   // Or allow "海外" (overseas) option
-  city: string;
-  addressLine1: string;
+interface TranscriptionProvider {
+  transcribe(audio: Buffer, language: string): Promise<TranscriptionResult>;
 }
-
-// Provide postal code lookup API for convenience
-// But don't block non-Japanese users
+// That's it. Don't over-specify the interface.
 ```
 
-3. **Font optimization**:
-```typescript
-// Use subset fonts for performance
-// Japanese fonts are HUGE (2-5MB), subset to needed characters
+4. **Don't abstract away provider-specific features** (Deepgram's diarization, OpenAI's prompt parameter). These are competitive advantages, not implementation details.
 
-// Option 1: Use system fonts
-font-family:
-  -apple-system, BlinkMacSystemFont,
-  "Hiragino Kaku Gothic ProN", "Hiragino Sans",
-  Meiryo, sans-serif;
+**Phase to address:** Ongoing. Resist the urge to abstract prematurely.
 
-// Option 2: Subset Noto Sans JP
-// Include only commonly used characters, not full CJK set
-// Use font-display: swap to prevent text blocking
-@font-face {
-  font-family: 'Noto Sans JP';
-  src: url('/fonts/NotoSansJP-subset.woff2') format('woff2');
-  font-display: swap;
-  unicode-range: U+3000-30FF, U+4E00-9FFF;  // Hiragana, Katakana, common kanji
-}
-```
-
-4. **Responsive UI for variable text length**:
-```typescript
-// Japanese text can be much longer or shorter than English
-
-// BAD: Fixed width
-<button className="w-32">Book Now</button>  // ❌ Breaks with "予約する"
-
-// GOOD: Flexible width
-<button className="px-6 py-2 min-w-fit">予約する</button>  // ✅
-```
-
-5. **Support Japanese input (IME)**:
-```typescript
-// Ensure input fields work with Japanese IME
-// Test with actual Japanese keyboard input
-
-<input
-  type="text"
-  name="fullName"
-  placeholder="山田 太郎"
-  lang="ja"  // Hint for better IME
-  autoComplete="name"
-/>
-
-// Allow both full-width and half-width characters
-// Don't reject full-width numbers (123 vs 123)
-const normalizedPhone = phone.replace(/[０-９]/g, (s) =>
-  String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
-);  // Convert full-width to half-width
-```
-
-6. **Proper form validation for Japanese**:
-```typescript
-// Name field: Allow kanji, hiragana, katakana, spaces
-const nameRegex = /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー・ ]+$/u;
-
-// Don't require Western name format (First Last)
-// Japanese: 山田 太郎 (surname first)
-// Allow single field or surname/given name separate fields
-
-interface JapaneseName {
-  surname: string;     // 姓 (sei)
-  givenName: string;   // 名 (mei)
-  surnameKana?: string;   // セイ (katakana reading)
-  givenNameKana?: string; // メイ
-}
-```
-
-7. **Translation quality checklist**:
-```typescript
-// Don't rely on machine translation alone
-// Hire native Japanese speaker for review
-
-// Common mistakes:
-// - "Book" → 予約 (correct for booking)
-//   NOT 本 (that's "book" as in reading material)
-// - Politeness level: Use です・ます form for customers
-// - Business vs casual: 予約する (business) vs 予約しよう (casual)
-
-// Use professional translation for:
-// - Legal terms (cancellation policy, ToS)
-// - Payment-related text
-// - Error messages
-```
-
-8. **Business hours and time notation**:
-```typescript
-// Support 24-hour format (standard in Japan)
-// Allow extended hours notation (26:00 = 2am next day)
-
-interface BusinessHours {
-  monday: { open: '09:00', close: '21:00' },  // 24-hour format
-  friday: { open: '09:00', close: '26:00' },  // Open past midnight
-}
-
-// Display: "9:00-21:00" not "9am-9pm"
-```
-
-**Detection warning signs:**
-- Bounce rate high for Japanese users
-- Support tickets in Japanese asking for help with forms
-- Lighthouse performance score low due to fonts
-- UI breaking on iPhone with Japanese locale
-- Validation errors on name/address fields
-
-**Phase mapping:** Must be in Phase 1 before Japanese launch. Can't launch in Japan with English-only UI.
-
-**Sources:**
-- [Localization Errors Impact And How To Prevent Mistakes](https://gtelocalize.com/localization-errors/)
-- [Common Localization Challenges in Japan and Solutions](https://nihonium.io/common-localization-challenges-in-japan-and-solutions/)
-- [Localization Mistakes to Avoid when Internationalizing](https://inlang.com/g/940fn8mg/guide-floriankiem-i18nMistakes)
-- [Japanese Date Format Explained](https://wakokujp.com/japanese-date-format/)
+**Confidence:** HIGH -- standard software engineering wisdom.
 
 ---
 
-### Pitfall 10: Double-Bottleneck Scheduling Logic Bugs
+### Pitfall 12: Auto-Tagging Accuracy Destroying User Trust
 
 **What goes wrong:**
-Booking system only checks worker availability, forgetting that treatment room (resource) must also be free. Or vice versa: room is free, but worker is booked. Result: double bookings where either worker or room is overcommitted. Especially problematic for wellness businesses with multiple massage rooms and rotating therapists.
-
-**Why it happens:**
-- Implementing worker availability first, adding room constraint later as afterthought
-- Separate queries for worker and room availability (not atomic check)
-- UI shows worker availability only, doesn't factor in room capacity
-- Logic assumes 1:1 worker-to-room mapping (breaks when workers share rooms)
-- Edge cases like "room setup time" or "worker break time" not modeled
-
-**Consequences:**
-- Double-booking: Worker assigned to Room A but Room A already booked
-- Customer arrives, no room available despite valid booking
-- Worker scheduled for two services simultaneously
-- Manual intervention required to resolve conflicts
-- Customer frustration, lost revenue from rescheduling
+AI auto-tagging suggests irrelevant or incorrect tags for treatment records. A seitai session gets tagged "hair coloring" because the client mentioned their hairstylist. Users learn to ignore tags entirely, making the feature useless.
 
 **Prevention:**
 
-1. **Model both constraints in database**:
+1. **Business-type-scoped tag vocabularies.** A seitai business should only see seitai-relevant tags, never hair salon tags.
+
+2. **Suggest, don't apply.** Show tags as suggestions that practitioners confirm or dismiss. Track acceptance rates.
+
+3. **Feedback loop:** When practitioners reject tags, use that signal to improve. If a tag is rejected >50% of the time for a business type, remove it from suggestions.
+
+4. **Start with rule-based tagging** (keyword matching against domain glossary) before introducing ML-based tagging. Rules are predictable and debuggable.
+
+**Phase to address:** Phase 4 (Auto-tagging). Comes after transcription quality is proven.
+
+**Confidence:** MEDIUM -- general AI UX patterns, not specific to this domain.
+
+---
+
+### Pitfall 13: i18n for AI-Generated Content is Fundamentally Different from Static i18n
+
+**What goes wrong:**
+Developers try to use the existing i18n system (next-intl or similar) for AI-generated content. But AI-generated karte summaries, tags, and translations aren't static strings with known keys -- they're dynamic content that needs to exist in multiple languages simultaneously.
+
+**Prevention:**
+
+1. **Store AI-generated content with language metadata:**
 ```typescript
-// Prisma schema
-model Booking {
-  id         String   @id @default(cuid())
-
-  // Both constraints required
-  workerId   String
-  resourceId String   // Treatment room, massage table, etc
-
-  startTime  DateTime @db.Timestamptz
-  endTime    DateTime @db.Timestamptz
-
-  worker     Worker   @relation(fields: [workerId], references: [id])
-  resource   Resource @relation(fields: [resourceId], references: [id])
-
-  status     BookingStatus
-
-  @@index([workerId, startTime, endTime])
-  @@index([resourceId, startTime, endTime])
-}
-
-model Resource {
-  id       String @id @default(cuid())
-  name     String  // "Massage Room 1", "Facial Room B"
-  type     ResourceType  // room, equipment, bed
-  capacity Int @default(1)
+interface KarteContent {
+  originalLanguage: 'ja' | 'en';
+  content: Record<string, string>; // { ja: '...', en: '...' }
+  generatedAt: Date;
+  model: string;
 }
 ```
 
-2. **Atomic availability check (both constraints)**:
+2. **Don't re-translate on every page load.** Generate translations once and store them. Allow manual re-translation if needed.
+
+3. **The karte UI must support mixed-language display** (original Japanese transcription alongside English translation), not just single-language switching.
+
+4. **AI-generated content should NOT go through the i18n key system.** Keep static UI strings and dynamic AI content in completely separate rendering paths.
+
+**Phase to address:** Phase 3 (Translation/i18n). Design the data model early.
+
+**Confidence:** HIGH -- architectural pattern, not technology-specific.
+
+---
+
+### Pitfall 14: Recording State Lost on Accidental Navigation or App Background
+
+**What goes wrong:**
+A practitioner accidentally swipes back, taps a notification, or the iPad auto-locks during a 60-minute recording. The entire recording is lost because it was only in browser memory.
+
+**Prevention:**
+
+1. **Periodic chunk saves:** Save audio chunks every 30-60 seconds to Supabase storage. If the session is interrupted, only the last chunk is lost.
+
+2. **`beforeunload` warning:**
 ```typescript
-async function checkAvailability(params: {
-  workerId: string;
-  resourceId: string;
-  startTime: Date;
-  endTime: Date;
-}): Promise<{ available: boolean; conflicts: string[] }> {
-
-  const conflicts: string[] = [];
-
-  // Check worker availability
-  const workerConflict = await prisma.booking.findFirst({
-    where: {
-      workerId: params.workerId,
-      startTime: { lt: params.endTime },
-      endTime: { gt: params.startTime },
-      status: { notIn: ['cancelled'] }
-    }
-  });
-
-  if (workerConflict) {
-    conflicts.push('Worker unavailable');
+window.addEventListener('beforeunload', (e) => {
+  if (isRecording) {
+    e.preventDefault();
+    e.returnValue = '録音中です。ページを離れると録音が失われます。';
   }
-
-  // Check resource availability
-  const resourceConflict = await prisma.booking.findFirst({
-    where: {
-      resourceId: params.resourceId,
-      startTime: { lt: params.endTime },
-      endTime: { gt: params.startTime },
-      status: { notIn: ['cancelled'] }
-    }
-  });
-
-  if (resourceConflict) {
-    conflicts.push('Room unavailable');
-  }
-
-  return {
-    available: conflicts.length === 0,
-    conflicts
-  };
-}
-```
-
-3. **Database constraint enforcement**:
-```sql
--- PostgreSQL exclusion constraint
--- Prevents overlapping bookings for same worker OR same resource
-
-CREATE EXTENSION IF NOT EXISTS btree_gist;
-
--- No overlapping worker bookings
-ALTER TABLE bookings
-ADD CONSTRAINT no_worker_overlap
-EXCLUDE USING gist (
-  worker_id WITH =,
-  tstzrange(start_time, end_time, '[)') WITH &&
-) WHERE (status != 'cancelled');
-
--- No overlapping resource bookings
-ALTER TABLE bookings
-ADD CONSTRAINT no_resource_overlap
-EXCLUDE USING gist (
-  resource_id WITH =,
-  tstzrange(start_time, end_time, '[)') WITH &&
-) WHERE (status != 'cancelled');
-```
-
-4. **UI shows combined availability**:
-```typescript
-// Don't just show worker calendar
-// Show intersection of worker AND resource availability
-
-async function getAvailableSlots(
-  serviceId: string,
-  date: Date
-): Promise<TimeSlot[]> {
-
-  const service = await prisma.service.findUnique({
-    where: { id: serviceId },
-    include: {
-      workers: true,      // Who can perform this service
-      requiredResources: true  // What rooms/equipment needed
-    }
-  });
-
-  // Generate potential slots (e.g., every 30min during business hours)
-  const potentialSlots = generateSlots(date);
-
-  // Filter to slots where BOTH worker AND resource available
-  const availableSlots = await Promise.all(
-    potentialSlots.map(async (slot) => {
-      // Find any worker + resource combination that's available
-      for (const worker of service.workers) {
-        for (const resource of service.requiredResources) {
-          const { available } = await checkAvailability({
-            workerId: worker.id,
-            resourceId: resource.id,
-            startTime: slot.start,
-            endTime: slot.end,
-          });
-
-          if (available) {
-            return {
-              ...slot,
-              workerId: worker.id,
-              resourceId: resource.id,
-              available: true,
-            };
-          }
-        }
-      }
-
-      return { ...slot, available: false };
-    })
-  );
-
-  return availableSlots.filter(slot => slot.available);
-}
-```
-
-5. **Handle buffer time and setup time**:
-```typescript
-// Some services need setup/cleanup time
-interface Service {
-  id: string;
-  duration: number;       // 60 minutes (actual service)
-  setupTime: number;      // 10 minutes (room prep)
-  cleanupTime: number;    // 10 minutes (sanitization)
-}
-
-// When checking availability, include buffers
-const effectiveStartTime = subMinutes(startTime, service.setupTime);
-const effectiveEndTime = addMinutes(endTime, service.cleanupTime);
-
-// Check availability using effective times
-const available = await checkAvailability({
-  workerId,
-  resourceId,
-  startTime: effectiveStartTime,  // Earlier
-  endTime: effectiveEndTime,      // Later
 });
 ```
 
-6. **Handle worker breaks and resource maintenance**:
+3. **Wake lock API** to prevent screen from auto-locking during recording:
 ```typescript
-// Model unavailability explicitly
-model Unavailability {
-  id         String @id @default(cuid())
-  workerId   String?  // Worker break
-  resourceId String?  // Room maintenance
-  startTime  DateTime
-  endTime    DateTime
-  reason     String   // "Lunch break", "Cleaning", "Maintenance"
-}
-
-// Check both bookings AND unavailability
-const isAvailable =
-  !hasBookingConflict &&
-  !hasWorkerBreak &&
-  !hasResourceMaintenance;
-```
-
-7. **Smart assignment algorithm**:
-```typescript
-// When user books, automatically assign optimal worker+resource pair
-// Don't require user to pick both
-
-async function findOptimalAssignment(
-  serviceId: string,
-  startTime: Date,
-  endTime: Date
-): Promise<{ workerId: string; resourceId: string } | null> {
-
-  const service = await getService(serviceId);
-
-  // Priority rules:
-  // 1. Minimize room transitions (prefer worker's usual room)
-  // 2. Balance workload (assign to worker with fewer bookings today)
-  // 3. Respect worker preferences/specialties
-
-  for (const worker of service.workers) {
-    const preferredRoom = worker.preferredResourceId;
-
-    // Try preferred room first
-    if (preferredRoom) {
-      const available = await checkAvailability({
-        workerId: worker.id,
-        resourceId: preferredRoom,
-        startTime,
-        endTime,
-      });
-
-      if (available.available) {
-        return { workerId: worker.id, resourceId: preferredRoom };
-      }
-    }
-
-    // Try any available room
-    for (const resource of service.requiredResources) {
-      const available = await checkAvailability({
-        workerId: worker.id,
-        resourceId: resource.id,
-        startTime,
-        endTime,
-      });
-
-      if (available.available) {
-        return { workerId: worker.id, resourceId: resource.id };
-      }
-    }
-  }
-
-  return null;  // No availability
+if ('wakeLock' in navigator) {
+  const wakeLock = await navigator.wakeLock.request('screen');
 }
 ```
 
-**Detection warning signs:**
-- Bookings exist with worker assigned but no room
-- Workers reporting double-bookings
-- Room conflict errors appearing in logs
-- Manual schedule adjustments needed after booking
+4. **Recovery mechanism:** On next page load, check for unsaved chunks and offer to recover the partial recording.
 
-**Phase mapping:** Must be in Phase 1. Core booking logic must handle double-bottleneck from start, not retrofit later.
+5. **Note:** Wake Lock API is supported in Safari 16.4+ (iOS 16.4+). For older devices, display a prominent "keep screen on" reminder.
+
+**Phase to address:** Phase 1 (Audio Recording). Critical for the treatment session use case.
+
+**Confidence:** HIGH -- standard browser behavior; Wake Lock API support verified on caniuse.com.
 
 ---
 
@@ -1637,104 +652,48 @@ async function findOptimalAssignment(
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| **Phase 1: Core Booking** | Race conditions causing double-bookings | Implement SERIALIZABLE transactions + unique DB constraints immediately. Not deferrable. |
-| **Phase 1: Core Booking** | Timezone bugs (Japan = UTC+9, no DST) | Store UTC with timestamptz, display in Asia/Tokyo. Use date-fns-tz. |
-| **Phase 1: Authentication** | Missing RLS policies on Supabase tables | Enable RLS on ALL tables before deployment. 83% of breaches are RLS misconfig. |
-| **Phase 1: Email Notifications** | Confirmation emails not delivered | Use transactional email service (Resend/SendGrid) with SPF/DKIM setup. Test deliverability. |
-| **Phase 1: Calendar UI** | Mobile booking UX broken | Mobile-first design. Min 44px touch targets. Test on real iOS/Android devices. |
-| **Phase 1: Availability Logic** | Stale calendar data with SWR | Set refreshInterval: 5000ms (not 30s). Revalidate on focus. Server-side availability re-check. |
-| **Phase 1: Booking Flow** | Double-bottleneck logic missing (worker + resource) | Model both constraints. Atomic check for both. UI shows intersection of availability. |
-| **Phase 2: Payments** | Not PCI-DSS compliant | Use Stripe/PayPal. NEVER store card numbers. Stripe handles PCI compliance. |
-| **Phase 2: Cancellation Policy** | High no-show rates (>15%) | Implement deposit collection, automated reminders (24hr + 2hr), clear cancellation policy. |
-| **Phase 2: Security** | API endpoints vulnerable to abuse | Rate limiting (10 req/min per IP). Input validation (zod). Parameterized queries (Prisma). |
-| **Phase 2: Real-time Updates** | SWR polling insufficient for high-demand slots | Upgrade to WebSocket for popular workers/times. Push updates to connected clients. |
-| **Pre-Launch: Localization** | Poor Japanese UX | Native speaker review. Optimize font loading. Support wareki calendar. Flexible address fields. |
-| **Pre-Launch: Testing** | Race conditions only appear under load | Load test with concurrent booking attempts (simulate 30+ simultaneous users). |
-| **Post-Launch: Monitoring** | No visibility into booking failures | Implement logging for race condition errors, email failures, payment issues. Set up alerts. |
+| Audio Recording | iOS Safari format/permission issues (Pitfalls 1, 2) | Test on real iOS devices from day 1. Probe formats at runtime. |
+| Audio Recording | Recording lost on navigation (Pitfall 14) | Periodic chunk saves, wake lock, beforeunload warning. |
+| Audio Recording | Storage costs (Pitfall 6) | Compress with Opus. Set retention policies. Budget early. |
+| Streaming Transcription | No real streaming from Whisper (Pitfall 5) | Use Deepgram or hybrid approach. Set architecture early. |
+| Streaming Transcription | SSE buffering on Vercel (Pitfall 3) | Return Response immediately. Use chunked architecture. |
+| Streaming Transcription | Japanese accuracy (Pitfall 7) | Domain glossaries. Confidence indicators. "AI-assisted" framing. |
+| Translation | Compounding latency (Pitfall 10) | DeepL for live, LLM for final. Parallel processing. |
+| Translation | i18n architecture mismatch (Pitfall 13) | Separate dynamic content from static i18n. Store multilingual. |
+| Auto-tagging | User trust (Pitfall 12) | Suggest don't apply. Business-scoped vocabularies. |
+| AI Integration | Cost runaway (Pitfall 8) | Usage metering from day 1. Hard limits per tier. |
+| AI Integration | Over-engineering abstraction (Pitfall 11) | Start with direct integrations. Abstract when needed. |
+| Privacy/Compliance | APPI violations (Pitfall 4) | Consent flows before recording. Classify data sensitivity. Legal review. |
+| Waveform UI | Mobile performance (Pitfall 9) | Throttle to 15fps. Degrade gracefully on low-end devices. |
 
 ---
 
-## Testing Checklist for Critical Pitfalls
+## Japan-Specific Considerations Summary
 
-Before launch, verify each critical pitfall is addressed:
-
-- [ ] **Race Conditions**: Load test with 30+ concurrent booking attempts for same slot. Database constraint should prevent double-booking.
-- [ ] **Timezones**: Book appointment from different timezone (simulate VPN). Verify displayed time is correct in JST.
-- [ ] **RLS**: Attempt to read other user's bookings via Supabase API. Should return empty/forbidden.
-- [ ] **Email Delivery**: Send test booking confirmation. Check Gmail/Outlook inbox (not spam). Verify SPF/DKIM pass.
-- [ ] **Mobile Calendar**: Book appointment on iPhone Safari and Android Chrome. Verify tap targets are easily clickable.
-- [ ] **Stale Availability**: Open calendar in two browser tabs. Book slot in tab 1. Verify tab 2 updates within 10 seconds.
-- [ ] **Double-Bottleneck**: Attempt to book when worker available but room booked. Should show "unavailable."
-- [ ] **Security**: Run `npm audit`. Check API rate limits. Verify admin routes require authentication.
-- [ ] **Japanese Localization**: Native speaker review. Check date format, font loading, address form usability.
-- [ ] **No-Show Policy**: Verify cancellation policy displayed prominently. Test that 24hr cancellations are charged.
+| Area | Requirement | Risk Level | Action |
+|------|------------|------------|--------|
+| **APPI Sensitive Data** | Treatment/health records require explicit consent for collection | HIGH | Consent flow before any recording |
+| **Cross-Border Transfer** | Sending audio/text to US-based AI APIs requires consent or adequacy assessment | HIGH | Privacy policy must disclose; get consent |
+| **Data Subject Rights** | Individuals can request disclosure, correction, deletion of their data | MEDIUM | Build data export and deletion tooling |
+| **Breach Notification** | Must notify PPC and affected individuals if data leak occurs | HIGH | Incident response plan |
+| **Data Retention** | No mandated period for wellness, but must have a defined policy | MEDIUM | Configurable retention per business |
+| **Upcoming APPI Reforms** | 2026-2027 reforms adding monetary penalties | MEDIUM | Design for compliance now to avoid retrofitting |
+| **Wellness vs Medical** | Gray area -- wellness isn't strictly "medical" but treatment records discussing body conditions likely qualify as sensitive | LOW-MEDIUM | Conservative approach: treat as sensitive. Get legal opinion. |
+| **Audio Consent (2-party)** | Japan does not have strict two-party consent for recording, but business ethics and client trust require disclosure | MEDIUM | Visible "recording in progress" indicator for clients |
 
 ---
 
-## Research Confidence Assessment
+## Pre-Implementation Checklist
 
-| Pitfall Category | Confidence | Source Quality |
-|------------------|-----------|----------------|
-| Race Conditions | **HIGH** | Multiple 2025-2026 technical articles + official Prisma/Supabase docs |
-| Timezone Handling | **HIGH** | Official docs + Japan-specific sources + date-fns documentation |
-| RLS Security | **HIGH** | Supabase official docs + CVE-2025-48757 incident report |
-| Email Delivery | **MEDIUM** | Multiple booking system troubleshooting sources, 2025 articles |
-| Calendar UI | **MEDIUM** | UX research articles 2025, travel/booking platform case studies |
-| SWR Stale Data | **HIGH** | Vercel SWR official docs + GitHub discussions |
-| Cancellation Policy | **MEDIUM** | Industry best practices articles, spa/wellness specific sources |
-| Security Vulnerabilities | **HIGH** | 2025 cybersecurity reports, hospitality threat analysis |
-| Japanese Localization | **MEDIUM** | i18n best practices + Japan-specific localization guides |
-| Double-Bottleneck Logic | **MEDIUM** | General booking system architecture patterns (less wellness-specific) |
+Before building Karte features, verify:
 
-**Overall Confidence: MEDIUM-HIGH**
-
-Most critical pitfalls (race conditions, RLS, timezones) are well-documented with authoritative sources. Some domain-specific pitfalls (wellness double-bottleneck, Japanese market conventions) required synthesis from multiple sources.
-
-## Recommendations for Further Research
-
-Areas that may need phase-specific research:
-
-1. **Phase 2 (Payments)**: Deep dive into Stripe integration with Supabase + Next.js 15 App Router. Current research is general payment best practices.
-
-2. **Phase 2 (Worker Scheduling)**: Complex scheduling algorithms for multi-worker, multi-resource optimization. Current research covers availability checking but not intelligent assignment.
-
-3. **Phase 3 (Real-time Features)**: WebSocket implementation with SWR + Supabase Realtime. Current research identifies the need but doesn't provide implementation details.
-
-4. **Pre-Launch (Japan Market)**: Deeper research into Japanese wellness industry conventions, competitor analysis (Hot Pepper Beauty, Airrsv), and market-specific UX expectations.
-
-5. **Post-Launch (Performance at Scale)**: Database query optimization, caching strategies, and performance monitoring specific to booking systems at 1000+ daily bookings.
-
----
-
-## Sources Summary
-
-**Critical Pitfalls (Race Conditions, Security, RLS)**:
-- [Building a Ticketing System: Concurrency, Locks, and Race Conditions](https://codefarm0.medium.com/building-a-ticketing-system-concurrency-locks-and-race-conditions-182e0932d962)
-- [How to Solve Race Conditions in a Booking System | HackerNoon](https://hackernoon.com/how-to-solve-race-conditions-in-a-booking-system)
-- [Preventing Race Conditions with SERIALIZABLE Isolation in Supabase](https://github.com/orgs/supabase/discussions/30334)
-- [Supabase Row Level Security Complete Guide 2026](https://vibeappscanner.com/supabase-row-level-security)
-- [Top Hospitality Cybersecurity Threats for 2025](https://udtonline.com/hospitality-cybersecurity-threats-2025/)
-
-**Timezone and Date Handling**:
-- [How to Handle Date and Time Correctly to Avoid Timezone Bugs](https://dev.to/kcsujeet/how-to-handle-date-and-time-correctly-to-avoid-timezone-bugs-4o03)
-- [Japanese Business Date Formats Guide](https://www.japanconvert.com/blog/japanese-business-date-formats-guide)
-- [Date and time notation in Japan - Wikipedia](https://en.wikipedia.org/wiki/Date_and_time_notation_in_Japan)
-
-**UX and Calendar**:
-- [Time Picker UX: Best Practices for 2025](https://www.eleken.co/blog-posts/time-picker-ux)
-- [Top UI/UX Mistakes in Travel Booking Apps](https://miracuves.com/blog/top-ui-ux-mistakes-travel-booking-platforms/)
-- [Best Practices for Calendar Design](https://medium.com/design-bootcamp/best-practices-for-calendar-design-fix-ux-dc57b62d9bb7)
-
-**Email and Notifications**:
-- [Booking email notifications NOT WORKING - Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/5647141/booking-email-notifications-not-working)
-- [Email notifications problems - Salon Booking System](https://salonbookingsystem.helpscoutdocs.com/article/126-email-notifications-problems)
-
-**Performance and Data Fetching**:
-- [SWR Data Fetching Library (Stale-While-Revalidate)](https://medium.com/@sparkyingjie/swr-data-fetching-library-stale-while-revalidate-8ecb75cc8f41)
-- [SWR API Documentation](https://swr.vercel.app/docs/api)
-
-**Business Operations**:
-- [Crafting a No-Show Policy for Your Spa: Best Practices](https://www.ascpskincare.com/updates/blog-posts/crafting-no-show-policy-your-spa)
-- [How to Reduce Hotel No-Shows](https://sevenrooms.com/blog/reduce-handle-hotel-no-shows/)
-
-**Total Sources Referenced**: 35+ authoritative sources from 2025-2026
+- [ ] Real iOS device available for testing (iPad preferred, matching target hardware)
+- [ ] Supabase storage bucket configured with file size limits
+- [ ] APPI-compliant consent flow designed (even if wireframe)
+- [ ] Streaming transcription provider selected (Deepgram recommended over Whisper)
+- [ ] Deployment target confirmed (Vercel limitations acknowledged, workarounds planned)
+- [ ] AI API cost budget established per business tier
+- [ ] Usage metering schema designed
+- [ ] Data retention policy defined
+- [ ] Audio format normalization strategy chosen (client-side Opus + server-side ffmpeg fallback)
+- [ ] Privacy policy updated to disclose AI processing and cross-border data transfer

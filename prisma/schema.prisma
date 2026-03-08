@@ -20,6 +20,30 @@ enum MedicalRecordContentType {
   IMAGE
 }
 
+enum KaruteStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+}
+
+enum RecordingStatus {
+  RECORDING
+  PAUSED
+  COMPLETED
+  PROCESSING
+  FAILED
+}
+
+enum KaruteEntryCategory {
+  SYMPTOM
+  TREATMENT
+  BODY_AREA
+  PREFERENCE
+  LIFESTYLE
+  NEXT_VISIT
+  OTHER
+}
+
 // ============================================================================
 // CORE MODELS
 // ============================================================================
@@ -47,6 +71,8 @@ model Worker {
   bookings          Booking[]
   schedules         WorkerSchedule[]
   assignedCustomers Customer[]       @relation("CustomerAssignedStaff")
+  karuteRecords     KaruteRecord[]
+  recordingSessions RecordingSession[]
 }
 
 model WorkerSchedule {
@@ -92,6 +118,8 @@ model Customer {
   bookings          Booking[]
   medicalRecords    MedicalRecord[]
   assignedStaff     Worker?         @relation("CustomerAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  karuteRecords     KaruteRecord[]
+  recordingSessions RecordingSession[]
 
   @@index([assignedStaffId])
 }
@@ -144,8 +172,94 @@ model Booking {
   serviceId  String
   service    Service  @relation(fields: [serviceId], references: [id])
 
+  karuteRecords     KaruteRecord[]
+  recordingSessions RecordingSession[]
+
   // Indexes for efficient availability queries (double-bottleneck logic)
   @@index([startsAt, endsAt])
   @@index([workerId, startsAt, endsAt])
   @@index([resourceId, startsAt, endsAt])
+}
+
+// ============================================================================
+// KARUTE MODELS
+// ============================================================================
+
+model KaruteRecord {
+  id         String       @id @default(uuid())
+  customerId String
+  customer   Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workerId   String
+  worker     Worker       @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  bookingId  String?
+  booking    Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  aiSummary  String?
+  status     KaruteStatus @default(DRAFT)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  entries           KaruteEntry[]
+  recordingSessions RecordingSession[]
+
+  @@index([customerId])
+  @@index([workerId])
+  @@index([bookingId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model KaruteEntry {
+  id            String              @id @default(uuid())
+  karuteId      String
+  karute        KaruteRecord        @relation(fields: [karuteId], references: [id], onDelete: Cascade)
+  category      KaruteEntryCategory
+  content       String
+  originalQuote String?
+  confidence    Float               @default(0.0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([karuteId])
+  @@index([category])
+}
+
+model RecordingSession {
+  id               String          @id @default(uuid())
+  karuteRecordId   String?
+  karuteRecord     KaruteRecord?   @relation(fields: [karuteRecordId], references: [id], onDelete: Cascade)
+  workerId         String
+  worker           Worker          @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  customerId       String
+  customer         Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  bookingId        String?
+  booking          Booking?        @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  audioStoragePath String?
+  durationSeconds  Int?
+  status           RecordingStatus @default(RECORDING)
+  startedAt        DateTime        @default(now())
+  endedAt          DateTime?
+  createdAt        DateTime        @default(now())
+
+  segments TranscriptionSegment[]
+
+  @@index([customerId])
+  @@index([karuteRecordId])
+  @@index([status])
+  @@index([workerId])
+}
+
+model TranscriptionSegment {
+  id           String           @id @default(uuid())
+  recordingId  String
+  recording    RecordingSession @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  segmentIndex Int
+  speakerLabel String?
+  content      String
+  startMs      Int
+  endMs        Int
+  language     String           @default("ja")
+  createdAt    DateTime         @default(now())
+
+  @@index([recordingId])
+  @@unique([recordingId, segmentIndex])
 }

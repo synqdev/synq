@@ -13,11 +13,12 @@ A reservation and booking system for wellness businesses (seitai, massage, yoga,
 **Goal:** Add AI-powered electronic medical records (Karte) to SYNQ, enabling practitioners to record treatment sessions, auto-generate notes via AI, and maintain structured customer visit history.
 
 **Target features:**
-- Dashboard with today's bookings, auto-detected current customer, visit list
+- Appointment view at `/{locale}/appointment/{id}` — per-appointment interface with recording, karte, settings
+- Dashboard integration — new view/tab in admin dashboard showing today's appointments with karte access
 - AI-powered session recording with timer, waveform, provider selection (OpenAI/Gemini)
 - Karte history — per-customer treatment records with visit tracking
 - Settings — AI provider config, business type templates, staff management
-- Dark navy sidebar navigation for Karte section
+- Dark navy sidebar navigation for appointment-level interface
 - Full i18n (en/ja)
 
 ## Requirements

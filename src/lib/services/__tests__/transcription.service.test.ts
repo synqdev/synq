@@ -12,6 +12,7 @@
 
 const mockSessionFindUnique = jest.fn()
 const mockSessionUpdate = jest.fn()
+const mockSessionUpdateMany = jest.fn()
 const mockSegmentCreateMany = jest.fn()
 
 jest.mock('@/lib/db/client', () => ({
@@ -19,10 +20,12 @@ jest.mock('@/lib/db/client', () => ({
     recordingSession: {
       findUnique: (...args: unknown[]) => mockSessionFindUnique(...args),
       update: (...args: unknown[]) => mockSessionUpdate(...args),
+      updateMany: (...args: unknown[]) => mockSessionUpdateMany(...args),
     },
     transcriptionSegment: {
       createMany: (...args: unknown[]) => mockSegmentCreateMany(...args),
     },
+    $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
   },
 }))
 
@@ -93,6 +96,7 @@ describe('transcription.service', () => {
     mockTranscriptionsCreate.mockResolvedValue(MOCK_DIARIZED_RESPONSE)
     mockSegmentCreateMany.mockResolvedValue({ count: 3 })
     mockSessionUpdate.mockResolvedValue({})
+    mockSessionUpdateMany.mockResolvedValue({ count: 1 })
   })
 
   describe('successful transcription', () => {
@@ -107,8 +111,8 @@ describe('transcription.service', () => {
       }
 
       // Verify status transitions
-      expect(mockSessionUpdate).toHaveBeenCalledWith({
-        where: { id: 'session-1' },
+      expect(mockSessionUpdateMany).toHaveBeenCalledWith({
+        where: { id: 'session-1', status: 'RECORDING' },
         data: { status: 'PROCESSING' },
       })
       expect(mockSessionUpdate).toHaveBeenCalledWith({
@@ -179,6 +183,12 @@ describe('transcription.service', () => {
       if (!result.success) {
         expect(result.error).toBe('OpenAI API rate limit exceeded')
       }
+
+      // Verify atomic claim was attempted
+      expect(mockSessionUpdateMany).toHaveBeenCalledWith({
+        where: { id: 'session-1', status: 'RECORDING' },
+        data: { status: 'PROCESSING' },
+      })
 
       // Verify status set to FAILED
       expect(mockSessionUpdate).toHaveBeenCalledWith({

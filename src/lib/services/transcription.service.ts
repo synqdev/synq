@@ -97,11 +97,18 @@ export async function transcribeRecording(
   }
 
   try {
-    // 2. Update status to PROCESSING
-    await prisma.recordingSession.update({
-      where: { id: recordingSessionId },
+    // 2. Atomically claim the session by conditionally updating status to PROCESSING
+    const claim = await prisma.recordingSession.updateMany({
+      where: { id: recordingSessionId, status: 'RECORDING' },
       data: { status: 'PROCESSING' },
     });
+
+    if (claim.count === 0) {
+      return {
+        success: false,
+        error: 'Recording is already being transcribed or has already been processed',
+      };
+    }
 
     // 3. Get signed URL and download audio
     const signedUrl = await getRecordingSignedUrl(session.audioStoragePath);
@@ -125,7 +132,12 @@ export async function transcribeRecording(
 
     // 5. Parse response — handle both 'speakers' and 'segments' fields defensively
     const diarized = transcription as unknown as DiarizedResponse;
-    const rawSegments = diarized.speakers || diarized.segments || [];
+    const rawSegments =
+      diarized.speakers?.length
+        ? diarized.speakers
+        : diarized.segments?.length
+          ? diarized.segments
+          : [];
 
     const segments = rawSegments.map(
       (segment: DiarizedSegment, index: number) => ({
@@ -139,14 +151,14 @@ export async function transcribeRecording(
       })
     );
 
-    // 6. Store segments
-    await prisma.transcriptionSegment.createMany({ data: segments });
-
-    // 7. Update status to COMPLETED
-    await prisma.recordingSession.update({
-      where: { id: recordingSessionId },
-      data: { status: 'COMPLETED' },
-    });
+    // 6. Store segments and update status atomically
+    await prisma.$transaction([
+      prisma.transcriptionSegment.createMany({ data: segments }),
+      prisma.recordingSession.update({
+        where: { id: recordingSessionId },
+        data: { status: 'COMPLETED' },
+      }),
+    ]);
 
     return { success: true, data: { segmentCount: segments.length } };
   } catch (error) {

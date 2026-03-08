@@ -14,9 +14,9 @@ import { z } from 'zod'
  * - locale: response language preference
  */
 export const sendMessageSchema = z.object({
-  message: z.string().min(1).max(2000),
-  customerId: z.string().uuid().nullable().optional().default(null),
-  conversationId: z.string().uuid().nullable().optional().default(null),
+  message: z.string().trim().min(1).max(2000),
+  customerId: z.string().nullable().optional().default(null),
+  conversationId: z.string().nullable().optional().default(null),
   locale: z.enum(['ja', 'en']).optional().default('ja'),
 })
 

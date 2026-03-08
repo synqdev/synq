@@ -66,57 +66,6 @@ function estimateTokens(text: string): number {
 // ============================================================================
 
 /**
- * Read-only lookup for the most recent conversation belonging to a customer.
- * Returns null data (not an error) when no conversation exists.
- */
-export async function getConversation(
-  customerId: string
-): Promise<ChatResult<{
-  id: string
-  customerId: string | null
-  title: string | null
-  createdAt: Date
-  updatedAt: Date
-  messages: { id: string; role: string; content: string; citations: unknown; tokenCount: number | null; createdAt: Date }[]
-} | null>> {
-  try {
-    const conversation = await prisma.chatConversation.findFirst({
-      where: { customerId },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          take: 50,
-        },
-      },
-    })
-    return { success: true, data: conversation }
-  } catch (error) {
-    captureChatError(error, { operation: 'getConversation', customerId })
-    return { success: false, error: formatError(error) }
-  }
-}
-
-/**
- * Validates that a conversation with the given ID exists.
- * Returns { exists: true } or { exists: false }.
- */
-export async function getConversationById(
-  conversationId: string
-): Promise<ChatResult<{ exists: boolean }>> {
-  try {
-    const conversation = await prisma.chatConversation.findUnique({
-      where: { id: conversationId },
-      select: { id: true },
-    })
-    return { success: true, data: { exists: conversation !== null } }
-  } catch (error) {
-    captureChatError(error, { operation: 'getConversationById', conversationId })
-    return { success: false, error: formatError(error) }
-  }
-}
-
-/**
  * Gets or creates a conversation for a customer (or global if null).
  * Auto-creates a new conversation if none exists or if last message was >24h ago.
  */
@@ -131,45 +80,46 @@ export async function getOrCreateConversation(
   messages: { id: string; role: string; content: string; citations: unknown; tokenCount: number | null; createdAt: Date }[]
 }>> {
   try {
-    // Find most recent conversation for this customer (or global)
-    const existing = await prisma.chatConversation.findFirst({
-      where: { customerId: customerId ?? null },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          take: 50,
+    const result = await prisma.$transaction(async (tx) => {
+      // Find most recent conversation and its newest message for 24h check
+      const existing = await tx.chatConversation.findFirst({
+        where: { customerId: customerId ?? null },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1, // only newest message needed for 24h check
+          },
         },
-      },
-    })
+      })
 
-    // Check if we should reuse or create new
-    if (existing) {
-      const lastMessage = existing.messages[existing.messages.length - 1]
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      if (existing) {
+        const lastMessage = existing.messages[0] // newest (desc order)
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-      // Reuse if there are messages and the last one was within 24 hours
-      if (lastMessage && lastMessage.createdAt > twentyFourHoursAgo) {
-        return { success: true, data: existing }
+        // Reuse if no messages yet, or if last message was within 24 hours
+        if (!lastMessage || lastMessage.createdAt > twentyFourHoursAgo) {
+          // Fetch all messages in asc order for display
+          const allMessages = await tx.chatMessage.findMany({
+            where: { conversationId: existing.id },
+            orderBy: { createdAt: 'asc' },
+          })
+          return { ...existing, messages: allMessages }
+        }
       }
 
-      // If no messages yet, reuse the empty conversation
-      if (!lastMessage) {
-        return { success: true, data: existing }
-      }
-    }
-
-    // Create new conversation
-    const conversation = await prisma.chatConversation.create({
-      data: { customerId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
+      // Create new conversation
+      return tx.chatConversation.create({
+        data: { customerId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
         },
-      },
+      })
     })
 
-    return { success: true, data: conversation }
+    return { success: true, data: result }
   } catch (error) {
     captureChatError(error, { operation: 'getOrCreateConversation', customerId })
     return { success: false, error: formatError(error) }
@@ -189,15 +139,15 @@ export async function getChatHistory(
   try {
     const messages = await prisma.chatMessage.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: 20,
       select: { role: true, content: true },
     })
 
     return {
       success: true,
-      data: messages.map((m) => ({
-        role: m.role,
+      data: messages.reverse().map((m) => ({
+        role: m.role as 'user' | 'assistant',
         content: m.content,
       })),
     }
@@ -247,6 +197,8 @@ async function buildCustomerContext(
           notes: true,
           visitCount: true,
           lastVisitDate: true,
+          email: true,
+          phone: true,
         },
       }),
       prisma.karuteRecord.findMany({
@@ -393,6 +345,8 @@ function formatCustomerProfile(customer: {
   notes: string | null
   visitCount: number
   lastVisitDate: Date | null
+  email: string
+  phone: string | null
 }): string {
   const lines = [
     `お客様: ${customer.name}`,
@@ -472,18 +426,20 @@ export async function saveMessage(
       updatedAt: new Date(),
     }
 
+    // Set title from first user message
+    if (role === 'user') {
+      const messageCount = await prisma.chatMessage.count({
+        where: { conversationId, role: 'user' },
+      })
+      if (messageCount === 1) {
+        updateData.title = content.slice(0, 50)
+      }
+    }
+
     await prisma.chatConversation.update({
       where: { id: conversationId },
       data: updateData,
     })
-
-    // Atomically set title from first user message (only if not already set)
-    if (role === 'user') {
-      await prisma.chatConversation.updateMany({
-        where: { id: conversationId, title: null },
-        data: { title: content.slice(0, 50) },
-      })
-    }
 
     return { success: true, data: message }
   } catch (error) {

@@ -160,9 +160,14 @@ export async function classifyAndStoreEntries(
       return { success: false, error: 'Empty classification response' };
     }
 
-    const classification = KaruteClassificationSchema.parse(
-      JSON.parse(content)
-    );
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      return { success: false, error: 'Invalid JSON in classification response' };
+    }
+
+    const classification = KaruteClassificationSchema.parse(parsed);
 
     // 4. Store in transaction: update summary + create entries
     await prisma.$transaction(async (tx) => {

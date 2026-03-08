@@ -9,6 +9,20 @@
 import { z } from 'zod';
 
 // ============================================================================
+// SHARED SCHEMAS
+// ============================================================================
+
+const karuteEntryCategorySchema = z.enum([
+  'SYMPTOM',
+  'TREATMENT',
+  'BODY_AREA',
+  'PREFERENCE',
+  'LIFESTYLE',
+  'NEXT_VISIT',
+  'OTHER',
+]);
+
+// ============================================================================
 // KARUTE RECORD SCHEMAS
 // ============================================================================
 
@@ -43,15 +57,7 @@ export type UpdateKaruteRecordInput = z.infer<typeof updateKaruteRecordSchema>;
  */
 export const createKaruteEntrySchema = z.object({
   karuteId: z.string().min(1, { message: 'Karute ID is required' }),
-  category: z.enum([
-    'SYMPTOM',
-    'TREATMENT',
-    'BODY_AREA',
-    'PREFERENCE',
-    'LIFESTYLE',
-    'NEXT_VISIT',
-    'OTHER',
-  ]),
+  category: karuteEntryCategorySchema,
   content: z.string().min(1, { message: 'Content is required' }),
   originalQuote: z.string().optional(),
   confidence: z.number().min(0).max(1).default(0),
@@ -64,17 +70,7 @@ export type CreateKaruteEntryInput = z.infer<typeof createKaruteEntrySchema>;
  */
 export const updateKaruteEntrySchema = z.object({
   id: z.string().min(1, { message: 'Entry ID is required' }),
-  category: z
-    .enum([
-      'SYMPTOM',
-      'TREATMENT',
-      'BODY_AREA',
-      'PREFERENCE',
-      'LIFESTYLE',
-      'NEXT_VISIT',
-      'OTHER',
-    ])
-    .optional(),
+  category: karuteEntryCategorySchema.optional(),
   content: z.string().min(1).optional(),
   originalQuote: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),

@@ -184,19 +184,22 @@ export async function deleteRecordingSession(
       return { success: false, error: 'Recording session not found' };
     }
 
-    // Delete session first (cascades to segments via Prisma schema)
+    const audioStoragePath = session.audioStoragePath;
+
+    // Delete session (cascades to segments via Prisma schema)
     await withRLSContext({ role: 'admin' }, () =>
       prisma.recordingSession.delete({ where: { id } })
     );
 
     // Best-effort cleanup of audio file from storage
-    if (session.audioStoragePath) {
+    if (audioStoragePath) {
       try {
-        await deleteRecording(session.audioStoragePath);
+        await deleteRecording(audioStoragePath);
       } catch (error) {
         console.warn('[recording.service] Failed to delete audio file', {
-          operation: 'deleteRecordingSession',
-          error: formatError(error),
+          sessionId: id,
+          path: audioStoragePath,
+          error,
         });
       }
     }

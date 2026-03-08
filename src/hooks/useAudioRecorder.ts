@@ -12,6 +12,8 @@ import { getSupportedMimeType, AUDIO_CHUNK_INTERVAL } from '@/lib/utils/audio';
 
 type RecordingStatus = 'idle' | 'recording' | 'paused' | 'stopped';
 
+export type RecordingErrorCode = 'ERROR_PERMISSION' | 'ERROR_NO_MIC' | 'ERROR_UNKNOWN';
+
 export interface UseAudioRecorderReturn {
   status: RecordingStatus;
   startRecording: () => Promise<void>;
@@ -21,7 +23,7 @@ export interface UseAudioRecorderReturn {
   audioBlob: Blob | null;
   analyserNode: AnalyserNode | null;
   elapsedSeconds: number;
-  error: string | null;
+  error: RecordingErrorCode | null;
   resetRecorder: () => void;
 }
 
@@ -46,7 +48,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RecordingErrorCode | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -173,19 +175,16 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       setStatus('recording');
     } catch (err) {
       cleanup();
+      let code: RecordingErrorCode = 'ERROR_UNKNOWN';
       if (err instanceof DOMException) {
         if (err.name === 'NotAllowedError') {
-          setError('Microphone access was denied. Please allow microphone permissions and try again.');
+          code = 'ERROR_PERMISSION';
         } else if (err.name === 'NotFoundError') {
-          setError('No microphone found. Please connect a microphone and try again.');
-        } else {
-          setError(`Microphone error: ${err.message}`);
+          code = 'ERROR_NO_MIC';
         }
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred while starting recording.');
       }
+      setError(code);
+      throw err;
     }
   }, [cleanup, startTimer]);
 

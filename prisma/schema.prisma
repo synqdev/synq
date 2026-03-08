@@ -44,6 +44,11 @@ enum KaruteEntryCategory {
   OTHER
 }
 
+enum ChatMessageRole {
+  user
+  assistant
+}
+
 // ============================================================================
 // CORE MODELS
 // ============================================================================
@@ -119,6 +124,7 @@ model Customer {
   assignedStaff     Worker?         @relation("CustomerAssignedStaff", fields: [assignedStaffId], references: [id], onDelete: SetNull)
   karuteRecords     KaruteRecord[]
   recordingSessions RecordingSession[]
+  chatConversations ChatConversation[]
 
   @@index([assignedStaffId])
 }
@@ -262,4 +268,35 @@ model TranscriptionSegment {
 
   @@index([recordingId])
   @@index([recordingId, segmentIndex])
+}
+
+// ============================================================================
+// CHAT MODELS
+// ============================================================================
+
+model ChatConversation {
+  id         String        @id @default(uuid())
+  customerId String?
+  customer   Customer?     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  title      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  messages   ChatMessage[]
+
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id             String           @id @default(uuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           ChatMessageRole
+  content        String
+  citations      Json?
+  tokenCount     Int?
+  createdAt      DateTime         @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
 }

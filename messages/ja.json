@@ -217,6 +217,24 @@
       "exportBookings": "予約CSV出力",
       "exporting": "出力中..."
     },
+    "recording": {
+      "startRecording": "録音開始",
+      "pauseRecording": "一時停止",
+      "resumeRecording": "再開",
+      "stopRecording": "録音停止",
+      "uploading": "アップロード中...",
+      "transcribing": "文字起こし中...",
+      "transcriptionComplete": "文字起こし完了",
+      "noSegments": "文字起こし結果がありません",
+      "speaker": "話者 {label}",
+      "errorPermission": "マイクへのアクセスが許可されていません",
+      "errorNoMic": "マイクが見つかりません",
+      "errorMic": "マイクエラー",
+      "errorUpload": "アップロードに失敗しました",
+      "errorTranscription": "文字起こしに失敗しました",
+      "recordingComplete": "録音完了",
+      "newRecording": "新規録音"
+    },
     "customerDetail": {
       "title": "顧客詳細",
       "backToList": "顧客一覧に戻る",

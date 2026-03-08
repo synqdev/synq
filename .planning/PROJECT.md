@@ -2,11 +2,23 @@
 
 ## What This Is
 
-A reservation and booking system for wellness businesses (seitai, massage, yoga, pilates) in Japan. Japanese-first with English support. Enables customers to book appointments online while managing the "double bottleneck" constraint of worker availability AND physical resource (bed) capacity.
+A reservation and booking system for wellness businesses (seitai, massage, yoga, pilates) in Japan, with an AI-powered electronic medical records (Karte) system. Japanese-first with English support. Enables customers to book appointments online while managing the "double bottleneck" constraint of worker availability AND physical resource (bed) capacity. The Karte system allows practitioners to record sessions, auto-generate treatment notes via AI, and maintain customer visit history.
 
 ## Core Value
 
 **A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.** This double-bottleneck logic prevents overbooking and ensures the shop can physically serve every confirmed booking.
+
+## Current Milestone: v2.0 SYNQ Karte
+
+**Goal:** Add AI-powered electronic medical records (Karte) to SYNQ, enabling practitioners to record treatment sessions, auto-generate notes via AI, and maintain structured customer visit history.
+
+**Target features:**
+- Dashboard with today's bookings, auto-detected current customer, visit list
+- AI-powered session recording with timer, waveform, provider selection (OpenAI/Gemini)
+- Karte history — per-customer treatment records with visit tracking
+- Settings — AI provider config, business type templates, staff management
+- Dark navy sidebar navigation for Karte section
+- Full i18n (en/ja)
 
 ## Requirements
 

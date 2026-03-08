@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { useChatContext } from '@/components/chat'
 import { IntakeUpload } from './intake-upload'
 
 interface WorkerOption {
@@ -185,6 +186,13 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
     )
   }
 
+  const { setCustomerId, setIsOpen } = useChatContext()
+
+  const handleAskAi = useCallback(() => {
+    setCustomerId(customer.id)
+    setIsOpen(true)
+  }, [customer.id, setCustomerId, setIsOpen])
+
   const staffOptions = [
     { value: '', label: t('noStaff') },
     ...workers.map((w) => ({ value: w.id, label: w.name })),
@@ -201,7 +209,20 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
 
       {/* Customer Info */}
       <section className="rounded-lg border border-secondary-200 p-4">
-        <h2 className="mb-4 text-xl font-bold text-secondary-900">{customer.name}</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-secondary-900">{customer.name}</h2>
+          <Button variant="outline" size="sm" onClick={handleAskAi}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="mr-1.5 h-4 w-4"
+            >
+              <path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1ZM5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06A.75.75 0 1 1 6.11 5.173L5.05 4.11a.75.75 0 0 1 0-1.06ZM14.95 3.05a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.061l1.061-1.06a.75.75 0 0 1 1.06 0ZM3 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 8ZM14 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 8ZM7.172 13.828a.75.75 0 0 1 0 1.061l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM12.828 13.828a.75.75 0 0 1 1.061 0l1.06 1.06a.75.75 0 0 1-1.06 1.061l-1.06-1.06a.75.75 0 0 1 0-1.061ZM10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM9.25 14a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 0 1.5H10a.75.75 0 0 1-.75-.75Z" />
+            </svg>
+            {t('askAi')}
+          </Button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <span className="text-sm text-secondary-500">{tCommon('email')}</span>

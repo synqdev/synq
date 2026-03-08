@@ -1,6 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
+import { useTranslations } from 'next-intl'
 import { Spinner } from '@/components/ui/spinner'
 import { KaruteHistoryItem, type KaruteHistoryRecord } from './KaruteHistoryItem'
 
@@ -21,6 +22,7 @@ const fetcher = (url: string) =>
  * Most recent records appear first.
  */
 export function KaruteHistory({ customerId, locale }: KaruteHistoryProps) {
+  const t = useTranslations('admin.customerDetail')
   const { data, error, isLoading } = useSWR<KaruteHistoryRecord[]>(
     `/api/admin/customers/${customerId}/karute`,
     fetcher
@@ -37,7 +39,7 @@ export function KaruteHistory({ customerId, locale }: KaruteHistoryProps) {
   if (error) {
     return (
       <div className="py-8 text-center text-red-500">
-        {locale === 'ja' ? 'データの読み込みに失敗しました' : 'Failed to load data'}
+        {t('karuteLoadError')}
       </div>
     )
   }
@@ -45,7 +47,7 @@ export function KaruteHistory({ customerId, locale }: KaruteHistoryProps) {
   if (!data || data.length === 0) {
     return (
       <div className="py-8 text-center text-secondary-500">
-        {locale === 'ja' ? 'カルテ記録がありません' : 'No karute records'}
+        {t('noKaruteRecords')}
       </div>
     )
   }

@@ -54,10 +54,14 @@ interface KaruteRecordData {
 // HELPERS
 // ============================================================================
 
-const fetcher = (url: string) => fetch(url).then((r) => {
-  if (!r.ok) throw new Error('Failed to fetch')
+const fetcher = async (url: string) => {
+  const r = await fetch(url)
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error || `Failed to fetch: ${r.status}`)
+  }
   return r.json()
-})
+}
 
 // ============================================================================
 // COMPONENT

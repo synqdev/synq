@@ -113,6 +113,8 @@ export async function generateKarutePDF(
       return { success: false, error: 'Karute record not found' }
     }
 
+    // Cast required: @react-pdf/renderer types are incompatible with React 19 JSX types.
+    // See .planning/phases/05-ai-classification-karute-ui/05-03-SUMMARY.md for details.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const element = React.createElement(KaruteDocument, { record }) as any
     const buffer = await renderToBuffer(element)
@@ -144,8 +146,8 @@ export async function generateKaruteText(
     }
 
     const dateStr = record.booking?.startsAt
-      ? new Date(record.booking.startsAt).toLocaleDateString('ja-JP')
-      : new Date(record.createdAt).toLocaleDateString('ja-JP')
+      ? new Date(record.booking.startsAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
+      : new Date(record.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
     const lines: string[] = [
       '施術記録 / Treatment Record',
@@ -163,10 +165,7 @@ export async function generateKaruteText(
       lines.push('')
     }
 
-    const sorted = [...record.entries].sort(
-      (a, b) => a.displayOrder - b.displayOrder
-    )
-    const grouped = groupByCategory(sorted)
+    const grouped = groupByCategory(record.entries)
 
     for (const [category, entries] of Object.entries(grouped)) {
       lines.push(`【${categoryLabel(category)}】`)
@@ -177,7 +176,7 @@ export async function generateKaruteText(
     }
 
     lines.push('──────────────────────────')
-    lines.push(`出力日時: ${new Date().toLocaleString('ja-JP')}`)
+    lines.push(`出力日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`)
 
     return { success: true, text: lines.join('\n') }
   } catch (error) {

@@ -184,7 +184,8 @@ export async function updateKaruteStatusAction(
  */
 export async function updateKaruteEntryTagsAction(
   entryId: string,
-  tags: string[]
+  tags: string[],
+  recordId?: string
 ) {
   const isAdmin = await getAdminSession()
   if (!isAdmin) throw new Error('Unauthorized')
@@ -192,6 +193,9 @@ export async function updateKaruteEntryTagsAction(
   const result = await updateKaruteEntry({ id: entryId, tags })
   if (!result.success) throw new Error(result.error)
 
+  if (recordId) {
+    revalidatePath(`/admin/karute/${recordId}`)
+  }
   revalidatePath('/admin/dashboard')
   return { success: true }
 }

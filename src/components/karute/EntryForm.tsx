@@ -30,10 +30,12 @@ export function EntryForm({ recordId, onAdd }: EntryFormProps) {
   const [content, setContent] = useState('')
   const [originalQuote, setOriginalQuote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
   const handleSubmit = async () => {
     if (!content.trim()) return
     setIsSubmitting(true)
+    setSubmissionError(null)
     try {
       await createKaruteEntryAction({
         karuteId: recordId,
@@ -49,6 +51,7 @@ export function EntryForm({ recordId, onAdd }: EntryFormProps) {
       onAdd()
     } catch (error) {
       console.error('Failed to create entry', error)
+      setSubmissionError(error instanceof Error ? error.message : 'エントリの作成に失敗しました')
     } finally {
       setIsSubmitting(false)
     }
@@ -98,6 +101,9 @@ export function EntryForm({ recordId, onAdd }: EntryFormProps) {
           placeholder="トランスクリプトからの引用..."
         />
       </div>
+      {submissionError && (
+        <p className="text-sm text-red-600">{submissionError}</p>
+      )}
       <div className="flex gap-2">
         <Button size="sm" onClick={handleSubmit} loading={isSubmitting}>
           追加

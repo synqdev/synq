@@ -273,6 +273,7 @@
       "notFound": "顧客が見つかりません",
       "karuteTab": "カルテ",
       "detailsTab": "詳細",
+      "karuteLoadError": "データの読み込みに失敗しました",
       "noKaruteRecords": "カルテ記録がありません",
       "entries": "エントリ",
       "viewKarute": "カルテを表示",

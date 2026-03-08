@@ -27,7 +27,7 @@ export type CreateKaruteRecordInput = z.infer<typeof createKaruteRecordSchema>;
  * Schema for updating an existing karute record.
  */
 export const updateKaruteRecordSchema = z.object({
-  id: z.string().min(1, { message: 'Record ID is required' }),
+  id: z.string().uuid({ message: 'Record ID must be a valid UUID' }),
   aiSummary: z.string().optional(),
   status: z.enum(['DRAFT', 'REVIEW', 'APPROVED']).optional(),
 });
@@ -63,7 +63,7 @@ export type CreateKaruteEntryInput = z.infer<typeof createKaruteEntrySchema>;
  * Schema for updating an existing karute entry.
  */
 export const updateKaruteEntrySchema = z.object({
-  id: z.string().min(1, { message: 'Entry ID is required' }),
+  id: z.string().uuid({ message: 'Entry ID must be a valid UUID' }),
   category: z
     .enum([
       'SYMPTOM',
@@ -134,7 +134,7 @@ export type CreateRecordingSessionInput = z.infer<typeof createRecordingSessionS
  * Schema for updating an existing recording session.
  */
 export const updateRecordingSessionSchema = z.object({
-  id: z.string().min(1, { message: 'Session ID is required' }),
+  id: z.string().uuid({ message: 'Session ID must be a valid UUID' }),
   status: z.enum(['RECORDING', 'PAUSED', 'COMPLETED', 'PROCESSING', 'FAILED']).optional(),
   audioStoragePath: z.string().optional(),
   durationSeconds: z.number().int().min(0).optional(),

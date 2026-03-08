@@ -170,13 +170,13 @@ interface KaruteDocumentProps {
  */
 export function KaruteDocument({ record }: KaruteDocumentProps) {
   const dateStr = record.booking?.startsAt
-    ? new Date(record.booking.startsAt).toLocaleDateString('ja-JP')
-    : new Date(record.createdAt).toLocaleDateString('ja-JP')
+    ? new Date(record.booking.startsAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
+    : new Date(record.createdAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
   const grouped = groupByCategory(
     [...record.entries].sort((a, b) => a.displayOrder - b.displayOrder)
   )
-  const generatedAt = new Date().toLocaleString('ja-JP')
+  const generatedAt = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
   return (
     <Document>

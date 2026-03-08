@@ -273,6 +273,7 @@
       "notFound": "Customer not found",
       "karuteTab": "Karute",
       "detailsTab": "Details",
+      "karuteLoadError": "Failed to load data",
       "noKaruteRecords": "No karute records",
       "entries": "entries",
       "viewKarute": "View Karute",

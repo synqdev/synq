@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { ConfidenceBadge } from './ConfidenceBadge'
@@ -44,21 +45,6 @@ const categoryColors: Record<string, string> = {
   OTHER: 'bg-gray-100 text-gray-700',
 }
 
-const categoryLabels: Record<string, string> = {
-  SYMPTOM: '症状',
-  TREATMENT: '施術',
-  BODY_AREA: '部位',
-  PREFERENCE: '好み',
-  LIFESTYLE: '生活習慣',
-  NEXT_VISIT: '次回予約',
-  OTHER: 'その他',
-}
-
-const categoryOptions = Object.entries(categoryLabels).map(([value, label]) => ({
-  value,
-  label,
-}))
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -73,8 +59,27 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
   const [editCategory, setEditCategory] = useState(entry.category)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const t = useTranslations('admin.karuteEditor')
+
+  const isMutating = isSaving || isDeleting
+
+  const categoryLabels: Record<string, string> = {
+    SYMPTOM: t('categories.SYMPTOM'),
+    TREATMENT: t('categories.TREATMENT'),
+    BODY_AREA: t('categories.BODY_AREA'),
+    PREFERENCE: t('categories.PREFERENCE'),
+    LIFESTYLE: t('categories.LIFESTYLE'),
+    NEXT_VISIT: t('categories.NEXT_VISIT'),
+    OTHER: t('categories.OTHER'),
+  }
+
+  const categoryOptions = Object.entries(categoryLabels).map(([value, label]) => ({
+    value,
+    label,
+  }))
 
   const handleSave = async () => {
+    if (isMutating) return
     setIsSaving(true)
     try {
       await updateKaruteEntryAction({
@@ -92,7 +97,8 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
   }
 
   const handleDelete = async () => {
-    if (!confirm('このエントリを削除しますか？')) return
+    if (isMutating) return
+    if (!confirm(t('deleteConfirm'))) return
     setIsDeleting(true)
     try {
       await deleteKaruteEntryAction(entry.id)
@@ -129,10 +135,10 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
         <button
           type="button"
           onClick={handleDelete}
-          disabled={isDeleting}
+          disabled={isMutating}
           className="text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
         >
-          {isDeleting ? '...' : '削除'}
+          {isDeleting ? '...' : t('delete')}
         </button>
       </div>
 
@@ -151,21 +157,22 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
             rows={3}
           />
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSave} loading={isSaving}>
-              保存
+            <Button size="sm" onClick={handleSave} loading={isSaving} disabled={isMutating}>
+              {t('save')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleCancel}>
-              キャンセル
+            <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isMutating}>
+              {t('cancel')}
             </Button>
           </div>
         </div>
       ) : (
-        <p
-          className="cursor-pointer text-sm text-secondary-800 hover:bg-secondary-50 rounded p-1 -m-1"
+        <button
+          type="button"
+          className="w-full rounded p-1 -m-1 text-left text-sm text-secondary-800 hover:bg-secondary-50 cursor-pointer"
           onClick={() => setIsEditing(true)}
         >
           {entry.content}
-        </p>
+        </button>
       )}
 
       {/* Original quote */}

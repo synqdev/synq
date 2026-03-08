@@ -25,7 +25,11 @@ export async function GET(
   const result = await getRecordingSession(sessionId)
 
   if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 404 })
+    const isNotFound = result.error?.toLowerCase().includes('not found')
+    return NextResponse.json(
+      { error: result.error },
+      { status: isNotFound ? 404 : 500 }
+    )
   }
 
   const segments = result.data.segments.map((seg) => ({

@@ -87,7 +87,13 @@ export function RecordingPanel({
       setSessionId(result.id);
     } catch (err) {
       if (recordingStarted) {
-        // DB creation failed after recording started — surface as pipeline error
+        // DB creation failed after recording started — stop the mic before surfacing the error
+        try {
+          await recorder.stopRecording();
+        } catch {
+          // Best effort: if stopRecording also fails, reset to release resources
+          recorder.resetRecorder();
+        }
         setPipelineError(
           err instanceof Error ? err.message : 'Failed to start recording'
         );
@@ -110,9 +116,10 @@ export function RecordingPanel({
       // Upload audio
       setIsUploading(true);
       const formData = new FormData();
+      const extension = blob.type.split(';')[0]?.split('/')[1] || 'webm';
       formData.append(
         'file',
-        new File([blob], `${sessionId}.webm`, { type: blob.type })
+        new File([blob], `${sessionId}.${extension}`, { type: blob.type })
       );
       formData.append('recordingSessionId', sessionId);
 

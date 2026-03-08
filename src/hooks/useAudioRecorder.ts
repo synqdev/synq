@@ -162,10 +162,9 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // Shared onerror handler — handles unexpected recorder failures
       mediaRecorder.onerror = () => {
         cleanup();
-        const msg = 'An unexpected recording error occurred.';
-        setError(msg);
+        setError('ERROR_UNKNOWN');
         setStatus('idle');
-        stopRejectRef.current?.(new Error(msg));
+        stopRejectRef.current?.(new Error('An unexpected recording error occurred.'));
         stopResolveRef.current = null;
         stopRejectRef.current = null;
       };

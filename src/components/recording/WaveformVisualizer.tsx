@@ -18,6 +18,7 @@ interface WaveformVisualizerProps {
 export function WaveformVisualizer({ analyserNode, isActive }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
 
   const drawIdleLine = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d');
@@ -43,7 +44,11 @@ export function WaveformVisualizer({ analyserNode, isActive }: WaveformVisualize
     if (!ctx) return;
 
     const bufferLength = analyserNode.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
+    // Reuse the same buffer across frames to avoid per-frame GC pressure
+    if (!dataArrayRef.current || dataArrayRef.current.length !== bufferLength) {
+      dataArrayRef.current = new Uint8Array(bufferLength);
+    }
+    const dataArray = dataArrayRef.current;
     analyserNode.getByteTimeDomainData(dataArray);
 
     const { width, height } = canvas;

@@ -78,9 +78,41 @@ export const updateKaruteEntrySchema = z.object({
   content: z.string().min(1).optional(),
   originalQuote: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export type UpdateKaruteEntryInput = z.infer<typeof updateKaruteEntrySchema>;
+
+// ============================================================================
+// CLASSIFICATION SCHEMAS
+// ============================================================================
+
+/**
+ * Schema for validating a classify request (karute record ID).
+ */
+export const classifyKaruteSchema = z.object({
+  karuteRecordId: z.string().uuid(),
+});
+
+export type ClassifyKaruteInput = z.infer<typeof classifyKaruteSchema>;
+
+/**
+ * Schema for updating karute record status.
+ */
+export const updateKaruteStatusSchema = z.object({
+  status: z.enum(['DRAFT', 'REVIEW', 'APPROVED']),
+});
+
+export type UpdateKaruteStatusInput = z.infer<typeof updateKaruteStatusSchema>;
+
+/**
+ * Schema for updating karute entry tags.
+ */
+export const updateKaruteEntryTagsSchema = z.object({
+  tags: z.array(z.string()),
+});
+
+export type UpdateKaruteEntryTagsInput = z.infer<typeof updateKaruteEntryTagsSchema>;
 
 // ============================================================================
 // RECORDING SESSION SCHEMAS

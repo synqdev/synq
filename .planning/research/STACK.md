@@ -1,609 +1,358 @@
-# Technology Stack - SYNQ
+# Technology Stack - SYNQ Karte (AI Electronic Medical Records)
 
-**Project:** SYNQ - Wellness Booking System for Japan
-**Domain:** Appointment/reservation system (seitai, massage, yoga, pilates)
-**Researched:** 2026-02-04
+**Project:** SYNQ Karte - AI-powered electronic medical records for Japanese wellness businesses
+**Domain:** Live transcription, auto-tagging, translation, waveform visualization, audio storage
+**Researched:** 2026-03-07
 **Overall confidence:** HIGH
+
+**Scope:** This document covers ONLY the new stack additions needed for the Karte milestone. The existing stack (Next.js 15, Prisma, Supabase PostgreSQL, Tailwind CSS, next-intl, SWR, Zod, Resend, Upstash Redis) is validated and not re-researched.
+
+---
 
 ## Executive Summary
 
-This research focuses on best practices and library recommendations for the pre-decided tech stack (Next.js 15, TypeScript, Supabase, Prisma, Tailwind). The 2025 landscape strongly validates these core choices while revealing critical patterns for booking systems: transaction-based concurrency control, Row-Level Security for multi-tenant isolation, and careful calendar component selection.
+The Karte feature requires five new capability domains: (1) browser audio capture, (2) real-time streaming transcription, (3) AI text processing for tagging/translation, (4) waveform visualization, and (5) audio file storage. The recommended approach uses the **Vercel AI SDK 6** as the unified abstraction layer for all AI operations, **OpenAI's Realtime API** for streaming transcription via WebSocket, **Deepgram as fallback provider**, **wavesurfer.js** for waveform rendering, and **Supabase Storage** for audio files (already in the stack via `@supabase/supabase-js`).
 
-**Key insight:** Booking systems require special attention to race conditions (double-booking prevention) and multi-tenant data isolation. The Prisma + Supabase combination handles these well but requires specific patterns documented below.
-
----
-
-## Core Framework
-
-### Next.js 15.5 (App Router)
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| Next.js | 15.5.x | Full-stack framework | App Router is production-ready, server-first by default. **Note:** Next.js 16 was released Oct 2025, but 15.5 remains stable LTS. Stick with 15.5 for now unless Turbopack improvements are critical. |
-| React | 19.x | UI library | Required by Next.js 15, stable as of Oct 2024 |
-| TypeScript | 5.x | Type system | Essential for booking domain complexity |
-
-**Confidence:** HIGH (verified via [Next.js official docs](https://nextjs.org/docs/app), [Next.js 15.5 release](https://nextjs.org/blog/next-15-5))
-
-**Configuration:**
-```json
-// tsconfig.json - Recommended strict settings
-{
-  "compilerOptions": {
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true
-  }
-}
-```
-
-```js
-// next.config.js
-module.exports = {
-  reactStrictMode: true, // true by default in App Router since 13.5.1
-  typescript: {
-    ignoreBuildErrors: false // Enforce type safety
-  }
-}
-```
-
-**Best practices for App Router:**
-- Server Components by default (ship minimal client JS)
-- Use `'use client'` sparingly - only when needed for interactivity
-- Leverage streaming with `loading.tsx` for booking confirmations
-- Tag-based cache invalidation: `{ next: { tags: ['bookings'] } }` + `revalidateTag('bookings')`
-- Avoid `cache: 'no-store'` unless absolutely required
-
-**Sources:**
-- [Next.js App Router Guides](https://nextjs.org/docs/app/guides)
-- [Next.js Best Practices 2025](https://javascript.plainenglish.io/next-js-15-in-2025-features-best-practices-and-why-its-still-the-framework-to-beat-a535c7338ca8)
-- [TypeScript Configuration](https://nextjs.org/docs/app/api-reference/config/typescript)
+**Key architectural decision:** Use OpenAI's Realtime API in transcription-only mode for live transcription (WebSocket streaming with incremental results), and the AI SDK `transcribe()` function for post-session batch transcription. This gives real-time UX during recording and high-accuracy final transcripts after.
 
 ---
 
-## Database & ORM
+## Recommended Stack Additions
 
-### Supabase + Prisma ORM
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| Supabase | Latest | PostgreSQL backend | Provides PostgreSQL + Auth + Real-time. Strong RLS for multi-tenant isolation. |
-| Prisma | 7.2.x | Type-safe ORM | Best-in-class TypeScript support. Critical for booking race condition handling. |
-| @prisma/client | 7.2.x | Prisma client | Auto-generated based on schema |
+### AI Provider Abstraction
 
-**Confidence:** HIGH (verified via [Prisma 7.2.0 release](https://www.prisma.io/blog/announcing-prisma-orm-7-2-0), [Supabase docs](https://supabase.com/docs/guides/getting-started/architecture))
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| ai | ^6.0.x | Unified AI SDK | Single abstraction for transcription, text generation (tagging/translation), and multi-provider support. Already supports OpenAI and Deepgram transcription via `transcribe()`. Streaming text via `streamText()` for live translation. Version 6 is latest stable (v6.0.116 as of March 2026). |
+| @ai-sdk/openai | ^3.0.x | OpenAI provider | Provides `openai.transcription('whisper-1')` and `openai('gpt-4o-mini')` for tagging/translation. Handles both Realtime API and standard API calls. |
+| @ai-sdk/deepgram | latest | Deepgram provider | Fallback transcription provider. Deepgram Nova-3 has strong Japanese support with lower latency for streaming. Use if OpenAI Realtime API costs are too high or latency is unacceptable. |
 
-**Why this combination:**
-- Supabase provides managed PostgreSQL with row-level security (RLS)
-- Prisma adds type-safe ORM layer with transaction support
-- Together: RLS handles tenant isolation, Prisma handles booking concurrency
+**Confidence:** HIGH -- AI SDK 6 verified via npm (v6.0.116 published March 2026), transcription support verified via official docs.
 
-### Critical Pattern: Preventing Double-Bookings
+**Why AI SDK 6 (not direct API calls):**
+- Unified interface: switch between OpenAI and Deepgram transcription without code changes
+- TypeScript-first with full type inference
+- Built-in streaming support via `streamText()` for real-time translation
+- Already designed for Next.js App Router (Route Handlers, Server Actions)
+- Experimental `transcribe()` function provides consistent API across providers
 
-**The problem:** Concurrent booking requests can create race conditions where two users book the same slot.
+**Why NOT AI SDK 5:** v6 is current stable. Migration from v5 to v6 is minimal (v3 Language Model Specification update, not a breaking redesign). No reason to pin to v5.
 
-**Prisma does NOT handle race conditions automatically.** You must implement one of these strategies:
+---
 
-#### 1. Optimistic Concurrency Control (Recommended for SYNQ)
+### Real-Time Streaming Transcription
 
-Add a `version` field to booking-related tables:
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| openai | ^4.x | OpenAI Node SDK | Required for Realtime API WebSocket connections. The AI SDK `transcribe()` handles batch transcription, but live streaming requires the OpenAI Realtime API directly via WebSocket. |
 
-```prisma
-model Booking {
-  id        String   @id @default(cuid())
-  version   Int      @default(0) // Concurrency token
-  // ... other fields
+**Confidence:** HIGH -- OpenAI Realtime API transcription-only mode verified via official docs (developers.openai.com).
+
+**Architecture: Two-tier transcription strategy**
+
+1. **Live (during recording):** OpenAI Realtime API in transcription-only mode via WebSocket
+   - Uses `gpt-4o-mini-transcribe` for incremental streaming (lower cost, good accuracy)
+   - WebSocket session type set to transcription (no audio output, no conversation)
+   - Receives `conversation.item.input_audio_transcription.delta` events with incremental text
+   - Voice Activity Detection (VAD) built in for turn boundary management
+   - Cost: ~$0.003/minute (gpt-4o-mini-transcribe)
+
+2. **Post-session (after recording):** AI SDK `transcribe()` with `gpt-4o-transcribe` or `whisper-1`
+   - Higher accuracy final transcript from complete audio file
+   - Produces timestamped segments for playback synchronization
+   - Cost: $0.006/minute (whisper-1/gpt-4o-transcribe)
+
+**Why NOT Deepgram for primary live transcription:**
+- OpenAI models have broader Japanese language training data
+- Keeping primary provider unified (OpenAI for transcription + GPT for tagging/translation) reduces complexity
+- Deepgram Nova-3 Japanese support is good but newer -- use as fallback if OpenAI quality disappoints
+
+**Why NOT a custom WebSocket server:**
+- Next.js App Router on Vercel does not support WebSocket upgrade in Route Handlers (serverless limitation)
+- The browser connects directly to OpenAI's Realtime API endpoint (no proxy needed for transcription-only)
+- For production with auth: use a short-lived ephemeral token generated via server-side Route Handler, browser uses token to connect directly to OpenAI
+
+**Streaming pattern for Next.js App Router:**
+
+```typescript
+// app/api/karte/transcription-token/route.ts
+// Server-side: generate ephemeral token for client WebSocket
+export async function POST(request: Request) {
+  // Validate auth, rate limit
+  const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini-transcribe',
+      // transcription-only session config
+    }),
+  });
+  const { client_secret } = await response.json();
+  return Response.json({ token: client_secret.value });
+}
+
+// Client-side: connect directly to OpenAI Realtime API
+// Browser -> OpenAI WebSocket (no server proxy)
+```
+
+---
+
+### AI Text Processing (Tagging & Translation)
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| ai (streamText) | ^6.0.x | Live translation & auto-tagging | `streamText()` for streaming ja->en translation as transcription arrives. `generateText()` for batch auto-tagging of completed sessions. Uses structured output with Zod schemas (already in stack) for tag extraction. |
+
+**Confidence:** HIGH -- AI SDK streamText/generateText are core, well-documented features.
+
+**Auto-tagging approach:**
+- Use `generateText()` with `output: 'object'` and a Zod schema to extract structured tags from transcript
+- Tags: symptoms, treatments, recommendations, follow-up items
+- Model: `gpt-4o-mini` (cost-effective for classification tasks)
+- Run after session ends (batch, not real-time) to keep costs down
+
+**Live translation approach:**
+- Use `streamText()` to translate transcript chunks as they arrive
+- Model: `gpt-4o-mini` for speed and cost
+- Direction: ja->en and en->ja based on detected source language
+- Stream translations to client via Server-Sent Events (SSE) from Route Handler
+
+**Why SSE (not WebSocket) for translation streaming:**
+- Next.js App Router Route Handlers support SSE via ReadableStream natively
+- Translation is server->client only (one-directional), perfect for SSE
+- No custom server needed, works on Vercel serverless
+
+```typescript
+// app/api/karte/translate/route.ts
+export async function POST(request: Request) {
+  const { text, targetLang } = await request.json();
+  const result = streamText({
+    model: openai('gpt-4o-mini'),
+    prompt: `Translate to ${targetLang}: ${text}`,
+  });
+  return result.toTextStreamResponse();
 }
 ```
 
-Update with version check:
+---
+
+### Browser Audio Capture
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| MediaRecorder API | Browser native | Audio recording | No library needed. Built into all modern browsers. Records audio as chunks (Blob). Use `audio/webm;codecs=opus` for compression. |
+| Web Audio API | Browser native | Audio processing | Required for waveform visualization (AnalyserNode for frequency data). Connects to MediaRecorder via MediaStream. |
+
+**Confidence:** HIGH -- Browser APIs, well-documented, universally supported.
+
+**No npm package needed for recording.** The MediaRecorder API is sufficient. Avoid libraries like `recordrtc` or `react-media-recorder` -- they add abstraction over simple APIs and often have stale dependencies.
+
+**Audio format strategy:**
+- **During recording:** `audio/webm;codecs=opus` (compressed, small chunks for streaming to transcription API)
+- **For storage:** Convert to `audio/webm` or `audio/mp4` after recording ends
+- **For Whisper API batch transcription:** Send as-is (Whisper accepts webm, mp4, wav, etc.)
+
+**Key implementation pattern:**
 
 ```typescript
-// Booking attempt includes version check
-const result = await prisma.booking.update({
-  where: {
-    id: bookingId,
-    version: currentVersion // Fails if version changed
-  },
-  data: {
-    status: 'confirmed',
-    version: { increment: 1 }
-  }
-})
-```
+// Custom React hook -- no library needed
+function useAudioRecorder() {
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
-If update returns 0 rows, another transaction modified the record - reject booking.
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    source.connect(analyser);
+    analyserRef.current = analyser;
 
-**Pros:** No locks, good for distributed systems
-**Cons:** Requires retry logic on client
-
-#### 2. Database Transactions with Serializable Isolation
-
-```typescript
-await prisma.$transaction(
-  async (tx) => {
-    // Check availability
-    const available = await tx.slot.findFirst({
-      where: { id: slotId, status: 'available' }
+    const recorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus',
     });
 
-    if (!available) throw new Error('Slot unavailable');
-
-    // Book it
-    await tx.booking.create({ data: { slotId, userId } });
-    await tx.slot.update({
-      where: { id: slotId },
-      data: { status: 'booked' }
-    });
-  },
-  {
-    isolationLevel: 'Serializable' // Prevents concurrent modifications
-  }
-);
-```
-
-**Pros:** Database-enforced correctness
-**Cons:** Potential deadlocks under high concurrency
-
-**Recommendation:** Start with optimistic concurrency control (simpler, scales better). Add serializable transactions only if race conditions occur in production.
-
-**Sources:**
-- [Prisma High-Concurrency Booking System](https://dev.to/zenstack/how-to-build-a-high-concurrency-ticket-booking-system-with-prisma-184n)
-- [Prisma Transactions Reference](https://www.prisma.io/docs/orm/prisma-client/queries/transactions)
-- [Prisma Race Conditions Discussion](https://github.com/prisma/prisma/discussions/10709)
-
-### Supabase-Specific Patterns
-
-#### Row-Level Security (RLS) for Multi-Tenant Isolation
-
-SYNQ serves multiple wellness businesses - each must see only their own data.
-
-**Pattern:** Add `tenant_id` column + RLS policies
-
-```sql
--- Add tenant_id to booking table
-ALTER TABLE bookings ADD COLUMN tenant_id UUID REFERENCES businesses(id);
-
--- RLS policy: users only see their tenant's bookings
-CREATE POLICY "Users see own tenant bookings"
-  ON bookings FOR SELECT
-  USING (tenant_id = auth.jwt() -> 'app_metadata' ->> 'tenant_id');
-```
-
-**Critical:** Store `tenant_id` in user's `app_metadata` (not `raw_user_meta_data`) - users cannot modify app_metadata, preventing cross-tenant access.
-
-**Benefits:**
-- Database-enforced isolation (not app-layer)
-- Even if application has bugs, users can't access other tenants' data
-
-**Sources:**
-- [Supabase RLS Guide](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Multi-Tenant RLS Patterns](https://www.antstack.com/blog/multi-tenant-applications-with-rls-on-supabase-postgress/)
-- [Supabase Multi-Tenancy Best Practices](https://dev.to/blackie360/-enforcing-row-level-security-in-supabase-a-deep-dive-into-lockins-multi-tenant-architecture-4hd2)
-
-#### Connection Management for Next.js Development
-
-Prisma + Next.js dev hot-reloading causes "too many connections" errors.
-
-**Solution:** Singleton pattern in development
-
-```typescript
-// lib/prisma.ts
-import { PrismaClient } from '@prisma/client';
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
-```
-
-**Production:** Configure connection pool: default is `num_cpus * 2 + 1`. For serverless, start with `connection_limit=1`.
-
-**Sources:**
-- [Prisma Next.js Production Guide](https://www.digitalapplied.com/blog/prisma-orm-production-guide-nextjs)
-- [Prisma Best Practices](https://codeit.mk/home/blog/Prisma-Best-Practices-for-Node.js-Developers--A-Comprehensive-Guide)
-
----
-
-## Styling & UI Components
-
-### Tailwind CSS v3 (Defer v4 Migration)
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| Tailwind CSS | 3.4.x | Utility-first CSS | Industry standard. v4 is stable but requires CSS-first config migration. |
-| shadcn/ui | Latest | Component library | Copy-paste components built on Radix + Tailwind. Own the code. |
-| Radix UI | Latest | Headless primitives | Accessible UI primitives (Dialog, Dropdown, etc.) |
-
-**Confidence:** HIGH (verified via [Tailwind v4 release](https://tailwindcss.com/blog/tailwindcss-v4), [shadcn/ui docs](https://ui.shadcn.com/))
-
-**Why Tailwind v3 (not v4):**
-- Tailwind v4 released Jan 22, 2025 - very recent
-- Requires migration to CSS-first config (no more `tailwind.config.js`)
-- Requires Node.js 20+, Safari 16.4+, Chrome 111+
-- **Recommendation:** Stay on v3.4 until v4 ecosystem matures (Q2-Q3 2025)
-
-**Why shadcn/ui:**
-- Not a package - you copy/paste components into your codebase
-- Built on Radix (accessible primitives) + Tailwind
-- Full customization - you own the code
-- Includes Calendar, Dialog, Form, Select - all needed for booking UI
-
-**Alternative considered:** Origin UI (shadcn-compatible, more components) - viable if shadcn selection is insufficient.
-
-**Sources:**
-- [Tailwind v4 Migration Guide](https://medium.com/better-dev-nextjs-react/tailwind-v4-migration-from-javascript-config-to-css-first-in-2025-ff3f59b215ca)
-- [shadcn/ui Overview](https://ui.shadcn.com/)
-- [shadcn vs Radix vs Tailwind UI](https://javascript.plainenglish.io/shadcn-ui-vs-radix-ui-vs-tailwind-ui-which-should-you-choose-in-2025-b8b4cadeaa25)
-
----
-
-## Internationalization (i18n)
-
-### next-intl
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| next-intl | Latest | i18n for Next.js | Best-in-class for App Router. ICU message syntax. TypeScript autocomplete. |
-
-**Confidence:** HIGH (verified via [next-intl docs](https://next-intl-docs.vercel.app/), [next-intl 2025 guide](https://www.buildwithmatija.com/blog/nextjs-internationalization-guide-next-intl-2025))
-
-**Why next-intl:**
-- Built specifically for Next.js App Router
-- TypeScript autocompletion for message keys
-- ICU message syntax (handles plurals, dates, complex Japanese formatting)
-- Locale support: Use `"ja-JP"` for Japan
-
-**Japanese-specific features:**
-- Japanese calendar support: `"ja-JP-u-ca-japanese"` for date formatting
-- ICU syntax handles honorifics, counters, complex pluralization
-
-**Configuration:**
-```typescript
-// i18n.config.ts
-export const locales = ['ja', 'en'] as const;
-export const defaultLocale = 'ja';
-```
-
-**Sources:**
-- [next-intl Complete Setup Guide](https://www.buildwithmatija.com/blog/nextjs-internationalization-guide-next-intl-2025)
-- [Internationalization Best Practices](https://arnab-k.medium.com/internationalization-i18n-in-next-js-a-complete-guide-f62989f6469b)
-
----
-
-## Date & Time Handling
-
-### date-fns v4
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| date-fns | 4.1.x | Date manipulation | Functional API, tree-shakeable, first-class timezone support (v4). |
-| @date-fns/tz | Latest | Timezone support | Time zone handling with TZDate class |
-
-**Confidence:** HIGH (verified via [date-fns v4 release](https://blog.date-fns.org/v40-with-time-zone-support/), [date-fns GitHub](https://github.com/date-fns/date-fns))
-
-**Why date-fns over Day.js:**
-- date-fns v4 added first-class timezone support (`TZDate` class)
-- Functional API (no mutable state like Moment)
-- Tree-shakeable (smaller bundles)
-- Strong TypeScript support
-- 200+ functions for date manipulation
-
-**Day.js alternative:** Valid if you prefer chainable Moment-like API (46.2k stars vs 37.7k). But date-fns v4 timezone support makes it superior for booking systems spanning timezones.
-
-**Critical for SYNQ:** Japan uses JST (UTC+9). Wellness businesses may schedule across dates. Use timezone-aware dates:
-
-```typescript
-import { TZDate } from '@date-fns/tz';
-import { format } from 'date-fns';
-
-// Create timezone-aware date
-const bookingTime = new TZDate('2026-02-04T10:00:00', 'Asia/Tokyo');
-const formatted = format(bookingTime, 'PPpp', { locale: ja });
-```
-
-**Sources:**
-- [date-fns vs Day.js Comparison](https://www.dhiwise.com/post/date-fns-vs-dayjs-the-battle-of-javascript-date-libraries)
-- [date-fns v4 Timezone Support](https://blog.date-fns.org/v40-with-time-zone-support/)
-
----
-
-## Calendar & Scheduling UI
-
-### React-based Calendar Components
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| react-day-picker | Latest | Date selection | Single date picker, date ranges. Foundation for shadcn Calendar. |
-| react-big-calendar | Latest | Event calendar | Full calendar view (month/week/day) with drag-drop events. |
-
-**Confidence:** MEDIUM (options verified via web search, not Context7)
-
-**Recommendation for SYNQ:**
-
-**Option A: Build with react-day-picker + shadcn Calendar (Recommended)**
-- shadcn/ui includes Calendar component (built on react-day-picker)
-- Lightweight, customizable, matches design system
-- Good for: selecting appointment dates, viewing availability
-- 6M+ weekly downloads, accessible, integrates with shadcn forms
-
-**Option B: react-big-calendar (for complex scheduling views)**
-- Full Outlook/Google Calendar-like interface
-- Month/week/day/agenda views
-- Drag-and-drop event management
-- Use if: businesses need to see full schedule overview
-- Integrates with date-fns localizer
-
-**Start with Option A.** react-day-picker + shadcn covers MVP (customer picks date/time). Add react-big-calendar later if business dashboard needs complex scheduling views.
-
-**Sources:**
-- [React Calendar Components 2025](https://www.builder.io/blog/best-react-calendar-component-ai)
-- [react-day-picker Official](https://daypicker.dev/)
-- [react-big-calendar GitHub](https://github.com/jquense/react-big-calendar)
-
----
-
-## Client-Side Data Fetching
-
-### SWR
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| SWR | Latest | Client data fetching | Vercel's data fetching library. Handles caching, revalidation, optimistic updates. |
-
-**Confidence:** HIGH (verified via [SWR official docs](https://swr.vercel.app/docs/with-nextjs))
-
-**Why SWR for booking system:**
-- Automatic revalidation on focus (user returns to tab, sees fresh availability)
-- Optimistic UI updates (booking confirms immediately, rolls back on error)
-- Dedupe concurrent requests (multiple components fetching same slot)
-- Built-in error retry with exponential backoff
-
-**App Router considerations:**
-- Import SWR hooks in Client Components (`'use client'`)
-- Server-side prefetch: pass initial data via `SWRConfig` fallback
-
-```typescript
-// Client Component for availability
-'use client';
-import useSWR from 'swr';
-
-export function AvailabilityCalendar({ initialData }) {
-  const { data, error, mutate } = useSWR(
-    '/api/availability',
-    fetcher,
-    {
-      fallbackData: initialData,
-      revalidateOnFocus: true // Refresh when user returns to tab
-    }
-  );
-
-  // Optimistic booking update
-  const handleBook = async (slotId) => {
-    mutate(
-      optimisticallyUpdatedData, // Show booked immediately
-      { revalidate: false }
-    );
-
-    try {
-      await bookSlot(slotId);
-    } catch (error) {
-      mutate(); // Revert on error
-    }
+    recorder.ondataavailable = (event) => {
+      // Send chunk to OpenAI Realtime API WebSocket
+      // Also accumulate for final file storage
+    };
+
+    recorder.start(250); // 250ms chunks for low-latency streaming
+    mediaRecorderRef.current = recorder;
   };
+  // ...
 }
 ```
 
-**Sources:**
-- [SWR with Next.js App Router](https://swr.vercel.app/docs/with-nextjs)
-- [SWR Best Practices 2025](https://arnab-k.medium.com/optimizing-data-fetching-in-next-js-with-swr-best-practices-560ff749e2c9)
-
 ---
 
-## Form Handling & Validation
+### Waveform Visualization
 
-### React Hook Form + Zod + next-safe-action
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| react-hook-form | Latest | Client form state | Industry standard. Minimal re-renders. |
-| zod | Latest | Schema validation | TypeScript-first validation. Share schemas client/server. |
-| @hookform/resolvers | Latest | Zod + RHF integration | Connects Zod schemas to React Hook Form |
-| next-safe-action | Latest | Type-safe Server Actions | Validates Server Actions with Zod schemas |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| wavesurfer.js | ^7.12.x | Waveform rendering | Industry standard for audio waveforms. 7.12.1 is latest (March 2026). Renders via Web Audio API + HTML5 Canvas. Plugins for recording, regions, timeline. |
+| @wavesurfer/react | ^1.0.x | React integration | Official React wrapper. Provides `useWavesurfer` hook and `<WaveSurfer>` component. v1.0.12 latest. |
 
-**Confidence:** HIGH (verified via multiple 2025 guides)
+**Confidence:** HIGH -- wavesurfer.js verified via npm/GitHub, actively maintained, 9k+ stars.
 
-**Why this combination:**
+**Why wavesurfer.js:**
+- Built-in Record plugin (captures from microphone with waveform visualization)
+- Regions plugin for marking segments (useful for highlighting tagged sections)
+- Timeline plugin for time markers
+- Renders into Shadow DOM (CSS isolation from Tailwind -- no conflicts)
+- Lightweight: only loads plugins you use
 
-1. **react-hook-form:** Manages client-side form state (minimal re-renders, great DX)
-2. **zod:** Defines validation schemas (shared between client and server)
-3. **next-safe-action:** Wraps Server Actions with type-safe validation
+**Why NOT canvas-based custom implementation:**
+- wavesurfer.js handles edge cases (resize, zoom, seek) that take weeks to build manually
+- Plugin ecosystem (Record, Regions, Hover, Timeline) covers all Karte needs
+- Well-tested across browsers
 
-**Pattern: Both-sides validation**
+**Two rendering modes needed:**
+
+1. **Live recording:** Use Web Audio API AnalyserNode directly for real-time waveform (wavesurfer Record plugin)
+2. **Playback:** Use wavesurfer.js to render completed recording waveform with seek, regions, timeline
 
 ```typescript
-// shared/schemas.ts
-import { z } from 'zod';
+// Playback with regions for tagged sections
+import WaveSurfer from 'wavesurfer.js';
+import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions';
+import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline';
 
-export const bookingSchema = z.object({
-  slotId: z.string().cuid(),
-  userId: z.string().cuid(),
-  notes: z.string().max(500).optional()
+const ws = WaveSurfer.create({
+  container: '#waveform',
+  waveColor: '#4F46E5',
+  progressColor: '#818CF8',
+  plugins: [
+    RegionsPlugin.create(),
+    TimelinePlugin.create(),
+  ],
 });
 
-// app/actions.ts (Server Action)
-'use server';
-import { action } from '@/lib/safe-action';
-import { bookingSchema } from '@/shared/schemas';
-
-export const createBooking = action
-  .schema(bookingSchema)
-  .action(async ({ parsedInput }) => {
-    // Server-side validation passed, proceed with booking
-    const booking = await prisma.booking.create({
-      data: parsedInput
-    });
-    return booking;
-  });
-
-// app/booking-form.tsx (Client Component)
-'use client';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { bookingSchema } from '@/shared/schemas';
-
-export function BookingForm() {
-  const form = useForm({
-    resolver: zodResolver(bookingSchema) // Client-side validation
-  });
-
-  const onSubmit = async (data) => {
-    const result = await createBooking(data); // Server validates again
-    if (result.serverError) {
-      // Handle server validation error
-    }
-  };
-}
+// Add region for a tagged symptom mention
+ws.plugins[0].addRegion({
+  start: 12.5,
+  end: 18.3,
+  color: 'rgba(239, 68, 68, 0.2)',
+  content: 'Symptom: lower back pain',
+});
 ```
-
-**Key benefits:**
-- Schema defined once, used on client AND server
-- Client validation provides instant feedback
-- Server validation prevents malicious requests
-- Full TypeScript type inference
-
-**Sources:**
-- [Next.js Form Validation with Zod](https://dev.to/bookercodes/nextjs-form-validation-on-the-client-and-server-with-zod-lbc)
-- [Both-Sides Validation Guide](https://dev.to/arnaudrenaud/both-sides-form-validation-with-nextjs-react-hook-form-next-safe-action-1di1)
-- [next-safe-action Official Docs](https://next-safe-action.dev/)
-- [React Hook Form + Server Actions](https://markus.oberlehner.net/blog/using-react-hook-form-with-react-19-use-action-state-and-next-js-15-app-router/)
 
 ---
 
-## Email Sending
+### Audio File Storage
 
-### Resend (with caveats)
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| Resend | Latest | Transactional email | Developer-friendly API. React Email templates. Next.js integration. |
-| react-email | Latest | Email templates | Build emails with React components |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| @supabase/supabase-js | ^2.97.x (already installed) | Audio file storage | Supabase Storage is included in the existing Supabase plan. No new dependency needed. Create a private bucket for audio files with RLS policies. |
 
-**Confidence:** MEDIUM (verified via web search, but concerns noted)
+**Confidence:** HIGH -- Supabase Storage verified via official docs, already using Supabase in the project.
 
-**Why Resend:**
-- Built for developers (simple API)
-- React Email templates (reuse components)
-- Next.js Server Actions integration
-- Good analytics and logging
+**Why Supabase Storage (not S3 directly):**
+- Already paying for Supabase -- Storage is included (1 GB free, $0.021/GB/month on Pro)
+- Same RLS policies as database -- audio files inherit tenant isolation
+- Signed URLs for secure playback (2-hour expiry)
+- No new SDK or credentials to manage
+- File size limit: 50 MB free tier, 500 GB on Pro (more than enough for audio sessions)
 
-**CONCERNS (from 2025 community feedback):**
-- **Slow spin-up time:** Users report 1min+ delays for confirmation emails
-- Unclear if this is free tier limitation or general issue
-- Limited component library for templates
+**Storage architecture:**
 
-**Recommendation:**
-- **For MVP:** Use Resend (easiest integration, good DX)
-- **Monitor:** Track email delivery times in production
-- **Fallback plan:** If delays are unacceptable, migrate to SendGrid (more mature, predictable performance)
+```
+Bucket: karte-audio (private)
+Path: /{tenantId}/{karteId}/{filename}
+Format: audio/webm (opus codec)
+```
 
-**Alternative: SendGrid**
-- More mature platform
-- Predictable performance
-- More complex setup (requires DKIM/SPF DNS configuration)
-- Better for high-volume production use
+**Upload pattern (chunked for large recordings):**
 
-**Configuration (Resend):**
 ```typescript
-// app/actions.ts
+// Server Action for audio upload
 'use server';
-import { Resend } from 'resend';
-import { BookingConfirmationEmail } from '@/emails/booking-confirmation';
+import { createClient } from '@/lib/supabase-server';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export async function uploadKarteAudio(karteId: string, audioBlob: Blob) {
+  const supabase = createClient();
+  const path = `${tenantId}/${karteId}/recording.webm`;
 
-export async function sendBookingConfirmation(booking) {
-  await resend.emails.send({
-    from: 'noreply@synq.jp',
-    to: booking.userEmail,
-    subject: '予約確認 - SYNQ',
-    react: BookingConfirmationEmail({ booking })
-  });
+  const { data, error } = await supabase.storage
+    .from('karte-audio')
+    .upload(path, audioBlob, {
+      contentType: 'audio/webm',
+      upsert: true,
+    });
+
+  return data?.path;
 }
 ```
 
-**Sources:**
-- [Resend with Next.js](https://resend.com/nextjs)
-- [Resend Review 2025](https://www.toksta.com/products/resend)
-- [5 Best Email Services for Next.js](https://dev.to/ethanleetech/5-best-email-services-for-nextjs-1fa2)
+**Cost estimation:**
+- Average session: 30 minutes = ~5 MB (webm/opus)
+- 100 sessions/month = 500 MB = ~$0.01/month
+- 1,000 sessions/month = 5 GB = ~$0.10/month
+- Audio storage cost is negligible
+
+---
+
+## Data Model Additions (Prisma)
+
+These are new models needed in the existing Prisma schema. Not a technology choice but critical for stack integration.
+
+| Model | Purpose | Key Fields |
+|-------|---------|------------|
+| Karte | Medical record per appointment | appointmentId, customerId, transcript, translatedTranscript, audioPath, duration, status |
+| KarteTag | Auto-generated tags | karteId, type (symptom/treatment/recommendation), content, confidence, startTime, endTime |
+| TranscriptSegment | Timestamped transcript chunks | karteId, text, startTime, endTime, speaker, language |
+
+**Confidence:** HIGH -- standard relational modeling, Prisma schema design.
+
+---
+
+## Environment Variables (New)
+
+```bash
+# AI Provider Keys
+OPENAI_API_KEY="sk-..."              # For transcription + tagging + translation
+DEEPGRAM_API_KEY="..."               # Fallback transcription provider (optional initially)
+
+# No new Supabase vars needed -- reuse existing SUPABASE_URL and keys
+```
 
 ---
 
 ## Installation Commands
 
-### Initial Setup
 ```bash
-# Core framework
-npm install next@15 react@19 react-dom@19
+# AI SDK 6 + Providers
+npm install ai @ai-sdk/openai
 
-# TypeScript
-npm install -D typescript @types/react @types/node
+# OpenAI SDK (for Realtime API WebSocket)
+npm install openai
 
-# Database & ORM
-npm install @prisma/client@7
-npm install -D prisma@7
+# Waveform visualization
+npm install wavesurfer.js @wavesurfer/react
 
-# Styling & UI
-npm install tailwindcss@3 postcss autoprefixer
-npm install @radix-ui/react-dialog @radix-ui/react-dropdown-menu # Radix primitives
-# Install shadcn via CLI: npx shadcn-ui@latest init
-
-# Internationalization
-npm install next-intl
-
-# Date handling
-npm install date-fns@4 @date-fns/tz
-
-# Calendar components
-npm install react-day-picker # Included in shadcn Calendar
-# Optional: npm install react-big-calendar (if complex scheduling needed)
-
-# Data fetching
-npm install swr
-
-# Forms & validation
-npm install react-hook-form zod @hookform/resolvers
-npm install next-safe-action @next-safe-action/adapter-react-hook-form
-
-# Email
-npm install resend react-email
-
-# Supabase (if not using Supabase CLI)
-npm install @supabase/supabase-js
+# Optional: Deepgram fallback (add when needed)
+# npm install @ai-sdk/deepgram
 ```
 
-### Development Dependencies
-```bash
-npm install -D @types/react @types/node
-npm install -D eslint eslint-config-next
-npm install -D prettier prettier-plugin-tailwindcss
-```
+**Total new dependencies: 4** (ai, @ai-sdk/openai, openai, wavesurfer.js + @wavesurfer/react)
 
 ---
 
-## Environment Variables
+## What NOT to Add
 
-```bash
-# .env.local
-DATABASE_URL="postgresql://..."
-DIRECT_URL="postgresql://..." # For migrations (Supabase Pooler)
-
-NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="xxx"
-SUPABASE_SERVICE_ROLE_KEY="xxx"
-
-RESEND_API_KEY="re_xxx"
-
-NODE_ENV="development"
-```
+| Technology | Why Avoid |
+|------------|-----------|
+| recordrtc / react-media-recorder | Unnecessary abstraction over MediaRecorder API. Adds bundle size for no benefit. |
+| socket.io | Not needed. OpenAI Realtime API uses native WebSocket. Next.js SSE handles server-to-client streaming. |
+| AWS S3 / Cloudflare R2 | Already have Supabase Storage. Adding another storage provider means another SDK, credentials, and billing. |
+| Google Cloud Speech-to-Text | More complex setup (service accounts, GCP project). OpenAI transcription is simpler and sufficient. Add Gemini later only if needed for cost optimization. |
+| Custom WebSocket server | Next.js on Vercel cannot handle WebSocket upgrade. Browser connects directly to OpenAI. Don't build a proxy. |
+| ffmpeg.wasm | Audio format conversion in browser is slow and heavy (~25 MB). Whisper/transcription APIs accept webm directly. Convert server-side only if needed later. |
+| AssemblyAI | Good product but adds another vendor. OpenAI + optional Deepgram covers transcription needs. |
+| react-audio-visualize | Small library with limited features. wavesurfer.js is more mature and feature-complete. |
 
 ---
 
@@ -611,102 +360,48 @@ NODE_ENV="development"
 
 | Category | Recommended | Alternative | Why Not Alternative |
 |----------|-------------|-------------|---------------------|
-| ORM | Prisma 7 | Drizzle ORM | Drizzle has lighter bundle but less mature ecosystem. Prisma's transaction support critical for bookings. |
-| Email | Resend (with monitoring) | SendGrid | SendGrid more mature but complex setup. Start with Resend, migrate if needed. |
-| Date library | date-fns v4 | Day.js | Day.js is lighter but date-fns v4 timezone support is superior for booking systems. |
-| Calendar UI | react-day-picker (shadcn) | react-big-calendar | Start simple with shadcn. Add react-big-calendar only if business dashboard needs complex views. |
-| Styling | Tailwind v3 | Tailwind v4 | v4 too new (Jan 2025), requires CSS-first config migration. Defer until Q3 2025. |
-| i18n | next-intl | next-i18next | next-intl built for App Router, better TypeScript DX. |
-| Forms | React Hook Form + next-safe-action | Formik | RHF is faster, smaller. Formik is legacy. |
+| AI abstraction | AI SDK 6 | Direct API calls | AI SDK provides provider switching, streaming utilities, structured output. Direct calls require more boilerplate. |
+| Live transcription | OpenAI Realtime API | Deepgram Streaming | OpenAI has deeper Japanese training data. Single vendor for transcription + tagging reduces complexity. Deepgram reserved as fallback. |
+| Batch transcription | AI SDK transcribe() | OpenAI Whisper API direct | AI SDK wraps the same API with type safety and provider abstraction. |
+| Waveform | wavesurfer.js | Custom Canvas | wavesurfer.js handles resize, zoom, seek, plugins. Custom Canvas takes weeks for same quality. |
+| Audio storage | Supabase Storage | AWS S3 | Already using Supabase. Same RLS policies. No new credentials. |
+| Translation | GPT-4o-mini via streamText | Google Translate API | GPT handles medical/wellness terminology better. Streaming integration with AI SDK is seamless. Translate API is literal translation. |
+| Auto-tagging | GPT-4o-mini structured output | Custom NLP/NER | GPT understands medical context without training. Structured output with Zod ensures type-safe tags. Custom NER requires training data we don't have. |
+| Real-time streaming | SSE (Route Handlers) | WebSocket | SSE works on Vercel serverless. WebSocket requires custom server. Translation streaming is server->client only. |
 
 ---
 
-## Deployment Considerations
+## Cost Estimation
 
-### Vercel (Recommended)
-- Built by Next.js creators
-- Zero-config deployment
-- Edge Functions for auth
-- Preview deployments per PR
+| Service | Usage | Cost/Month (est.) |
+|---------|-------|-------------------|
+| OpenAI Realtime (live transcription) | 100 sessions x 30 min = 3,000 min | ~$9.00 (gpt-4o-mini-transcribe at $0.003/min) |
+| OpenAI Whisper (batch re-transcription) | 100 sessions x 30 min = 3,000 min | ~$18.00 (whisper-1 at $0.006/min) |
+| OpenAI GPT-4o-mini (tagging + translation) | ~500K tokens/month | ~$0.50 |
+| Supabase Storage (audio) | ~500 MB | ~$0.01 |
+| **Total** | | **~$27.50/month at 100 sessions** |
 
-### Supabase Production Checklist
-- Enable connection pooling (PgBouncer)
-- Configure RLS policies (test thoroughly!)
-- Set up database backups
-- Monitor connection pool usage
+At scale (1,000 sessions/month): ~$275/month. Manageable for a B2B SaaS.
 
-### Prisma Production Checklist
-- Use `prisma migrate deploy` (NOT `prisma migrate dev`)
-- Configure connection pool: start with `connection_limit=10`
-- Enable query logging in dev, disable in production
-- Set up Prisma Accelerate for edge/serverless (optional)
+**Cost optimization opportunities:**
+- Skip batch re-transcription if live transcript quality is sufficient
+- Cache translations for repeated phrases (wellness terminology is repetitive)
+- Use Deepgram ($0.0043/min) instead of OpenAI for live transcription to save ~30%
 
 ---
 
-## What NOT to Use
+## Integration Points with Existing Stack
 
-| Technology | Why Avoid |
-|------------|-----------|
-| Moment.js | Deprecated. Large bundle, mutable state, no tree-shaking. Use date-fns or Day.js. |
-| Formik | Legacy. React Hook Form is faster, smaller, better DX. |
-| REST API in Next.js | Use Server Actions instead. Simpler, type-safe, no separate API routes. |
-| Global CSS files | Use Tailwind + CSS Modules. Avoid large global.css. |
-| Unvalidated Server Actions | ALWAYS validate with Zod + next-safe-action. Never trust client input. |
-| Prisma migrations in production | Use `prisma migrate deploy`, NOT `prisma migrate dev`. |
-| Client-side timezone conversions | Use server-side with date-fns/tz. Client timezones are unreliable. |
-
----
-
-## Critical Patterns Summary
-
-1. **Double-booking prevention:** Optimistic concurrency control (version field) OR serializable transactions
-2. **Multi-tenant isolation:** Supabase RLS with `tenant_id` in `app_metadata`
-3. **Connection pooling:** Singleton pattern in dev, configure limits in production
-4. **Form validation:** Both client (React Hook Form + Zod) and server (next-safe-action + Zod)
-5. **Date handling:** Always use timezone-aware dates (`TZDate` from @date-fns/tz)
-6. **Email delivery:** Monitor Resend delays, have SendGrid migration plan ready
-
----
-
-## Next Steps for Implementation
-
-1. **Phase 0: Setup**
-   - Initialize Next.js 15 with TypeScript strict mode
-   - Set up Prisma + Supabase connection with singleton pattern
-   - Configure RLS policies for tenant isolation
-
-2. **Phase 1: Core Booking Schema**
-   - Design Prisma schema with `version` field for concurrency control
-   - Implement basic booking transaction logic
-   - Test race condition handling
-
-3. **Phase 2: UI Foundation**
-   - Set up Tailwind + shadcn/ui
-   - Build date picker with react-day-picker (shadcn Calendar)
-   - Configure next-intl for Japanese locale
-
-4. **Phase 3: Forms & Validation**
-   - Set up React Hook Form + Zod schemas
-   - Implement next-safe-action for Server Actions
-   - Test client/server validation flow
-
-5. **Phase 4: Email & Notifications**
-   - Configure Resend + React Email templates
-   - Monitor email delivery times
-   - Set up error logging for failures
-
----
-
-## Version Summary (for reference)
-
-| Package | Version | Released | Notes |
-|---------|---------|----------|-------|
-| Next.js | 15.5.x | Jan 2026 | Stable. Next.js 16 available but not required. |
-| React | 19.x | Oct 2024 | Stable |
-| Prisma | 7.2.0 | Dec 2025 | Latest stable |
-| Tailwind | 3.4.x | Current | v4 defer until Q3 2025 |
-| date-fns | 4.1.0 | 2025 | First-class timezone support |
-| TypeScript | 5.x | Current | Stable |
+| Existing Tech | Integration Point | Notes |
+|---------------|-------------------|-------|
+| Next.js App Router | Route Handlers for SSE streaming, Server Actions for audio upload | SSE via ReadableStream in Route Handlers. No custom server needed. |
+| Prisma | New Karte/KarteTag/TranscriptSegment models | Add to existing schema.prisma. Standard relations to existing Customer and Appointment models. |
+| Supabase | Storage bucket for audio, existing auth for RLS | Create `karte-audio` bucket with RLS policies matching existing tenant isolation. |
+| SWR | Polling for transcription status, karte data fetching | Use `refreshInterval` for live transcript updates during recording. |
+| Zod | Structured output schemas for auto-tagging | AI SDK `output: 'object'` uses Zod schemas directly. Reuse existing Zod patterns. |
+| next-intl | UI labels for karte interface | Standard i18n, no special integration needed. |
+| JWT admin auth | Protect transcription token endpoint | Validate admin JWT before issuing OpenAI ephemeral token. |
+| Upstash Redis | Rate limit transcription API calls | Prevent abuse of expensive AI API endpoints. |
 
 ---
 
@@ -714,58 +409,53 @@ NODE_ENV="development"
 
 | Area | Confidence | Rationale |
 |------|------------|-----------|
-| Core framework (Next.js) | HIGH | Official docs, 2025 guides verified |
-| Database (Prisma + Supabase) | HIGH | Official docs, community patterns verified |
-| Concurrency patterns | HIGH | Multiple authoritative sources on Prisma transactions |
-| UI (Tailwind + shadcn) | HIGH | Widespread adoption, official docs |
-| Date handling | HIGH | date-fns v4 official release notes verified |
-| Email (Resend) | MEDIUM | Community reports of delays, needs monitoring |
-| Calendar components | MEDIUM | Options verified but not Context7-confirmed |
+| AI SDK 6 | HIGH | npm verified v6.0.116, official docs confirm transcription support |
+| OpenAI Realtime API | HIGH | Official docs, transcription-only mode documented, pricing verified |
+| MediaRecorder/Web Audio | HIGH | Browser standards, universally supported |
+| wavesurfer.js | HIGH | npm verified v7.12.1, active maintenance, 9k+ GitHub stars |
+| Supabase Storage | HIGH | Official docs, already using Supabase in project |
+| Japanese transcription quality | MEDIUM | OpenAI Whisper supports Japanese well, but medical/wellness vocabulary may need prompt tuning |
+| Live translation accuracy | MEDIUM | GPT-4o-mini handles ja/en well but medical terminology may need glossary prompts |
+| Cost estimates | MEDIUM | Based on published pricing, actual usage patterns may differ |
 
 ---
 
 ## Sources
 
-### Core Framework
-- [Next.js App Router Best Practices 2025](https://javascript.plainenglish.io/next-js-15-in-2025-features-best-practices-and-why-its-still-the-framework-to-beat-a535c7338ca8)
-- [Next.js Official Documentation](https://nextjs.org/docs/app)
-- [Next.js 15.5 Release](https://nextjs.org/blog/next-15-5)
+### AI SDK
+- [AI SDK 6 Release](https://vercel.com/blog/ai-sdk-6) -- AI SDK 6 announcement
+- [AI SDK Transcription Docs](https://ai-sdk.dev/docs/ai-sdk-core/transcription) -- transcribe() function reference
+- [AI SDK npm](https://www.npmjs.com/package/ai) -- v6.0.116 current
+- [@ai-sdk/openai npm](https://www.npmjs.com/package/@ai-sdk/openai) -- v3.0.41 current
+- [AI SDK Deepgram Provider](https://ai-sdk.dev/providers/ai-sdk-providers/deepgram) -- Deepgram integration
 
-### Database & ORM
-- [Prisma 7.2.0 Release](https://www.prisma.io/blog/announcing-prisma-orm-7-2-0)
-- [Prisma High-Concurrency Booking Systems](https://dev.to/zenstack/how-to-build-a-high-concurrency-ticket-booking-system-with-prisma-184n)
-- [Prisma Transactions Documentation](https://www.prisma.io/docs/orm/prisma-client/queries/transactions)
-- [Supabase Architecture](https://supabase.com/docs/guides/getting-started/architecture)
-- [Supabase RLS Multi-Tenant Patterns](https://www.antstack.com/blog/multi-tenant-applications-with-rls-on-supabase-postgress/)
+### OpenAI Realtime API
+- [Realtime Transcription Guide](https://developers.openai.com/api/docs/guides/realtime-transcription/) -- transcription-only mode
+- [Realtime API WebSocket](https://developers.openai.com/api/docs/guides/realtime-websocket/) -- WebSocket connection reference
+- [OpenAI Pricing](https://developers.openai.com/api/docs/pricing) -- per-minute transcription costs
+- [GPT-4o Transcribe Model](https://developers.openai.com/api/docs/models/gpt-4o-transcribe) -- model capabilities
+- [Speech to Text Guide](https://developers.openai.com/api/docs/guides/speech-to-text) -- batch transcription reference
 
-### UI & Styling
-- [shadcn/ui Documentation](https://ui.shadcn.com/)
-- [Tailwind v4 Release](https://tailwindcss.com/blog/tailwindcss-v4)
-- [Tailwind v4 Migration Guide](https://medium.com/better-dev-nextjs-react/tailwind-v4-migration-from-javascript-config-to-css-first-in-2025-ff3f59b215ca)
+### Deepgram
+- [Deepgram Nova-3 Japanese Support](https://deepgram.com/learn/deepgram-expands-nova-3-with-11-new-languages-across-europe-and-asia) -- Japanese language expansion
+- [Deepgram JS SDK npm](https://www.npmjs.com/package/@deepgram/sdk) -- v4.11.3 current
+- [Deepgram vs OpenAI Comparison](https://deepgram.com/learn/whisper-vs-deepgram) -- accuracy and latency benchmarks
 
-### Internationalization
-- [next-intl 2025 Complete Guide](https://www.buildwithmatija.com/blog/nextjs-internationalization-guide-next-intl-2025)
-- [next-intl Official Documentation](https://next-intl-docs.vercel.app/)
+### Waveform Visualization
+- [wavesurfer.js Official](https://wavesurfer.xyz/) -- documentation and examples
+- [wavesurfer.js GitHub](https://github.com/katspaugh/wavesurfer.js) -- v7.12.1 latest
+- [@wavesurfer/react npm](https://www.npmjs.com/package/@wavesurfer/react) -- v1.0.12, official React wrapper
 
-### Date & Time
-- [date-fns v4 with Timezone Support](https://blog.date-fns.org/v40-with-time-zone-support/)
-- [date-fns vs Day.js Comparison](https://www.dhiwise.com/post/date-fns-vs-dayjs-the-battle-of-javascript-date-libraries)
+### Audio Storage
+- [Supabase Storage Pricing](https://supabase.com/docs/guides/storage/pricing) -- $0.021/GB/month
+- [Supabase Storage File Limits](https://supabase.com/docs/guides/storage/uploads/file-limits) -- 50 MB free, 500 GB Pro
+- [Supabase JS Upload Reference](https://supabase.com/docs/reference/javascript/storage-from-upload) -- upload API
 
-### Calendar Components
-- [React Calendar Components 2025](https://www.builder.io/blog/best-react-calendar-component-ai)
-- [react-day-picker Official](https://daypicker.dev/)
-- [react-big-calendar GitHub](https://github.com/jquense/react-big-calendar)
+### Next.js Streaming Patterns
+- [SSE in Next.js App Router](https://www.pedroalonso.net/blog/sse-nextjs-real-time-notifications/) -- SSE via ReadableStream
+- [WebSocket Limitations Discussion](https://github.com/vercel/next.js/discussions/58698) -- why WebSocket won't work in Route Handlers
+- [Streaming in Next.js 15](https://hackernoon.com/streaming-in-nextjs-15-websockets-vs-server-sent-events) -- SSE vs WebSocket comparison
 
-### Data Fetching
-- [SWR with Next.js App Router](https://swr.vercel.app/docs/with-nextjs)
-- [SWR Best Practices 2025](https://arnab-k.medium.com/optimizing-data-fetching-in-next-js-with-swr-best-practices-560ff749e2c9)
-
-### Forms & Validation
-- [Next.js Zod Form Validation](https://dev.to/bookercodes/nextjs-form-validation-on-the-client-and-server-with-zod-lbc)
-- [Both-Sides Validation with next-safe-action](https://dev.to/arnaudrenaud/both-sides-form-validation-with-nextjs-react-hook-form-next-safe-action-1di1)
-- [next-safe-action Official Documentation](https://next-safe-action.dev/)
-
-### Email
-- [Resend with Next.js](https://resend.com/nextjs)
-- [Resend Review 2025](https://www.toksta.com/products/resend)
-- [5 Best Email Services for Next.js](https://dev.to/ethanleetech/5-best-email-services-for-nextjs-1fa2)
+### Speech-to-Text Ecosystem
+- [Best APIs for Real-Time Transcription 2026](https://www.assemblyai.com/blog/best-api-models-for-real-time-speech-recognition-and-transcription) -- ecosystem overview
+- [Best Speech-to-Text APIs 2026](https://deepgram.com/learn/best-speech-to-text-apis-2026) -- comparison guide

@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-04)
+See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 3: Payments & Membership
-**Phase 2.1 status:** Complete — all PRs merged (2026-02-26)
+**Current focus:** v2.0 SYNQ Karte — AI Electronic Medical Records
+**v1.0 status:** Complete — booking MVP + staff availability shipped
 
 ## Current Position
 
-Phase: 3 of 4 (Payments & Membership)
-Plan: 0 of 6
-Status: Ready to begin — Phase 2.1 complete
-Last activity: 2026-03-06 - Completed quick task 2: Consolidate admin UI navigation and reskin pages
+Phase: 03-karte-foundation (Plan 3 of 3)
+Plan: 03-03 complete
+Status: Phase 03 complete
+Last activity: 2026-03-07 — Completed 03-03 (Server Actions, Upload Route & Service Tests)
 
-Progress: [________] 0%
+Progress: [########] 100%
 
 ### Open PRs
 
@@ -24,7 +24,7 @@ None
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 17
 - Average duration: 6 min
 - Total execution time: 1.4 hours
 
@@ -34,9 +34,10 @@ None
 |-------|-------|-------|----------|
 | 01-mvp | 14 | 82 min | 6 min |
 | 02.1-staff-availability | 2 | 12 min | 6 min |
+| 03-karte-foundation | 3 | 8 min | 2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 4m, 1m, 4m, 9m
+- Last 5 plans: 1m, 4m, 9m, 3m, 3m
 - Trend: stable (Phase 1 MVP complete with frontend refactor)
 
 *Updated after each plan completion*
@@ -113,6 +114,14 @@ Recent decisions affecting current work:
 - generateTimeSlots('06:00', '23:30', 30) for select dropdown time options (02.1-02)
 - Hidden input for isAvailable toggle ensures value always submitted in FormData (02.1-02)
 - schedule key added to admin.workersPage namespace to avoid multiple useTranslations calls (02.1-02)
+- Flat storage path ({recordingId}.webm) for single-shop simplicity (03-01)
+- Admin-only RLS on all karute tables, no customer self-service (03-01)
+- Per-bucket storage modules with singleton Supabase client pattern (03-01)
+- Generic 'data' property in KaruteResult<T> for multi-entity service (03-02)
+- Best-effort audio cleanup on delete with warn logging, non-blocking (03-02)
+- Separate lighter include type for list queries (omit recording sessions) (03-02)
+- Server actions follow admin-booking.ts pattern exactly for consistency (03-03)
+- jest.fn() delegation in mock factories to avoid hoisting issues with const (03-03)
 
 ### Roadmap Evolution
 
@@ -139,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 2.1 complete, verified, all PRs merged
-Resume: Begin Phase 3 (Payments & Membership) — plans already exist
+Last session: 2026-03-07
+Stopped at: Completed 03-03-PLAN.md (Server Actions, Upload Route & Service Tests)
+Resume: Phase 03 complete. Start next phase.

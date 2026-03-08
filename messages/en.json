@@ -290,6 +290,54 @@
       "todaysAppointments": "Today's appointments",
       "error": "An error occurred",
       "close": "Close"
+    },
+    "appointment": {
+      "title": "Appointment",
+      "recording": "Recording",
+      "karute": "Karute",
+      "customer": "Customer",
+      "settings": "Settings",
+      "summaryBar": {
+        "customer": "Customer",
+        "service": "Service",
+        "worker": "Practitioner",
+        "time": "Time",
+        "status": "Status"
+      },
+      "noKarute": "No karute record yet",
+      "createKarute": "Create Karute",
+      "viewSettings": "Manage Settings"
+    },
+    "sidebar": {
+      "backToDashboard": "Back to Dashboard",
+      "aiChat": "AI Chat",
+      "prevAppointment": "Previous",
+      "nextAppointment": "Next"
+    },
+    "today": {
+      "title": "Today's Appointments",
+      "noAppointments": "No appointments today",
+      "open": "Open",
+      "startRecording": "Record",
+      "viewKarute": "Karute",
+      "customerProfile": "Profile",
+      "hasKarute": "Karute",
+      "noKarute": "No karute"
+    },
+    "settingsPage": {
+      "title": "Settings",
+      "aiProvider": "AI Provider",
+      "businessType": "Business Type",
+      "autoTranscribe": "Auto-transcribe recordings",
+      "recordingLang": "Recording Language",
+      "audioQuality": "Audio Quality",
+      "save": "Save Settings",
+      "saved": "Settings saved",
+      "general": "General",
+      "salon": "Salon",
+      "clinic": "Clinic",
+      "standard": "Standard",
+      "high": "High"
     }
   },
   "auth": {

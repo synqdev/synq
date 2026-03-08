@@ -290,6 +290,54 @@
       "todaysAppointments": "本日の予約一覧",
       "error": "エラーが発生しました",
       "close": "閉じる"
+    },
+    "appointment": {
+      "title": "予約",
+      "recording": "録音",
+      "karute": "カルテ",
+      "customer": "顧客",
+      "settings": "設定",
+      "summaryBar": {
+        "customer": "顧客",
+        "service": "サービス",
+        "worker": "施術者",
+        "time": "時間",
+        "status": "ステータス"
+      },
+      "noKarute": "カルテ記録がありません",
+      "createKarute": "カルテを作成",
+      "viewSettings": "設定を管理"
+    },
+    "sidebar": {
+      "backToDashboard": "ダッシュボードに戻る",
+      "aiChat": "AIチャット",
+      "prevAppointment": "前の予約",
+      "nextAppointment": "次の予約"
+    },
+    "today": {
+      "title": "本日の予約",
+      "noAppointments": "本日の予約はありません",
+      "open": "開く",
+      "startRecording": "録音",
+      "viewKarute": "カルテ",
+      "customerProfile": "プロフィール",
+      "hasKarute": "カルテあり",
+      "noKarute": "カルテなし"
+    },
+    "settingsPage": {
+      "title": "設定",
+      "aiProvider": "AIプロバイダー",
+      "businessType": "業種",
+      "autoTranscribe": "録音を自動文字起こし",
+      "recordingLang": "録音言語",
+      "audioQuality": "音声品質",
+      "save": "設定を保存",
+      "saved": "設定が保存されました",
+      "general": "一般",
+      "salon": "サロン",
+      "clinic": "クリニック",
+      "standard": "標準",
+      "high": "高品質"
     }
   },
   "auth": {

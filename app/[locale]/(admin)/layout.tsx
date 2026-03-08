@@ -1,3 +1,5 @@
+import { ChatWrapper } from '@/components/chat/ChatWrapper'
+
 interface AdminLayoutProps {
   children: React.ReactNode
 }
@@ -5,7 +7,9 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <main>{children}</main>
+      <ChatWrapper>
+        <main>{children}</main>
+      </ChatWrapper>
     </div>
   )
 }

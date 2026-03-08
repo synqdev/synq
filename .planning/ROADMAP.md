@@ -158,8 +158,12 @@ Plans:
   4. Whisper API transcribes audio to Japanese text segments
   5. Transcription segments stored with timestamps and speaker labels
 
+**Plans:** 3 plans in 2 waves
+
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 04-01-PLAN.md — useAudioRecorder hook and MIME utility with tests (Wave 1)
+- [ ] 04-02-PLAN.md — Transcription service, API route, and tests (Wave 1)
+- [ ] 04-03-PLAN.md — Recording UI components, pipeline wiring, and i18n (Wave 2)
 
 ### Phase 5: AI Classification & Karute UI
 **Goal**: AI classifies transcription into structured karute entries (symptom, treatment, preference, lifestyle, etc.), karute view/edit UI with approval workflow (draft → review → approved)
@@ -261,7 +265,7 @@ Plans:
 | 2. Parity | 8/8 | Complete | 2026-02-25 |
 | 2.1 Staff Availability | 2/2 | Complete | 2026-02-26 |
 | 3. Karte Foundation | 0/3 | Not started | - |
-| 4. Recording & Transcription | 0/? | Not started | - |
+| 4. Recording & Transcription | 0/3 | Not started | - |
 | 5. AI Classification & Karute UI | 0/? | Not started | - |
 | 6. Ask AI Chat | 0/? | Not started | - |
 | 7. Appointment View & Dashboard | 0/? | Not started | - |

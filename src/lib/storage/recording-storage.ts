@@ -20,6 +20,10 @@ export async function uploadRecording(
   recordingId: string,
   file: File
 ): Promise<{ path: string }> {
+  if (file.type !== 'audio/webm') {
+    throw new Error(`Unsupported recording MIME type: ${file.type || 'unknown'}`)
+  }
+
   const path = `${recordingId}.webm`
 
   const { data, error } = await getSupabase().storage

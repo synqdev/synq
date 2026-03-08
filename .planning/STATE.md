@@ -5,21 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** v2.0 SYNQ Karte — AI Electronic Medical Records
+**Current focus:** Phase 5: AI Classification & Karute UI
 **v1.0 status:** Complete — booking MVP + staff availability shipped
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements for v2.0 SYNQ Karte
-Last activity: 2026-03-07 — Milestone v2.0 started
+Phase: 5 of 9 - AI Classification & Karute UI
+Plan: 0 of 3
+Status: Executing Phase 5
+Last activity: 2026-03-07 — Executing Phase 5
 
-Progress: [________] 0%
+Progress: [████░░░░░░] 40% (v2.0: phases 3-4 built, executing 5)
 
 ### Open PRs
 
-None
+**Phase 3: Karte Foundation** (target: `phase-3/karte-foundation`)
+- PR #56, #57, #58 — all checks passed
+
+**Phase 4: Recording & Transcription** (target: `phase-4/recording-transcription`)
+- PR #59, #60, #61 — all checks passed
 
 ## Performance Metrics
 

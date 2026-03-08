@@ -97,6 +97,23 @@ describe('recording.service', () => {
       }
       expect(mockSessionCreate).not.toHaveBeenCalled()
     })
+
+    it('returns error and captures to Sentry when Prisma throws', async () => {
+      const dbError = new Error('Connection timeout')
+      mockSessionCreate.mockRejectedValue(dbError)
+
+      const result = await createRecordingSession({
+        customerId: 'cust-1',
+        workerId: 'worker-1',
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Connection timeout')
+      }
+      expect(mockSessionCreate).toHaveBeenCalled()
+      expect(mockCaptureException).toHaveBeenCalledWith(dbError, expect.anything())
+    })
   })
 
   describe('getRecordingSession', () => {

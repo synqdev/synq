@@ -20,6 +20,14 @@ const BUCKET = 'recordings'
 /** Allowed audio MIME types for recording uploads. */
 export const ALLOWED_RECORDING_TYPES = ['audio/webm', 'audio/mp4', 'audio/wav', 'audio/ogg'] as const
 
+/** Maps MIME type to file extension for storage path construction. */
+const MIME_TO_EXT: Record<string, string> = {
+  'audio/webm': 'webm',
+  'audio/mp4': 'm4a',
+  'audio/wav': 'wav',
+  'audio/ogg': 'ogg',
+}
+
 /** Regex for validating recording IDs (UUID format). Prevents path traversal attacks. */
 const SAFE_RECORDING_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -35,7 +43,8 @@ export async function uploadRecording(
     throw new Error(`Unsupported recording MIME type: ${file.type || 'unknown'}`)
   }
 
-  const path = `${recordingId}.webm`
+  const ext = MIME_TO_EXT[file.type] ?? 'webm'
+  const path = `${recordingId}.${ext}`
 
   const { data, error } = await getSupabase().storage
     .from(BUCKET)

@@ -31,8 +31,13 @@ const SPEAKER_COLORS: Record<string, string> = {
 
 function getSpeakerColor(label: string | null): string {
   if (!label) return 'bg-slate-100 text-slate-600';
-  // Extract last character for color mapping (e.g., "Speaker A" -> "A")
-  const key = label.trim().slice(-1).toUpperCase();
+  // Extract last token for color mapping (e.g., "Speaker A" -> "A", "Speaker 1" -> "A")
+  const lastToken = label.trim().split(/\s+/).pop() ?? '';
+  const NUMERIC_TO_LETTER = ['A', 'B', 'C', 'D', 'E'];
+  const numericIndex = parseInt(lastToken, 10);
+  const key = !isNaN(numericIndex) && numericIndex >= 1
+    ? (NUMERIC_TO_LETTER[numericIndex - 1] ?? lastToken.toUpperCase())
+    : lastToken.toUpperCase();
   return SPEAKER_COLORS[key] || 'bg-slate-100 text-slate-600';
 }
 

@@ -61,6 +61,9 @@ function formatError(error: unknown): string {
 }
 
 function createOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
@@ -81,7 +84,8 @@ function createOpenAIClient(): OpenAI {
  * On error, status is set to FAILED (best-effort).
  */
 export async function transcribeRecording(
-  recordingSessionId: string
+  recordingSessionId: string,
+  language = 'ja'
 ): Promise<TranscriptionResult<{ segmentCount: number }>> {
   // 1. Find session
   const session = await prisma.recordingSession.findUnique({
@@ -97,11 +101,18 @@ export async function transcribeRecording(
   }
 
   try {
-    // 2. Update status to PROCESSING
-    await prisma.recordingSession.update({
-      where: { id: recordingSessionId },
+    // 2. Atomically claim the session by conditionally updating status to PROCESSING
+    const claim = await prisma.recordingSession.updateMany({
+      where: { id: recordingSessionId, status: 'RECORDING' },
       data: { status: 'PROCESSING' },
     });
+
+    if (claim.count === 0) {
+      return {
+        success: false,
+        error: 'Recording is already being transcribed or has already been processed',
+      };
+    }
 
     // 3. Get signed URL and download audio
     const signedUrl = await getRecordingSignedUrl(session.audioStoragePath);
@@ -125,14 +136,20 @@ export async function transcribeRecording(
     const transcription = await openai.audio.transcriptions.create({
       model: 'gpt-4o-transcribe-diarize',
       file: audioFile,
-      language: 'ja',
+      language,
       response_format: 'diarized_json',
+      chunking_strategy: 'auto',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     // 5. Parse response — handle both 'speakers' and 'segments' fields defensively
     const diarized = transcription as unknown as DiarizedResponse;
-    const rawSegments = diarized.speakers || diarized.segments || [];
+    const rawSegments =
+      diarized.speakers?.length
+        ? diarized.speakers
+        : diarized.segments?.length
+          ? diarized.segments
+          : [];
 
     const segments = rawSegments.map(
       (segment: DiarizedSegment, index: number) => ({
@@ -142,7 +159,7 @@ export async function transcribeRecording(
         content: segment.text,
         startMs: Math.round(segment.start * 1000),
         endMs: Math.round(segment.end * 1000),
-        language: 'ja',
+        language,
       })
     );
 

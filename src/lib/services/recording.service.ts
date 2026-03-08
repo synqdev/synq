@@ -9,6 +9,7 @@
  */
 
 import { prisma } from '@/lib/db/client';
+import { withRLSContext } from '@/lib/db/rls-context';
 import { Prisma } from '@prisma/client';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -47,8 +48,9 @@ export type RecordingSessionWithSegments = Prisma.RecordingSessionGetPayload<{
 // ============================================================================
 
 function captureRecordingError(error: unknown, context: Record<string, unknown>) {
-  Sentry.captureException(error);
-  console.error('[recording.service] operation failed', { error, ...context });
+  const sanitized = { operation: context.operation };
+  Sentry.captureException(error, { extra: sanitized });
+  console.error('[recording.service] operation failed', { operation: context.operation, error: formatError(error) });
 }
 
 function formatError(error: unknown): string {
@@ -90,19 +92,21 @@ export async function createRecordingSession(
   const validated = parseResult.data;
 
   try {
-    const session = await prisma.recordingSession.create({
-      data: {
-        customerId: validated.customerId,
-        workerId: validated.workerId,
-        karuteRecordId: validated.karuteRecordId,
-        bookingId: validated.bookingId,
-      },
-      include: sessionDetailInclude,
-    });
+    const session = await withRLSContext({ role: 'admin' }, () =>
+      prisma.recordingSession.create({
+        data: {
+          customerId: validated.customerId,
+          workerId: validated.workerId,
+          karuteRecordId: validated.karuteRecordId,
+          bookingId: validated.bookingId,
+        },
+        include: sessionDetailInclude,
+      })
+    );
 
     return { success: true, data: session };
   } catch (error) {
-    captureRecordingError(error, { operation: 'createRecordingSession', ...validated });
+    captureRecordingError(error, { operation: 'createRecordingSession' });
     return { success: false, error: formatError(error) };
   }
 }
@@ -114,10 +118,12 @@ export async function getRecordingSession(
   id: string
 ): Promise<RecordingResult<RecordingSessionWithSegments>> {
   try {
-    const session = await prisma.recordingSession.findUnique({
-      where: { id },
-      include: sessionWithSegmentsInclude,
-    });
+    const session = await withRLSContext({ role: 'admin' }, () =>
+      prisma.recordingSession.findUnique({
+        where: { id },
+        include: sessionWithSegmentsInclude,
+      })
+    );
 
     if (!session) {
       return { success: false, error: 'Recording session not found' };
@@ -125,7 +131,7 @@ export async function getRecordingSession(
 
     return { success: true, data: session };
   } catch (error) {
-    captureRecordingError(error, { operation: 'getRecordingSession', id });
+    captureRecordingError(error, { operation: 'getRecordingSession' });
     return { success: false, error: formatError(error) };
   }
 }
@@ -144,15 +150,17 @@ export async function updateRecordingSession(
   const { id, ...data } = parseResult.data;
 
   try {
-    const session = await prisma.recordingSession.update({
-      where: { id },
-      data,
-      include: sessionDetailInclude,
-    });
+    const session = await withRLSContext({ role: 'admin' }, () =>
+      prisma.recordingSession.update({
+        where: { id },
+        data,
+        include: sessionDetailInclude,
+      })
+    );
 
     return { success: true, data: session };
   } catch (error) {
-    captureRecordingError(error, { operation: 'updateRecordingSession', id });
+    captureRecordingError(error, { operation: 'updateRecordingSession' });
     return { success: false, error: formatError(error) };
   }
 }
@@ -168,10 +176,12 @@ export async function deleteRecordingSession(
 ): Promise<RecordingResult<{ id: string }>> {
   try {
     // Find session to get audio path before deletion
-    const session = await prisma.recordingSession.findUnique({
-      where: { id },
-      select: { id: true, audioStoragePath: true },
-    });
+    const session = await withRLSContext({ role: 'admin' }, () =>
+      prisma.recordingSession.findUnique({
+        where: { id },
+        select: { id: true, audioStoragePath: true },
+      })
+    );
 
     if (!session) {
       return { success: false, error: 'Recording session not found' };
@@ -181,7 +191,9 @@ export async function deleteRecordingSession(
 
     // Delete DB record first (cascades to segments via Prisma schema).
     // Storage cleanup happens after to ensure DB delete is not rolled back.
-    await prisma.recordingSession.delete({ where: { id } });
+    await withRLSContext({ role: 'admin' }, () =>
+      prisma.recordingSession.delete({ where: { id } })
+    );
 
     // Best-effort cleanup of audio file from storage (after successful DB delete)
     if (audioStoragePath) {
@@ -198,7 +210,7 @@ export async function deleteRecordingSession(
 
     return { success: true, data: { id } };
   } catch (error) {
-    captureRecordingError(error, { operation: 'deleteRecordingSession', id });
+    captureRecordingError(error, { operation: 'deleteRecordingSession' });
     return { success: false, error: formatError(error) };
   }
 }

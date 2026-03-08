@@ -170,7 +170,7 @@ export async function updateKaruteStatusAction(
   // Allowed transitions: maps each target status to the set of statuses it can be reached from.
   // Using an atomic updateMany with a WHERE on the current status avoids TOCTOU races
   // when two admins update the same record simultaneously.
-  const allowedFromStatuses: Record<string, string[]> = {
+  const allowedFromStatuses: Record<string, ('DRAFT' | 'REVIEW' | 'APPROVED')[]> = {
     REVIEW: ['DRAFT'],
     APPROVED: ['REVIEW'],
     DRAFT: ['REVIEW', 'APPROVED'],

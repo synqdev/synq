@@ -18,8 +18,7 @@ interface WaveformVisualizerProps {
 export function WaveformVisualizer({ analyserNode, isActive }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number | null>(null);
-  // Reuse a single Uint8Array per frame to avoid GC pressure at 60fps
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
 
   const drawIdleLine = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d');
@@ -45,6 +44,7 @@ export function WaveformVisualizer({ analyserNode, isActive }: WaveformVisualize
     if (!ctx) return;
 
     const bufferLength = analyserNode.frequencyBinCount;
+    // Reuse the same buffer across frames to avoid per-frame GC pressure
     if (!dataArrayRef.current || dataArrayRef.current.length !== bufferLength) {
       dataArrayRef.current = new Uint8Array(bufferLength);
     }

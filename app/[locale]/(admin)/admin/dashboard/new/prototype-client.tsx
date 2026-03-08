@@ -6,16 +6,15 @@ import { adminLogout } from '@/app/actions/admin'
 import { useCalendarPolling } from '@/hooks/useCalendarPolling'
 import { formatInTimeZone } from '@/lib/utils/time'
 import { blockWorkerTime, createAdminBooking, sendBooking } from '@/app/actions/admin-booking'
-import { WorkerForm } from '../workers/worker-form'
-import { WorkerTable } from '../workers/worker-table'
-import { ServiceForm } from '../services/service-form'
-import { ServiceTable } from '../services/service-table'
-import { ResourceForm } from '../resources/resource-form'
-import { ResourceTable } from '../resources/resource-table'
-import { CustomerList } from '../customers/customer-list'
-import { RevenueDashboard } from '../reports/revenue-dashboard'
+import { WorkerForm } from '../../workers/worker-form'
+import { WorkerTable } from '../../workers/worker-table'
+import { ServiceForm } from '../../services/service-form'
+import { ServiceTable } from '../../services/service-table'
+import { ResourceForm } from '../../resources/resource-form'
+import { ResourceTable } from '../../resources/resource-table'
 import {
   TimetableWithTabs,
+  type SideActionItem,
   type TimelineBarItem,
   type TimelineStaff,
   type TopTabItem,
@@ -80,26 +79,34 @@ interface AdminDashboardPrototypeClientProps {
   initialServiceCrud: ServiceCrudItem[]
   initialResourceCrud: ResourceCrudItem[]
   initialBookings: PrototypeBooking[]
-  initialCustomerWorkers: Array<{ id: string; name: string }>
 }
 
 const tabs: TopTabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar' },
-  { id: 'customers', label: 'Customers', icon: 'client' },
   { id: 'workers', label: 'Workers', icon: 'user' },
   { id: 'services', label: 'Services', icon: 'services' },
   { id: 'resources', label: 'Resources', icon: 'settings' },
-  { id: 'reports', label: 'Reports', icon: 'analytics' },
   { id: 'logout', label: 'Logout', icon: 'logout' },
 ]
 
 const tabRouteById: Record<string, string> = {
   dashboard: '/admin/dashboard',
-  calendar: '/admin/dashboard',
+  calendar: '/admin/dashboard/new',
 }
 
-const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources', 'customers', 'reports'])
+const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources'])
+
+const sideActions: SideActionItem[] = [
+  { id: 'refresh', icon: 'refresh' },
+  { id: 'home', icon: 'home' },
+  { id: 'calendar', icon: 'calendar' },
+  { id: 'roster', icon: 'user' },
+  { id: 'client', icon: 'client' },
+  { id: 'services', icon: 'services' },
+  { id: 'analytics', icon: 'analytics' },
+  { id: 'settings', icon: 'settings' },
+]
 
 function timeToMinute(time: string): number {
   const [hours, minutes] = time.split(':').map(Number)
@@ -172,8 +179,8 @@ function getNowLocal() {
 
 function CrudPanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-gray-300 bg-white p-5 shadow-sm">
-      <h3 className="mb-3 text-lg font-semibold text-gray-900">{title}</h3>
+    <section className="rounded-2xl border border-white/18 bg-[#c9d2d6]/92 p-4">
+      <h3 className="mb-3 text-lg font-semibold text-[#32444b]">{title}</h3>
       {children}
     </section>
   )
@@ -189,7 +196,6 @@ export function AdminDashboardPrototypeClient({
   initialServiceCrud,
   initialResourceCrud,
   initialBookings,
-  initialCustomerWorkers,
 }: AdminDashboardPrototypeClientProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -199,6 +205,7 @@ export function AdminDashboardPrototypeClient({
   const [activeTabId, setActiveTabId] = useState(() =>
     tabParam && tabs.some((tab) => tab.id === tabParam) ? tabParam : 'calendar'
   )
+  const [activeSideActionId, setActiveSideActionId] = useState('home')
   const [bars, setBars] = useState<TimelineBarItem[]>(() => toBars(initialBookings))
   const [baselineBars, setBaselineBars] = useState<TimelineBarItem[]>(() => toBars(initialBookings))
   const [dragDraft, setDragDraft] = useState<DragDraft | null>(null)
@@ -384,58 +391,48 @@ export function AdminDashboardPrototypeClient({
 
   const updateUrlTab = (id: string) => {
     const next = new URLSearchParams(searchParams.toString())
+    next.set('date', activeDateStr)
     next.set('tab', id)
-    if (embeddedPanelTabs.has(id)) {
-      next.set('date', activeDateStr)
-    } else {
-      next.delete('date')
-    }
-    router.replace(`/${locale}/admin/dashboard?${next.toString()}`)
+    router.replace(`/${locale}/admin/dashboard/new?${next.toString()}`)
   }
 
   const panelContent = activeTabId === 'workers' ? (
-    <div className="space-y-4">
-      <CrudPanelSection title="Add Worker">
-        <WorkerForm mode="create" />
-      </CrudPanelSection>
-      <CrudPanelSection title="Workers">
-        <WorkerTable workers={initialWorkerCrud} />
-      </CrudPanelSection>
+    <div className="h-full overflow-auto p-4">
+      <div className="space-y-4">
+        <CrudPanelSection title="Add Worker">
+          <WorkerForm mode="create" />
+        </CrudPanelSection>
+        <CrudPanelSection title="Workers">
+          <WorkerTable workers={initialWorkerCrud} />
+        </CrudPanelSection>
+      </div>
     </div>
   ) : activeTabId === 'services' ? (
-    <div className="space-y-4 font-bahnschrift">
-      <CrudPanelSection title="Add Service">
-        <ServiceForm mode="create" />
-      </CrudPanelSection>
-      <CrudPanelSection title="Services">
-        <ServiceTable services={initialServiceCrud} />
-      </CrudPanelSection>
+    <div className="h-full overflow-auto p-4">
+      <div className="space-y-4">
+        <CrudPanelSection title="Add Service">
+          <ServiceForm mode="create" />
+        </CrudPanelSection>
+        <CrudPanelSection title="Services">
+          <ServiceTable services={initialServiceCrud} />
+        </CrudPanelSection>
+      </div>
     </div>
   ) : activeTabId === 'resources' ? (
-    <div className="space-y-4">
-      <CrudPanelSection title="Add Resource">
-        <ResourceForm mode="create" />
-      </CrudPanelSection>
-      <CrudPanelSection title="Resources">
-        <ResourceTable resources={initialResourceCrud} />
-      </CrudPanelSection>
-    </div>
-  ) : activeTabId === 'customers' ? (
-    <div className="space-y-4">
-      <CrudPanelSection title="Customers">
-        <CustomerList locale={locale} workers={initialCustomerWorkers} />
-      </CrudPanelSection>
-    </div>
-  ) : activeTabId === 'reports' ? (
-    <div className="space-y-4">
-      <CrudPanelSection title="Reports">
-        <RevenueDashboard locale={locale} />
-      </CrudPanelSection>
+    <div className="h-full overflow-auto p-4">
+      <div className="space-y-4">
+        <CrudPanelSection title="Add Resource">
+          <ResourceForm mode="create" />
+        </CrudPanelSection>
+        <CrudPanelSection title="Resources">
+          <ResourceTable resources={initialResourceCrud} />
+        </CrudPanelSection>
+      </div>
     </div>
   ) : undefined
 
   return (
-    <div className="h-[calc(100dvh-16px)] min-h-[640px] w-full px-3 sm:px-4">
+    <div className="relative left-1/2 right-1/2 ml-[-50vw] mr-[-50vw] h-[calc(100dvh-140px)] min-h-[640px] w-screen px-3 sm:px-4">
       <TimetableWithTabs
         tabs={tabs}
         activeTabId={activeTabId}
@@ -455,6 +452,9 @@ export function AdminDashboardPrototypeClient({
           if (!route) return
           router.push(`/${locale}${route}`)
         }}
+        sideActions={sideActions}
+        activeSideActionId={activeSideActionId}
+        onSideActionChange={setActiveSideActionId}
         staff={effectiveStaff}
         bars={bars}
         onBarsChange={setBars}
@@ -462,7 +462,7 @@ export function AdminDashboardPrototypeClient({
         onBarDragEnd={openMoveModal}
         panelContent={panelContent}
         startHour={10}
-        endHour={19}
+        endHour={18}
         currentTimeLabel={currentTimeLabel}
         currentMinute={currentMinute}
         className="h-full"

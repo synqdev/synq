@@ -66,7 +66,7 @@ Output: Single-hub admin dashboard with all sections as embedded tab panels.
     src/components/calendar/prototype-calendar-view.tsx
   </files>
   <action>
-    1. **layout.tsx** - Remove the SYNQ header and AdminNav entirely. Keep the auth check (`getAdminSession`). The layout should be a minimal full-height wrapper:
+    1. **layout.tsx** - Remove the SYNQ header and AdminNav entirely. The auth check (`getAdminSession`) was also removed — authentication is now handled per-page (each page calls `getAdminSession` individually). The layout should be a minimal full-height wrapper:
        - Remove the `import { AdminNav }` line
        - Remove the entire `<header>` block (the SYNQ h1 and AdminNav)
        - Remove the `max-w-[1600px]` constraint and padding from `<main>` since the dashboard needs full width

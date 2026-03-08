@@ -15,6 +15,7 @@ interface RecordingControlsProps {
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
+  onNewRecording?: () => void;
   disabled?: boolean;
 }
 
@@ -24,12 +25,25 @@ export function RecordingControls({
   onPause,
   onResume,
   onStop,
+  onNewRecording,
   disabled = false,
 }: RecordingControlsProps) {
   const t = useTranslations('admin.recording');
 
   if (status === 'stopped') {
-    return null;
+    return (
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={onNewRecording ?? onStart}
+          disabled={disabled}
+          className="flex items-center gap-2 rounded-full bg-slate-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span className="inline-block h-3 w-3 rounded-full bg-white" />
+          {t('newRecording')}
+        </button>
+      </div>
+    );
   }
 
   return (

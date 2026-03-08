@@ -86,7 +86,11 @@ None.
 
 ## User Setup Required
 
-None - no external service configuration required.
+Supabase storage must be configured for the recording-storage module:
+
+1. Set `NEXT_PUBLIC_SUPABASE_URL` environment variable
+2. Set `SUPABASE_SERVICE_ROLE_KEY` environment variable (service-role key required; anon key is insufficient for admin storage operations)
+3. Create a `recordings` bucket in Supabase Storage and apply RLS policies from `prisma/migrations/20260307_recordings_storage_policies/migration.sql`
 
 ## Next Phase Readiness
 - Service layer complete, ready for server actions and API routes in 03-03

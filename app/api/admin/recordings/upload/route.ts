@@ -30,14 +30,14 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData()
-  const file = formData.get('file') as File | null
-  const recordingSessionId = formData.get('recordingSessionId') as string | null
+  const file = formData.get('file')
+  const recordingSessionId = formData.get('recordingSessionId')
 
-  if (!file) {
+  if (!(file instanceof File)) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
-  if (!recordingSessionId) {
+  if (typeof recordingSessionId !== 'string' || !recordingSessionId) {
     return NextResponse.json({ error: 'recordingSessionId is required' }, { status: 400 })
   }
 
@@ -53,25 +53,27 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await uploadRecording(recordingSessionId, file)
+    const uploadResult = await uploadRecording(recordingSessionId, file)
 
-    try {
-      await updateRecordingSession({
-        id: recordingSessionId,
-        audioStoragePath: result.path,
-      })
-    } catch (dbError) {
-      // DB write failed after storage upload — clean up orphaned blob
-      await deleteRecording(result.path).catch((cleanupError) => {
-        console.error('[recordings/upload] Cleanup of orphaned blob failed', {
+    const sessionResult = await updateRecordingSession({
+      id: recordingSessionId,
+      audioStoragePath: uploadResult.path,
+    })
+
+    if (!sessionResult.success) {
+      // Roll back the uploaded file to avoid orphaned storage objects
+      try {
+        await deleteRecording(uploadResult.path)
+      } catch (cleanupError) {
+        console.error('[recordings/upload] Failed to clean up orphaned file', {
+          path: uploadResult.path,
           cleanupError,
-          path: result.path,
         })
-      })
-      throw dbError
+      }
+      return NextResponse.json({ error: sessionResult.error }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, path: result.path })
+    return NextResponse.json({ success: true, path: uploadResult.path })
   } catch (error) {
     console.error('[recordings/upload] Upload failed', { error, recordingSessionId })
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })

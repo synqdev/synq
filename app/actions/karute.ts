@@ -188,6 +188,55 @@ export async function updateKaruteStatusAction(
 }
 
 // ============================================================================
+// STATUS & TAGS ACTIONS
+// ============================================================================
+
+/**
+ * Update a karute record's status (DRAFT -> REVIEW -> APPROVED).
+ *
+ * @param recordId - UUID of the karute record
+ * @param status - New status value
+ * @returns Success status
+ * @throws Error if not authenticated or update fails
+ */
+export async function updateKaruteStatusAction(
+  recordId: string,
+  status: 'DRAFT' | 'REVIEW' | 'APPROVED'
+) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) throw new Error('Unauthorized')
+
+  const result = await updateKaruteRecord({ id: recordId, status })
+  if (!result.success) throw new Error(result.error)
+
+  revalidatePath(`/admin/karute/${recordId}`)
+  revalidatePath('/admin/dashboard')
+  return { success: true }
+}
+
+/**
+ * Update tags on a karute entry.
+ *
+ * @param entryId - UUID of the karute entry
+ * @param tags - Array of tag strings
+ * @returns Success status
+ * @throws Error if not authenticated or update fails
+ */
+export async function updateKaruteEntryTagsAction(
+  entryId: string,
+  tags: string[]
+) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) throw new Error('Unauthorized')
+
+  const result = await updateKaruteEntry({ id: entryId, tags })
+  if (!result.success) throw new Error(result.error)
+
+  revalidatePath('/admin/dashboard')
+  return { success: true }
+}
+
+// ============================================================================
 // RECORDING SESSION ACTIONS
 // ============================================================================
 

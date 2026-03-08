@@ -42,7 +42,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ error: result.error }, { status: 500 })
+    const status =
+      result.error === 'Recording session not found'
+        ? 404
+        : result.error === 'Recording session has no audio file'
+          ? 409
+          : result.error?.includes('already being transcribed')
+            ? 409
+            : 500
+
+    return NextResponse.json({ error: result.error }, { status })
   } catch (error) {
     console.error('[recordings/transcribe] Transcription failed', {
       error,

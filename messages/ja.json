@@ -274,6 +274,23 @@
         "uploading": "アップロード中...",
         "noFiles": "問診票がまだアップロードされていません"
       }
+    },
+    "chat": {
+      "title": "AIチャット",
+      "placeholder": "質問を入力...",
+      "send": "送信",
+      "emptyCustomer": "このお客様について質問してください",
+      "emptyGlobal": "質問を入力してください",
+      "newChat": "新しいチャット",
+      "summarizeLastVisit": "前回の施術まとめ",
+      "showTreatmentHistory": "施術履歴を表示",
+      "anyAllergies": "アレルギー情報",
+      "nextAppointment": "次回の予約",
+      "recentTrends": "最近の施術傾向",
+      "todaysAppointments": "本日の予約一覧",
+      "error": "エラーが発生しました",
+      "close": "閉じる",
+      "customerContextActive": "顧客コンテキスト有効"
     }
   },
   "auth": {

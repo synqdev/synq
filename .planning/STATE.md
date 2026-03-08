@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 05-ai-classification-karute-ui (Plan 2 of 3)
-Plan: 05-02 complete
+Phase: 06-ask-ai-chat (Plan 2 of 3)
+Plan: 06-02 complete
 Status: In progress
-Last activity: 2026-03-07 — Completed 05-02 (Karute Editor UI)
+Last activity: 2026-03-07 — Completed 06-02 (Chat UI Components)
 
-Progress: [#####---] 67%
+Progress: [######--] 83%
 
 ### Open PRs
 
@@ -24,9 +24,9 @@ None
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
+- Total plans completed: 24
 - Average duration: 6 min
-- Total execution time: 1.5 hours
+- Total execution time: 1.6 hours
 
 **By Phase:**
 
@@ -37,9 +37,10 @@ None
 | 03-karte-foundation | 3 | 8 min | 2.7 min |
 | 04-recording-transcription | 3 | 7 min | 2.3 min |
 | 05-ai-classification-karute-ui | 2 | 13 min | 6.5 min |
+| 06-ask-ai-chat | 2 | 6 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 2m, 2m, 3m, 7m, 6m
+- Last 5 plans: 3m, 7m, 6m, 3m, 3m
 - Trend: stable
 
 *Updated after each plan completion*
@@ -135,6 +136,14 @@ Recent decisions affecting current work:
 - Category colors as lookup object for consistent badge coloring across karute components (05-02)
 - Collapsible EntryForm starts as dashed button to reduce visual clutter (05-02)
 - Manual confidence of 1.0 for manually-added entries (human-created = full confidence) (05-02)
+- Tiered context budget: 8000 tokens max, full entries for last 3 records, aiSummary for older (06-01)
+- 24-hour conversation auto-renewal: new conversation if last message >24h ago (06-01)
+- Citation format [KR:uuid] parsed server-side after streaming completes (06-01)
+- ChatResult<T> discriminated union matching KaruteResult<T> pattern (06-01)
+- SSE protocol: conversationId first, content chunks, usage stats, [DONE] terminator (06-01)
+- ChatWrapper client component keeps admin layout as server component (06-02)
+- fetch + ReadableStream for SSE client (EventSource is GET-only) (06-02)
+- Quick actions send Japanese text queries regardless of UI locale (06-02)
 
 ### Roadmap Evolution
 
@@ -162,5 +171,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 05-02-PLAN.md (Karute Editor UI)
-Resume: Continue with 05-03 (Karute list and dashboard integration).
+Stopped at: Completed 06-02-PLAN.md (Chat UI Components)
+Resume: Continue with 06-03 (Chat Integration).

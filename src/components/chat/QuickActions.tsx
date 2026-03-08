@@ -24,29 +24,31 @@ export function QuickActions({
 
   if (isStreaming) return null
 
-  const customerActionKeys = [
-    'summarizeLastVisit',
-    'showTreatmentHistory',
-    'anyAllergies',
-    'nextAppointment',
+  // Query strings are intentionally in Japanese: the backend builds context
+  // from Japanese salon records and the locale parameter controls the response language.
+  const customerActions = [
+    { key: 'summarizeLastVisit', query: t('summarizeLastVisit') },
+    { key: 'showTreatmentHistory', query: t('showTreatmentHistory') },
+    { key: 'anyAllergies', query: t('anyAllergies') },
+    { key: 'nextAppointment', query: t('nextAppointment') },
   ]
 
-  const globalActionKeys = [
-    'recentTrends',
-    'todaysAppointments',
+  const globalActions = [
+    { key: 'recentTrends', query: t('recentTrends') },
+    { key: 'todaysAppointments', query: t('todaysAppointments') },
   ]
 
-  const actionKeys = customerId ? customerActionKeys : globalActionKeys
+  const actions = customerId ? customerActions : globalActions
 
   return (
     <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-hide">
-      {actionKeys.map((key) => (
+      {actions.map((action) => (
         <button
-          key={key}
-          onClick={() => onAction(t(key))}
+          key={action.key}
+          onClick={() => onAction(action.query)}
           className="flex-shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
         >
-          {t(key)}
+          {t(action.key)}
         </button>
       ))}
     </div>

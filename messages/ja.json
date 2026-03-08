@@ -291,7 +291,7 @@
       "todaysAppointments": "本日の予約一覧",
       "error": "エラーが発生しました",
       "close": "閉じる",
-      "customerContextActive": "顧客コンテキスト有効"
+      "customerContextActive": "お客様コンテキスト有効"
     }
   },
   "auth": {

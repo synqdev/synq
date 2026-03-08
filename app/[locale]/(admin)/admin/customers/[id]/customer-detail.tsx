@@ -97,6 +97,12 @@ const statusStyles: Record<string, string> = {
 export function CustomerDetail({ customerId, locale, workers }: CustomerDetailProps) {
   const t = useTranslations('admin.customerDetail')
   const tCommon = useTranslations('common')
+  const { setCustomerId, setIsOpen } = useChatContext()
+
+  const handleAskAi = useCallback(() => {
+    setCustomerId(customerId)
+    setIsOpen(true)
+  }, [customerId, setCustomerId, setIsOpen])
 
   const { data: customer, error, isLoading, mutate } = useSWR<CustomerDetailData>(
     `/api/admin/customers/${customerId}`,
@@ -185,13 +191,6 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
       </div>
     )
   }
-
-  const { setCustomerId, setIsOpen } = useChatContext()
-
-  const handleAskAi = useCallback(() => {
-    setCustomerId(customer.id)
-    setIsOpen(true)
-  }, [customer.id, setCustomerId, setIsOpen])
 
   const staffOptions = [
     { value: '', label: t('noStaff') },

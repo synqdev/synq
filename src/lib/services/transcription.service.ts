@@ -105,7 +105,14 @@ export async function transcribeRecording(
 
     // 3. Get signed URL and download audio
     const signedUrl = await getRecordingSignedUrl(session.audioStoragePath);
-    const response = await fetch(signedUrl);
+    const response = await fetch(signedUrl, {
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download recording: ${response.status} ${response.statusText} (path: ${session.audioStoragePath})`
+      );
+    }
     const arrayBuffer = await response.arrayBuffer();
     const audioFile = new File(
       [arrayBuffer],
@@ -139,14 +146,15 @@ export async function transcribeRecording(
       })
     );
 
-    // 6. Store segments
-    await prisma.transcriptionSegment.createMany({ data: segments });
-
-    // 7. Update status to COMPLETED
-    await prisma.recordingSession.update({
-      where: { id: recordingSessionId },
-      data: { status: 'COMPLETED' },
-    });
+    // 6. Store segments and update status atomically so a partial failure
+    //    cannot leave rows in the DB while the session shows FAILED.
+    await prisma.$transaction([
+      prisma.transcriptionSegment.createMany({ data: segments }),
+      prisma.recordingSession.update({
+        where: { id: recordingSessionId },
+        data: { status: 'COMPLETED' },
+      }),
+    ]);
 
     return { success: true, data: { segmentCount: segments.length } };
   } catch (error) {

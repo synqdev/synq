@@ -9,11 +9,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { getAdminSession } from '@/lib/auth/admin'
+import { prisma } from '@/lib/db/client'
 import {
   createKaruteRecord,
   updateKaruteRecord,
   deleteKaruteRecord,
-  getKaruteRecord,
   createKaruteEntry,
   updateKaruteEntry,
   deleteKaruteEntry,
@@ -167,20 +167,28 @@ export async function updateKaruteStatusAction(
   const isAdmin = await getAdminSession()
   if (!isAdmin) throw new Error('Unauthorized')
 
-  const current = await getKaruteRecord(recordId)
-  if (!current.success) throw new Error('Karute record not found')
-
-  const allowedTransitions: Record<string, string[]> = {
-    DRAFT: ['REVIEW'],
-    REVIEW: ['APPROVED', 'DRAFT'],
-    APPROVED: ['DRAFT'],
-  }
-  if (!allowedTransitions[current.data.status]?.includes(status)) {
-    throw new Error(`Invalid status transition: ${current.data.status} → ${status}`)
+  // Allowed transitions: maps each target status to the set of statuses it can be reached from.
+  // Using an atomic updateMany with a WHERE on the current status avoids TOCTOU races
+  // when two admins update the same record simultaneously.
+  const allowedFromStatuses: Record<string, string[]> = {
+    REVIEW: ['DRAFT'],
+    APPROVED: ['REVIEW'],
+    DRAFT: ['REVIEW', 'APPROVED'],
   }
 
-  const result = await updateKaruteRecord({ id: recordId, status })
-  if (!result.success) throw new Error(result.error)
+  const validFromStatuses = allowedFromStatuses[status]
+  if (!validFromStatuses) {
+    throw new Error(`Invalid target status: ${status}`)
+  }
+
+  const { count } = await prisma.karuteRecord.updateMany({
+    where: { id: recordId, status: { in: validFromStatuses } },
+    data: { status },
+  })
+
+  if (count === 0) {
+    throw new Error(`Invalid status transition to ${status} — record not found or transition not allowed`)
+  }
 
   revalidatePath('/[locale]/admin/karute/[id]', 'page')
   revalidatePath('/[locale]/admin/dashboard', 'page')
@@ -207,9 +215,9 @@ export async function updateKaruteEntryTagsAction(
   if (!result.success) throw new Error(result.error)
 
   if (recordId) {
-    revalidatePath(`/admin/karute/${recordId}`)
+    revalidatePath('/[locale]/admin/karute/[id]', 'page')
   }
-  revalidatePath('/admin/dashboard')
+  revalidatePath('/[locale]/admin/dashboard', 'page')
   return { success: true }
 }
 

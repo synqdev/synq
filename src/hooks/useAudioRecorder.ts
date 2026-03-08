@@ -80,6 +80,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
    * Starts a timer that increments elapsedSeconds every second.
    */
   const startTimer = useCallback(() => {
+    // Clear any existing timer before starting a new one
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     timerRef.current = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
@@ -96,8 +101,16 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, []);
 
   const startRecording = useCallback(async () => {
+    // Bail out if a recording is already active to prevent resource leaks
+    const existingRecorder = mediaRecorderRef.current;
+    if (existingRecorder && existingRecorder.state !== 'inactive') {
+      return;
+    }
+
     try {
       setError(null);
+      setAudioBlob(null);
+      setElapsedSeconds(0);
       chunksRef.current = [];
 
       // Get microphone stream

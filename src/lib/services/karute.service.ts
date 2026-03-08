@@ -204,34 +204,37 @@ export async function deleteKaruteRecord(
   id: string
 ): Promise<KaruteResult<{ id: string }>> {
   try {
-    // Find record with recording sessions to get audio paths
+    // Find record with recording sessions to get audio paths before deletion
     const record = await prisma.karuteRecord.findUnique({
       where: { id },
-      include: { recordingSessions: true },
+      include: { recordingSessions: { select: { id: true, audioStoragePath: true } } },
     });
 
     if (!record) {
       return { success: false, error: 'Karute record not found' };
     }
 
-    // Best-effort cleanup of audio files from storage
-    for (const session of record.recordingSessions) {
-      if (session.audioStoragePath) {
-        try {
-          await deleteRecording(session.audioStoragePath);
-        } catch (error) {
-          console.warn('[karute.service] Failed to delete audio file', {
-            recordId: id,
-            sessionId: session.id,
-            path: session.audioStoragePath,
-            error,
-          });
-        }
+    // Collect audio paths before deleting
+    const audioPaths = record.recordingSessions
+      .map((s) => s.audioStoragePath)
+      .filter((p): p is string => p !== null);
+
+    // Delete DB record first — cascades to entries, sessions, segments via Prisma schema.
+    // Storage cleanup happens after to ensure the DB delete is not rolled back.
+    await prisma.karuteRecord.delete({ where: { id } });
+
+    // Best-effort cleanup of audio files from storage (after successful DB delete)
+    for (const path of audioPaths) {
+      try {
+        await deleteRecording(path);
+      } catch (error) {
+        console.warn('[karute.service] Failed to delete audio file', {
+          recordId: id,
+          path,
+          error,
+        });
       }
     }
-
-    // Delete record (cascades to entries via Prisma schema)
-    await prisma.karuteRecord.delete({ where: { id } });
 
     return { success: true, data: { id } };
   } catch (error) {
@@ -265,6 +268,9 @@ export async function createKaruteEntry(
         content: validated.content,
         originalQuote: validated.originalQuote,
         confidence: validated.confidence,
+        tags: validated.tags ?? [],
+        segmentIndices: validated.segmentIndices ?? [],
+        displayOrder: validated.displayOrder ?? 0,
       },
     });
 

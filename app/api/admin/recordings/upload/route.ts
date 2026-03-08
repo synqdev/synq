@@ -9,10 +9,18 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { uploadRecording } from '@/lib/storage/recording-storage'
+import { uploadRecording, deleteRecording } from '@/lib/storage/recording-storage'
 import { updateRecordingSession } from '@/lib/services/recording.service'
 
-const ALLOWED_TYPES = ['audio/webm', 'audio/mp4', 'audio/wav', 'audio/ogg']
+// Include codec-qualified variants that browsers emit (e.g. audio/webm;codecs=opus)
+const ALLOWED_TYPES = [
+  'audio/webm;codecs=opus',
+  'audio/webm',
+  'audio/mp4',
+  'audio/wav',
+  'audio/ogg;codecs=opus',
+  'audio/ogg',
+]
 const MAX_SIZE = 100 * 1024 * 1024 // 100MB
 
 export async function POST(request: NextRequest) {
@@ -33,7 +41,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'recordingSessionId is required' }, { status: 400 })
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  // Accept both exact match and base MIME type (strip codec params for comparison)
+  const baseMimeType = file.type.split(';')[0].trim()
+  const isAllowed = ALLOWED_TYPES.includes(file.type) || ALLOWED_TYPES.includes(baseMimeType)
+  if (!isAllowed) {
     return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
   }
 
@@ -44,10 +55,21 @@ export async function POST(request: NextRequest) {
   try {
     const result = await uploadRecording(recordingSessionId, file)
 
-    await updateRecordingSession({
-      id: recordingSessionId,
-      audioStoragePath: result.path,
-    })
+    try {
+      await updateRecordingSession({
+        id: recordingSessionId,
+        audioStoragePath: result.path,
+      })
+    } catch (dbError) {
+      // DB write failed after storage upload — clean up orphaned blob
+      await deleteRecording(result.path).catch((cleanupError) => {
+        console.error('[recordings/upload] Cleanup of orphaned blob failed', {
+          cleanupError,
+          path: result.path,
+        })
+      })
+      throw dbError
+    }
 
     return NextResponse.json({ success: true, path: result.path })
   } catch (error) {

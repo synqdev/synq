@@ -20,15 +20,21 @@ export async function GET(
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
-    // Map to a lighter shape for the history list
-    const records = result.data.map((record) => ({
-      id: record.id,
-      createdAt: record.createdAt,
-      status: record.status,
-      workerName: record.worker.name,
-      entryCount: record.entries.length,
-      bookingDate: record.booking?.startsAt ?? null,
-    }))
+    // Map to a lighter shape for the history list, sorted by booking date (most recent first)
+    const records = result.data
+      .map((record) => ({
+        id: record.id,
+        createdAt: record.createdAt,
+        status: record.status,
+        workerName: record.worker.name,
+        entryCount: record.entries.length,
+        bookingDate: record.booking?.startsAt ?? null,
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.bookingDate ?? b.createdAt).getTime() -
+          new Date(a.bookingDate ?? a.createdAt).getTime()
+      )
 
     return NextResponse.json(records)
   } catch (error) {

@@ -55,6 +55,9 @@ export const createKaruteEntrySchema = z.object({
   content: z.string().min(1, { message: 'Content is required' }),
   originalQuote: z.string().optional(),
   confidence: z.number().min(0).max(1).default(0),
+  tags: z.array(z.string()).optional(),
+  segmentIndices: z.array(z.number().int().nonnegative()).optional(),
+  displayOrder: z.number().int().nonnegative().optional(),
 });
 
 export type CreateKaruteEntryInput = z.infer<typeof createKaruteEntrySchema>;

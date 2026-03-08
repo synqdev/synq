@@ -20,13 +20,17 @@ interface ApprovalControlsProps {
 export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControlsProps) {
   const t = useTranslations('admin.karuteEditor')
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [transitionError, setTransitionError] = useState<string | null>(null)
 
   const handleTransition = async (newStatus: KaruteStatus) => {
     setIsLoading(newStatus)
+    setTransitionError(null)
     try {
       await updateKaruteStatusAction(recordId, newStatus)
       onUpdate()
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update status'
+      setTransitionError(message)
       console.error('Failed to update status', error)
     } finally {
       setIsLoading(null)
@@ -34,7 +38,8 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
   }
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 flex-wrap">
       <StatusBadge status={status} />
 
       {status === 'DRAFT' && (
@@ -84,6 +89,10 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
         >
           {t('reopen')}
         </Button>
+      )}
+      </div>
+      {transitionError && (
+        <p className="text-sm text-red-600">{transitionError}</p>
       )}
     </div>
   )

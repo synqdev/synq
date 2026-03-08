@@ -5,9 +5,14 @@ let _supabase: SupabaseClient | null = null
 function getSupabase() {
   if (!_supabase) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // This module performs privileged server-side storage operations.
+    // Require the service role key — never fall back to the anon key
+    // to avoid silently operating with reduced permissions.
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) {
-      throw new Error('Supabase environment variables not configured')
+      throw new Error(
+        'NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for storage operations'
+      )
     }
     _supabase = createClient(url, key)
   }

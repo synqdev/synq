@@ -56,9 +56,9 @@ export const KaruteClassificationSchema = z.object({
         'OTHER',
       ]),
       content: z.string(),
-      confidence: z.number(),
+      confidence: z.number().min(0).max(1),
       originalQuote: z.string(),
-      segmentIndices: z.array(z.number()),
+      segmentIndices: z.array(z.number().int().nonnegative()),
     })
   ),
 });
@@ -172,8 +172,13 @@ export async function classifyAndStoreEntries(
 
     const classification = KaruteClassificationSchema.parse(parsed);
 
-    // 4. Store in transaction: update summary + create entries
+    // 4. Store in transaction: delete existing entries (idempotent), update summary, create new entries.
+    // Deleting before creating ensures retries don't produce duplicate rows.
     await prisma.$transaction(async (tx) => {
+      await tx.karuteEntry.deleteMany({
+        where: { karuteId: karuteRecordId },
+      });
+
       await tx.karuteRecord.update({
         where: { id: karuteRecordId },
         data: { aiSummary: classification.summary },

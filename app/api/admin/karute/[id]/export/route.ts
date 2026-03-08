@@ -26,6 +26,7 @@ export async function GET(
 
       return new Response(result.text, {
         headers: {
+          'Cache-Control': 'private, no-store, max-age=0',
           'Content-Type': 'text/plain; charset=utf-8',
           'Content-Disposition': `attachment; filename=karute-${id}.txt`,
         },
@@ -40,6 +41,7 @@ export async function GET(
 
     return new Response(new Uint8Array(result.buffer), {
       headers: {
+        'Cache-Control': 'private, no-store, max-age=0',
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename=karute-${id}.pdf`,
       },

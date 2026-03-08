@@ -194,8 +194,12 @@ Plans:
   5. Global mode: ask across all recent karute records
   6. Japanese-first responses
 
+**Plans:** 3 plans in 3 waves
+
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 06-01-PLAN.md — Chat backend: schema, service, and API routes (Wave 1)
+- [ ] 06-02-PLAN.md — Chat UI: slide-over panel, components, and i18n (Wave 2)
+- [ ] 06-03-PLAN.md — Customer detail integration and end-to-end verification (Wave 3)
 
 ### Phase 7: Appointment View & Dashboard Integration
 **Goal**: Per-appointment page at `/{locale}/appointment/{id}` with recording, karute, and settings access. Dashboard integration showing today's appointments with karute access. Dark navy sidebar navigation for appointment-level interface
@@ -267,7 +271,7 @@ Plans:
 | 3. Karte Foundation | 0/3 | Not started | - |
 | 4. Recording & Transcription | 0/3 | Not started | - |
 | 5. AI Classification & Karute UI | 0/? | Not started | - |
-| 6. Ask AI Chat | 0/? | Not started | - |
+| 6. Ask AI Chat | 0/3 | Not started | - |
 | 7. Appointment View & Dashboard | 0/? | Not started | - |
 | 8. Payments & Membership | 0/? | Deferred | - |
 | 9. Differentiation | 0/? | Deferred | - |

@@ -244,7 +244,9 @@
         "LIFESTYLE": "Lifestyle",
         "NEXT_VISIT": "Next Visit",
         "OTHER": "Other"
-      }
+      },
+      "exportPDF": "Export PDF",
+      "exportText": "Export Text"
     },
     "customerDetail": {
       "title": "Customer Detail",

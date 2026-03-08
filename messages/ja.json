@@ -244,7 +244,9 @@
         "LIFESTYLE": "生活習慣",
         "NEXT_VISIT": "次回予約",
         "OTHER": "その他"
-      }
+      },
+      "exportPDF": "PDF出力",
+      "exportText": "テキスト出力"
     },
     "customerDetail": {
       "title": "顧客詳細",

@@ -269,6 +269,11 @@
       "medicalRecords": "Medical Records",
       "comingSoon": "Coming soon",
       "notFound": "Customer not found",
+      "karuteTab": "Karute",
+      "detailsTab": "Details",
+      "noKaruteRecords": "No karute records",
+      "entries": "entries",
+      "viewKarute": "View Karute",
       "intake": {
         "dropzone": "Drop files here or click to upload (PDF, JPG, PNG, WEBP, max 10MB)",
         "uploading": "Uploading...",

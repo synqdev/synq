@@ -269,6 +269,11 @@
       "medicalRecords": "カルテ",
       "comingSoon": "準備中",
       "notFound": "顧客が見つかりません",
+      "karuteTab": "カルテ",
+      "detailsTab": "詳細",
+      "noKaruteRecords": "カルテ記録がありません",
+      "entries": "エントリ",
+      "viewKarute": "カルテを表示",
       "intake": {
         "dropzone": "ファイルをドロップまたはクリックしてアップロード（PDF, JPG, PNG, WEBP, 最大10MB）",
         "uploading": "アップロード中...",

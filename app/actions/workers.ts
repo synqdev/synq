@@ -40,7 +40,7 @@ export async function createWorker(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/workers')
+  revalidatePath('/[locale]/admin/workers', 'page')
   return { success: true, workerId: worker.id }
 }
 
@@ -74,7 +74,7 @@ export async function updateWorker(formData: FormData) {
     },
   })
 
-  revalidatePath('/admin/workers')
+  revalidatePath('/[locale]/admin/workers', 'page')
   return { success: true }
 }
 
@@ -96,6 +96,6 @@ export async function deleteWorker(id: string) {
     data: { isActive: false },
   })
 
-  revalidatePath('/admin/workers')
+  revalidatePath('/[locale]/admin/workers', 'page')
   return { success: true }
 }

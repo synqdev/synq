@@ -196,11 +196,11 @@ describe('useAudioRecorder', () => {
     const { result } = renderHook(() => useAudioRecorder());
 
     await act(async () => {
-      await result.current.startRecording();
+      await expect(result.current.startRecording()).rejects.toThrow();
     });
 
     expect(result.current.status).toBe('idle');
-    expect(result.current.error).toContain('denied');
+    expect(result.current.error).toBe('ERROR_PERMISSION');
   });
 
   it('resets state after recording', async () => {

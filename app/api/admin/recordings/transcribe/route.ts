@@ -17,20 +17,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { recordingSessionId?: string }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { recordingSessionId } = body
-  if (!recordingSessionId) {
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    typeof (body as Record<string, unknown>).recordingSessionId !== 'string' ||
+    !(body as Record<string, unknown>).recordingSessionId
+  ) {
     return NextResponse.json(
       { error: 'recordingSessionId is required' },
       { status: 400 }
     )
   }
+
+  const { recordingSessionId } = body as { recordingSessionId: string }
 
   try {
     const result = await transcribeRecording(recordingSessionId)
@@ -42,7 +48,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ error: result.error }, { status: 500 })
+    const status =
+      result.error === 'Recording session not found'
+        ? 404
+        : result.error === 'Recording session has no audio file'
+          ? 409
+          : result.error?.includes('already being transcribed')
+            ? 409
+            : 500
+
+    return NextResponse.json({ error: result.error }, { status })
   } catch (error) {
     console.error('[recordings/transcribe] Transcription failed', {
       error,

@@ -1,6 +1,11 @@
 -- SYNQ Karute Row Level Security (RLS) Policies
 -- Karute data is admin-only (practitioners use admin panel).
 -- No customer self-service access to karute records.
+--
+-- IMPORTANT: All API routes and server actions that query these tables MUST call
+-- withRLSContext({ role: 'admin' }, ...) from src/lib/db/rls-context.ts before
+-- executing Prisma queries, otherwise the current_setting('app.role') check will
+-- fail and the query will be denied.
 
 -- ============================================================================
 -- ENABLE ROW LEVEL SECURITY ON ALL KARUTE TABLES

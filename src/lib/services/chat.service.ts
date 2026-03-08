@@ -138,14 +138,14 @@ export async function getChatHistory(
   try {
     const messages = await prisma.chatMessage.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: 20,
       select: { role: true, content: true },
     })
 
     return {
       success: true,
-      data: messages.map((m) => ({
+      data: messages.reverse().map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),

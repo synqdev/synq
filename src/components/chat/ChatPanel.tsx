@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useChatContext } from './ChatProvider'
 import { useChatStream } from './useChatStream'
@@ -56,13 +56,25 @@ export function ChatPanel() {
     onComplete: handleComplete,
   })
 
+  const optimisticIdRef = useRef<string | null>(null)
+
+  // Roll back optimistic user message if streaming fails
+  useEffect(() => {
+    if (error && optimisticIdRef.current) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticIdRef.current))
+      optimisticIdRef.current = null
+    }
+  }, [error, setMessages])
+
   const handleSend = useCallback(
     (message: string) => {
+      const optimisticId = `user-${Date.now()}`
+      optimisticIdRef.current = optimisticId
       // Add user message to the list immediately
       setMessages((prev) => [
         ...prev,
         {
-          id: `user-${Date.now()}`,
+          id: optimisticId,
           role: 'user' as const,
           content: message,
           createdAt: new Date().toISOString(),
@@ -126,7 +138,7 @@ export function ChatPanel() {
               {t('title')}
             </h2>
             {customerId && (
-              <p className="text-xs text-gray-500">Customer context active</p>
+              <p className="text-xs text-gray-500">{t('customerContextActive')}</p>
             )}
           </div>
           <button

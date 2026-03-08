@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 interface UseChatStreamOptions {
   onComplete: (content: string, conversationId: string) => void
@@ -33,6 +33,14 @@ export function useChatStream({
   const [streamingContent, setStreamingContent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const isStreamingRef = useRef(false)
+
+  // Abort any in-flight request on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   const sendMessage = useCallback(
     async (
@@ -41,9 +49,10 @@ export function useChatStream({
       conversationId: string | null,
       locale: string
     ) => {
-      // Prevent sending while already streaming
-      if (isStreaming) return
+      // Prevent sending while already streaming (ref avoids stale closure)
+      if (isStreamingRef.current) return
 
+      isStreamingRef.current = true
       setIsStreaming(true)
       setStreamingContent('')
       setError(null)
@@ -126,12 +135,13 @@ export function useChatStream({
           setError((err as Error).message || 'Stream failed')
         }
       } finally {
+        isStreamingRef.current = false
         setIsStreaming(false)
         setStreamingContent(null)
         abortRef.current = null
       }
     },
-    [isStreaming, onComplete]
+    [onComplete]
   )
 
   return { sendMessage, isStreaming, streamingContent, error }

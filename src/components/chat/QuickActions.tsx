@@ -24,16 +24,18 @@ export function QuickActions({
 
   if (isStreaming) return null
 
+  // Query strings are intentionally in Japanese: the backend builds context
+  // from Japanese salon records and the locale parameter controls the response language.
   const customerActions = [
-    { key: 'summarizeLastVisit', query: '前回の施術まとめ' },
-    { key: 'showTreatmentHistory', query: '施術履歴を表示' },
-    { key: 'anyAllergies', query: 'アレルギー情報' },
-    { key: 'nextAppointment', query: '次回の予約' },
+    { key: 'summarizeLastVisit', query: t('summarizeLastVisit') },
+    { key: 'showTreatmentHistory', query: t('showTreatmentHistory') },
+    { key: 'anyAllergies', query: t('anyAllergies') },
+    { key: 'nextAppointment', query: t('nextAppointment') },
   ]
 
   const globalActions = [
-    { key: 'recentTrends', query: '最近の施術傾向' },
-    { key: 'todaysAppointments', query: '本日の予約一覧' },
+    { key: 'recentTrends', query: t('recentTrends') },
+    { key: 'todaysAppointments', query: t('todaysAppointments') },
   ]
 
   const actions = customerId ? customerActions : globalActions

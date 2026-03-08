@@ -5,9 +5,10 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from './StatusBadge'
 import { updateKaruteStatusAction } from '@/app/actions/karute'
+import type { KaruteStatus } from './constants'
 
 interface ApprovalControlsProps {
-  status: string
+  status: KaruteStatus
   recordId: string
   onUpdate: () => void
 }
@@ -17,11 +18,10 @@ interface ApprovalControlsProps {
  * Draft -> Review -> Approved, with ability to reopen.
  */
 export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControlsProps) {
-  const [isLoading, setIsLoading] = useState<string | null>(null)
   const t = useTranslations('admin.karuteEditor')
+  const [isLoading, setIsLoading] = useState<string | null>(null)
 
-  const handleTransition = async (newStatus: 'DRAFT' | 'REVIEW' | 'APPROVED') => {
-    if (isLoading) return
+  const handleTransition = async (newStatus: KaruteStatus) => {
     setIsLoading(newStatus)
     try {
       await updateKaruteStatusAction(recordId, newStatus)

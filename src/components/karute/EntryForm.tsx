@@ -1,45 +1,44 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { createKaruteEntryAction } from '@/app/actions/karute'
+import { CATEGORY_KEYS } from './constants'
+import type { KaruteEntryCategory } from './constants'
 
 interface EntryFormProps {
   recordId: string
   onAdd: () => void
 }
 
-const categoryOptions = [
-  { value: 'SYMPTOM', label: '症状' },
-  { value: 'TREATMENT', label: '施術' },
-  { value: 'BODY_AREA', label: '部位' },
-  { value: 'PREFERENCE', label: '好み' },
-  { value: 'LIFESTYLE', label: '生活習慣' },
-  { value: 'NEXT_VISIT', label: '次回予約' },
-  { value: 'OTHER', label: 'その他' },
-]
-
 /**
  * Collapsible form for manually adding new karute entries.
  * Starts as a "+ Add Entry" button, expands to show the form.
  */
 export function EntryForm({ recordId, onAdd }: EntryFormProps) {
+  const t = useTranslations('admin.karuteEditor')
   const [isOpen, setIsOpen] = useState(false)
   const [category, setCategory] = useState('SYMPTOM')
   const [content, setContent] = useState('')
   const [originalQuote, setOriginalQuote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const categoryOptions = CATEGORY_KEYS.map((key) => ({
+    value: key,
+    label: t(`categories.${key}` as Parameters<typeof t>[0]),
+  }))
 
   const handleSubmit = async () => {
     if (!content.trim()) return
     setIsSubmitting(true)
-    setSubmissionError(null)
+    setErrorMessage(null)
     try {
       await createKaruteEntryAction({
         karuteId: recordId,
-        category: category as 'SYMPTOM' | 'TREATMENT' | 'BODY_AREA' | 'PREFERENCE' | 'LIFESTYLE' | 'NEXT_VISIT' | 'OTHER',
+        category: category as KaruteEntryCategory,
         content: content.trim(),
         originalQuote: originalQuote.trim() || undefined,
         confidence: 1.0,
@@ -51,7 +50,7 @@ export function EntryForm({ recordId, onAdd }: EntryFormProps) {
       onAdd()
     } catch (error) {
       console.error('Failed to create entry', error)
-      setSubmissionError(error instanceof Error ? error.message : 'エントリの作成に失敗しました')
+      setErrorMessage(error instanceof Error ? error.message : t('addEntry') + ' failed')
     } finally {
       setIsSubmitting(false)
     }
@@ -64,7 +63,7 @@ export function EntryForm({ recordId, onAdd }: EntryFormProps) {
         onClick={() => setIsOpen(true)}
         className="w-full rounded-lg border-2 border-dashed border-secondary-300 p-3 text-sm text-secondary-500 hover:border-primary-400 hover:text-primary-600 transition-colors"
       >
-        + エントリを追加
+        + {t('addEntry')}
       </button>
     )
   }
@@ -75,41 +74,41 @@ export function EntryForm({ recordId, onAdd }: EntryFormProps) {
         options={categoryOptions}
         value={category}
         onChange={setCategory}
-        label="カテゴリ"
+        label={t('category')}
       />
       <div>
         <label className="mb-1.5 block text-sm font-bold uppercase tracking-wide text-black">
-          内容
+          {t('content')}
         </label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           className="w-full rounded-lg border-2 border-black p-2 text-sm focus:border-primary-500 focus:outline-none"
           rows={3}
-          placeholder="エントリの内容を入力..."
+          placeholder={t('content') + '...'}
         />
       </div>
       <div>
         <label className="mb-1.5 block text-sm font-bold uppercase tracking-wide text-black">
-          原文引用（任意）
+          {t('originalQuote')}
         </label>
         <input
           type="text"
           value={originalQuote}
           onChange={(e) => setOriginalQuote(e.target.value)}
           className="w-full rounded-lg border-2 border-black p-2 text-sm focus:border-primary-500 focus:outline-none"
-          placeholder="トランスクリプトからの引用..."
+          placeholder={t('originalQuote') + '...'}
         />
       </div>
-      {submissionError && (
-        <p className="text-sm text-red-600">{submissionError}</p>
+      {errorMessage && (
+        <p className="text-xs text-red-600">{errorMessage}</p>
       )}
       <div className="flex gap-2">
         <Button size="sm" onClick={handleSubmit} loading={isSubmitting}>
-          追加
+          {t('addEntry')}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setIsOpen(false)}>
-          キャンセル
+          {t('cancel')}
         </Button>
       </div>
     </div>

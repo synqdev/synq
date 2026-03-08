@@ -26,7 +26,7 @@ export async function GET(
       where: { id },
       include: {
         entries: {
-          orderBy: { displayOrder: 'asc' },
+          orderBy: { createdAt: 'asc' },
         },
         customer: {
           select: { id: true, name: true },

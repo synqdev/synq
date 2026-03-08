@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 interface ConfidenceBadgeProps {
   confidence: number
 }
@@ -8,11 +10,13 @@ interface ConfidenceBadgeProps {
  * Displays confidence score with a warning for low-confidence entries (< 0.7).
  */
 export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps) {
+  const t = useTranslations('admin.karuteEditor')
+
   if (confidence < 0.7) {
     return (
       <span
         className="inline-flex items-center gap-1 text-xs font-medium text-amber-600"
-        title="低信頼度"
+        title={t('lowConfidence')}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

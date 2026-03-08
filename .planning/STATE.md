@@ -5,30 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** A slot is only bookable when BOTH the worker is free AND a physical resource (bed) is available.
-**Current focus:** Phase 5: AI Classification & Karute UI
+**Current focus:** v2.0 SYNQ Karte — AI Electronic Medical Records
 **v1.0 status:** Complete — booking MVP + staff availability shipped
 
 ## Current Position
 
-Phase: 5 of 9 - AI Classification & Karute UI
-Plan: 0 of 3
-Status: Executing Phase 5
-Last activity: 2026-03-07 — Executing Phase 5
+Phase: 03-karte-foundation (Plan 1 of 3)
+Plan: 03-01 complete
+Status: Executing phase 03
+Last activity: 2026-03-07 — Completed 03-01 (Schema & Storage Foundation)
 
-Progress: [████░░░░░░] 40% (v2.0: phases 3-4 built, executing 5)
+Progress: [###_____] 33%
 
 ### Open PRs
 
-**Phase 3: Karte Foundation** (target: `phase-3/karte-foundation`)
-- PR #56, #57, #58 — all checks passed
-
-**Phase 4: Recording & Transcription** (target: `phase-4/recording-transcription`)
-- PR #59, #60, #61 — all checks passed
+None
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 6 min
 - Total execution time: 1.4 hours
 
@@ -38,6 +34,7 @@ Progress: [████░░░░░░] 40% (v2.0: phases 3-4 built, executin
 |-------|-------|-------|----------|
 | 01-mvp | 14 | 82 min | 6 min |
 | 02.1-staff-availability | 2 | 12 min | 6 min |
+| 03-karte-foundation | 1 | 2 min | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 4m, 4m, 1m, 4m, 9m
@@ -117,6 +114,9 @@ Recent decisions affecting current work:
 - generateTimeSlots('06:00', '23:30', 30) for select dropdown time options (02.1-02)
 - Hidden input for isAvailable toggle ensures value always submitted in FormData (02.1-02)
 - schedule key added to admin.workersPage namespace to avoid multiple useTranslations calls (02.1-02)
+- Flat storage path ({recordingId}.webm) for single-shop simplicity (03-01)
+- Admin-only RLS on all karute tables, no customer self-service (03-01)
+- Per-bucket storage modules with singleton Supabase client pattern (03-01)
 
 ### Roadmap Evolution
 
@@ -143,6 +143,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 2.1 complete, verified, all PRs merged
-Resume: Begin Phase 3 (Payments & Membership) — plans already exist
+Last session: 2026-03-07
+Stopped at: Completed 03-01-PLAN.md (Schema & Storage Foundation)
+Resume: Continue with 03-02-PLAN.md (Karute Service Layer)

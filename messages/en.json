@@ -274,6 +274,22 @@
         "uploading": "Uploading...",
         "noFiles": "No intake forms uploaded yet"
       }
+    },
+    "chat": {
+      "title": "AI Chat",
+      "placeholder": "Type a question...",
+      "send": "Send",
+      "emptyCustomer": "Ask a question about this customer",
+      "emptyGlobal": "Ask a question",
+      "newChat": "New Chat",
+      "summarizeLastVisit": "Summarize last visit",
+      "showTreatmentHistory": "Show treatment history",
+      "anyAllergies": "Any allergies?",
+      "nextAppointment": "Next appointment",
+      "recentTrends": "Recent treatment trends",
+      "todaysAppointments": "Today's appointments",
+      "error": "An error occurred",
+      "close": "Close"
     }
   },
   "auth": {

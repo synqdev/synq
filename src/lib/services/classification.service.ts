@@ -139,21 +139,24 @@ export async function classifyAndStoreEntries(
       target: 'draft-7',
     });
 
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
-        { role: 'user', content: transcript },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'karute_classification',
-          strict: true,
-          schema: jsonSchema,
+    const response = await getOpenAI().chat.completions.create(
+      {
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: CLASSIFICATION_SYSTEM_PROMPT },
+          { role: 'user', content: transcript },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'karute_classification',
+            strict: true,
+            schema: jsonSchema,
+          },
         },
       },
-    });
+      { timeout: 60000 } // 60 second timeout for long transcripts
+    );
 
     const content = response.choices[0]?.message?.content;
     if (!content) {

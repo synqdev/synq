@@ -59,7 +59,7 @@ const fetcher = async (url: string) => {
   const r = await fetch(url)
   if (!r.ok) {
     const body = await r.json().catch(() => ({}))
-    throw new Error(body.error || `Failed to fetch: ${r.status}`)
+    throw new Error((body as { error?: string }).error || `Failed to fetch: ${r.status}`)
   }
   return r.json()
 }
@@ -161,6 +161,24 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
             <span>{t('customer')}: <strong>{data.customer.name}</strong></span>
             <span>{t('practitioner')}: <strong>{data.worker.name}</strong></span>
             <span>{t('date')}: <strong>{dateStr}</strong></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/admin/karute/${recordId}/export?format=pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded border border-secondary-300 px-2 py-1 text-xs text-secondary-600 transition-colors hover:bg-secondary-50"
+            >
+              {locale === 'en' ? 'Export PDF' : 'PDF出力'}
+            </a>
+            <a
+              href={`/api/admin/karute/${recordId}/export?format=text`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded border border-secondary-300 px-2 py-1 text-xs text-secondary-600 transition-colors hover:bg-secondary-50"
+            >
+              {locale === 'en' ? 'Export Text' : 'テキスト出力'}
+            </a>
           </div>
         </div>
         <ApprovalControls

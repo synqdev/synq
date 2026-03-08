@@ -244,7 +244,9 @@
         "LIFESTYLE": "生活習慣",
         "NEXT_VISIT": "次回予約",
         "OTHER": "その他"
-      }
+      },
+      "exportPDF": "PDF出力",
+      "exportText": "テキスト出力"
     },
     "customerDetail": {
       "title": "顧客詳細",
@@ -269,6 +271,12 @@
       "medicalRecords": "カルテ",
       "comingSoon": "準備中",
       "notFound": "顧客が見つかりません",
+      "karuteTab": "カルテ",
+      "detailsTab": "詳細",
+      "karuteLoadError": "データの読み込みに失敗しました",
+      "noKaruteRecords": "カルテ記録がありません",
+      "entries": "エントリ",
+      "viewKarute": "カルテを表示",
       "intake": {
         "dropzone": "ファイルをドロップまたはクリックしてアップロード（PDF, JPG, PNG, WEBP, 最大10MB）",
         "uploading": "アップロード中...",

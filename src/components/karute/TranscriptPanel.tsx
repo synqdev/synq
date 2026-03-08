@@ -28,9 +28,10 @@ export function TranscriptPanel({ segments, highlightedIndices }: TranscriptPane
 
   useEffect(() => {
     if (highlightedIndices.length === 0) return
+    if (!containerRef.current) return
 
     const firstIndex = highlightedIndices[0]
-    const element = containerRef.current?.querySelector(`#segment-${firstIndex}`)
+    const element = containerRef.current.querySelector(`#segment-${firstIndex}`)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }

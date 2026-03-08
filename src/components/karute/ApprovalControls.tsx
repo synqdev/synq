@@ -43,6 +43,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
           variant="outline"
           onClick={() => handleTransition('REVIEW')}
           loading={isLoading === 'REVIEW'}
+          disabled={isLoading !== null}
           className="!border-yellow-500 !text-yellow-700 hover:!bg-yellow-50"
         >
           {t('submitReview')}
@@ -56,6 +57,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
             variant="outline"
             onClick={() => handleTransition('APPROVED')}
             loading={isLoading === 'APPROVED'}
+            disabled={isLoading !== null}
             className="!border-green-500 !text-green-700 hover:!bg-green-50"
           >
             {t('approve')}
@@ -65,6 +67,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
             variant="ghost"
             onClick={() => handleTransition('DRAFT')}
             loading={isLoading === 'DRAFT'}
+            disabled={isLoading !== null}
           >
             {t('backToDraft')}
           </Button>
@@ -77,6 +80,7 @@ export function ApprovalControls({ status, recordId, onUpdate }: ApprovalControl
           variant="ghost"
           onClick={() => handleTransition('DRAFT')}
           loading={isLoading === 'DRAFT'}
+          disabled={isLoading !== null}
         >
           {t('reopen')}
         </Button>

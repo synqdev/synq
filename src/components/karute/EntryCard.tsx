@@ -50,6 +50,8 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
   const [isDeleting, setIsDeleting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  const isMutating = isSaving || isDeleting
+
   const categoryOptions = CATEGORY_KEYS.map((key) => ({
     value: key,
     label: t(`categories.${key}` as Parameters<typeof t>[0]),
@@ -58,6 +60,7 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
   const categoryLabel = categoryOptions.find((opt) => opt.value === entry.category)?.label ?? entry.category
 
   const handleSave = async () => {
+    if (isMutating) return
     setIsSaving(true)
     setErrorMessage(null)
     try {
@@ -77,6 +80,7 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
   }
 
   const handleDelete = async () => {
+    if (isMutating) return
     if (!confirm(t('deleteConfirm'))) return
     setIsDeleting(true)
     setErrorMessage(null)
@@ -117,7 +121,7 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
         <button
           type="button"
           onClick={handleDelete}
-          disabled={isDeleting}
+          disabled={isMutating}
           className="text-xs text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
         >
           {isDeleting ? '...' : t('delete')}
@@ -144,21 +148,22 @@ export function EntryCard({ entry, onHover, onLeave, onUpdate }: EntryCardProps)
             rows={3}
           />
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSave} loading={isSaving}>
+            <Button size="sm" onClick={handleSave} loading={isSaving} disabled={isMutating}>
               {t('save')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleCancel}>
+            <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isMutating}>
               {t('cancel')}
             </Button>
           </div>
         </div>
       ) : (
-        <p
-          className="cursor-pointer text-sm text-secondary-800 hover:bg-secondary-50 rounded p-1 -m-1"
+        <button
+          type="button"
+          className="w-full rounded p-1 -m-1 text-left text-sm text-secondary-800 hover:bg-secondary-50 cursor-pointer"
           onClick={() => setIsEditing(true)}
         >
           {entry.content}
-        </p>
+        </button>
       )}
 
       {/* Original quote */}

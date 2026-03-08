@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 04-recording-transcription (Plan 1 of 3)
-Plan: 04-01 complete
+Phase: 04-recording-transcription (Plan 2 of 3)
+Plan: 04-02 complete
 Status: In progress
-Last activity: 2026-03-07 — Completed 04-01 (Audio Recorder Hook & MIME Utility)
+Last activity: 2026-03-07 — Completed 04-02 (Transcription Service & API)
 
-Progress: [###-----] 33%
+Progress: [######--] 67%
 
 ### Open PRs
 
@@ -23,10 +23,10 @@ None
 
 ## Performance Metrics
 
-**Velocity:** *(derived from phase table below)*
-- Total plans completed: 20
-- Average duration: 5.2 min
-- Total execution time: 1.73 hours (104 min)
+**Velocity:**
+- Total plans completed: 19
+- Average duration: 6 min
+- Total execution time: 1.4 hours
 
 **By Phase:**
 
@@ -35,10 +35,10 @@ None
 | 01-mvp | 14 | 82 min | 6 min |
 | 02.1-staff-availability | 2 | 12 min | 6 min |
 | 03-karte-foundation | 3 | 8 min | 2.7 min |
-| 04-recording-transcription | 1 | 2 min | 2 min |
+| 04-recording-transcription | 2 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 4m, 9m, 3m, 3m, 2m
+- Last 5 plans: 9m, 3m, 3m, 2m, 2m
 - Trend: stable
 
 *Updated after each plan completion*
@@ -126,6 +126,8 @@ Recent decisions affecting current work:
 - AnalyserNode connected to source only (not destination) to avoid audio feedback (04-01)
 - setInterval with 1-second increment for timer (not timeDelta, per research anti-pattern) (04-01)
 - Ref-based resource tracking for MediaRecorder, AudioContext, stream, chunks (04-01)
+- Lazy OpenAI client creation (not module-level) for test/build compatibility (04-02)
+- Defensive parsing of diarized_json response (handle both speakers and segments fields) (04-02)
 
 ### Roadmap Evolution
 
@@ -153,5 +155,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 04-01-PLAN.md (Audio Recorder Hook & MIME Utility)
-Resume: Continue with 04-02-PLAN.md (Recording UI components)
+Stopped at: Completed 04-02-PLAN.md (Transcription Service & API)
+Resume: Continue with 04-03-PLAN.md

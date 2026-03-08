@@ -38,6 +38,7 @@ jest.mock('@sentry/nextjs', () => ({
 import {
   createRecordingSession,
   getRecordingSession,
+  updateRecordingSession,
   deleteRecordingSession,
 } from '../recording.service'
 
@@ -138,6 +139,44 @@ describe('recording.service', () => {
       if (!result.success) {
         expect(result.error).toBe('Recording session not found')
       }
+    })
+  })
+
+  describe('updateRecordingSession', () => {
+    it('returns success with updated session', async () => {
+      const mockSession = {
+        id: 'session-1',
+        audioStoragePath: 'session-1.webm',
+        customer: {},
+        worker: {},
+        karuteRecord: null,
+      }
+      mockSessionUpdate.mockResolvedValue(mockSession)
+
+      const result = await updateRecordingSession({
+        id: 'session-1',
+        audioStoragePath: 'session-1.webm',
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.id).toBe('session-1')
+      }
+      expect(mockSessionUpdate).toHaveBeenCalledWith({
+        where: { id: 'session-1' },
+        data: expect.objectContaining({ audioStoragePath: 'session-1.webm' }),
+        include: expect.objectContaining({ customer: true, worker: true }),
+      })
+    })
+
+    it('returns error when validation fails (empty id)', async () => {
+      const result = await updateRecordingSession({ id: '' })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain('Session ID is required')
+      }
+      expect(mockSessionUpdate).not.toHaveBeenCalled()
     })
   })
 

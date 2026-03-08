@@ -65,8 +65,9 @@ type KaruteRecordListItem = Prisma.KaruteRecordGetPayload<{
 // ============================================================================
 
 function captureKaruteError(error: unknown, context: Record<string, unknown>) {
-  Sentry.captureException(error, { extra: context });
-  console.error('[karute.service] operation failed', { error, ...context });
+  const sanitized = { operation: context.operation };
+  Sentry.captureException(error, { extra: sanitized });
+  console.error('[karute.service] operation failed', { operation: context.operation, error: formatError(error) });
 }
 
 function formatError(error: unknown): string {
@@ -247,7 +248,6 @@ export async function deleteKaruteRecord(
         });
       }
     }
-
 
     return { success: true, data: { id } };
   } catch (error) {

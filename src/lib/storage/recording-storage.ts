@@ -1,3 +1,4 @@
+import 'server-only'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 let _supabase: SupabaseClient | null = null
@@ -16,11 +17,21 @@ function getSupabase() {
 
 const BUCKET = 'recordings'
 
+/** Allowed audio MIME types for recording uploads. */
+export const ALLOWED_RECORDING_TYPES = ['audio/webm', 'audio/mp4', 'audio/wav', 'audio/ogg'] as const
+
+/** Regex for validating recording IDs (UUID format). Prevents path traversal attacks. */
+const SAFE_RECORDING_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function uploadRecording(
   recordingId: string,
   file: File
 ): Promise<{ path: string }> {
-  if (file.type !== 'audio/webm') {
+  if (!SAFE_RECORDING_ID_RE.test(recordingId)) {
+    throw new Error('Invalid recording ID format')
+  }
+
+  if (!(ALLOWED_RECORDING_TYPES as readonly string[]).includes(file.type)) {
     throw new Error(`Unsupported recording MIME type: ${file.type || 'unknown'}`)
   }
 

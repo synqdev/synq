@@ -9,10 +9,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
-import { uploadRecording, deleteRecording } from '@/lib/storage/recording-storage'
+import { uploadRecording, deleteRecording, ALLOWED_RECORDING_TYPES } from '@/lib/storage/recording-storage'
 import { updateRecordingSession } from '@/lib/services/recording.service'
 
-const ALLOWED_TYPES = ['audio/webm']
+const ALLOWED_TYPES: readonly string[] = ALLOWED_RECORDING_TYPES
 const MAX_SIZE = 100 * 1024 * 1024 // 100MB
 
 export async function POST(request: NextRequest) {

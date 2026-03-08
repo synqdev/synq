@@ -444,11 +444,8 @@ describe('Karute Foundation Integration Tests', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(mockSessionCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.not.objectContaining({ karuteRecordId: expect.anything() }),
-        })
-      )
+      const callData = mockSessionCreate.mock.calls[0][0].data
+      expect(callData).not.toHaveProperty('karuteRecordId')
     })
 
     it('retrieves session with transcription segments', async () => {

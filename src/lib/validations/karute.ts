@@ -12,7 +12,7 @@ import { z } from 'zod';
 // SHARED SCHEMAS
 // ============================================================================
 
-const karuteEntryCategorySchema = z.enum([
+export const karuteEntryCategorySchema = z.enum([
   'SYMPTOM',
   'TREATMENT',
   'BODY_AREA',

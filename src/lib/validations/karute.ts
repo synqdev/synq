@@ -78,6 +78,7 @@ export const updateKaruteEntrySchema = z.object({
   content: z.string().min(1).optional(),
   originalQuote: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export type UpdateKaruteEntryInput = z.infer<typeof updateKaruteEntrySchema>;

@@ -176,5 +176,24 @@ describe('recording.service', () => {
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).not.toHaveBeenCalled()
     })
+
+    it('still deletes session when audio cleanup fails (best-effort)', async () => {
+      const mockSession = {
+        id: 'session-3',
+        audioStoragePath: 'session-3.webm',
+      }
+      mockSessionFindUnique.mockResolvedValue(mockSession)
+      mockSessionDelete.mockResolvedValue(mockSession)
+      mockDeleteRecording.mockRejectedValue(new Error('storage down'))
+
+      const result = await deleteRecordingSession('session-3')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.id).toBe('session-3')
+      }
+      expect(mockSessionDelete).toHaveBeenCalledWith({ where: { id: 'session-3' } })
+      expect(mockDeleteRecording).toHaveBeenCalledWith('session-3.webm')
+    })
   })
 })

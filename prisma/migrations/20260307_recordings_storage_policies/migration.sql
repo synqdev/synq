@@ -1,9 +1,8 @@
 -- Storage RLS policies for audio recording uploads.
--- All operations use SUPABASE_SERVICE_ROLE_KEY (server-side only, bypasses RLS).
--- No client-side direct bucket access is permitted for medical audio recordings.
--- Access is exclusively through server-side signed URLs (getRecordingSignedUrl).
---
--- NOTE: No storage.objects policies are created here intentionally.
--- The recordings bucket should be set to private (not public) in Supabase dashboard.
--- Server-side code in src/lib/storage/recording-storage.ts uses the service role
--- key which bypasses RLS entirely, so no policy grants are required.
+-- All operations (upload, download, delete) are server-side using SUPABASE_SERVICE_ROLE_KEY,
+-- which bypasses RLS entirely. No client-side access policies are needed.
+-- Audio is served via signed URLs generated server-side (no authenticated policy required).
+-- This bucket is admin-only: no customer self-service access.
+
+-- No client-side storage policies are defined for the recordings bucket.
+-- If client-side access is required in future, restrict to current_setting('app.role') = 'admin'.

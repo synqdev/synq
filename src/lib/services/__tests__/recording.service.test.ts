@@ -25,6 +25,10 @@ jest.mock('@/lib/db/client', () => ({
   },
 }))
 
+jest.mock('@/lib/db/rls-context', () => ({
+  withRLSContext: (_ctx: unknown, op: () => Promise<unknown>) => op(),
+}))
+
 const mockDeleteRecording = jest.fn()
 jest.mock('@/lib/storage/recording-storage', () => ({
   deleteRecording: (...args: unknown[]) => mockDeleteRecording(...args),
@@ -43,6 +47,20 @@ import {
 } from '../recording.service'
 
 // ============================================================================
+// TEST IDS (valid UUIDs required by validation)
+// ============================================================================
+
+const IDS = {
+  session1: '11111111-1111-4111-a111-111111111111',
+  session2: '22222222-2222-4222-a222-222222222222',
+  session3: '33333333-3333-4333-a333-333333333333',
+  cust1: '44444444-4444-4444-a444-444444444444',
+  worker1: '55555555-5555-4555-a555-555555555555',
+  seg1: '66666666-6666-4666-a666-666666666666',
+  seg2: '77777777-7777-4777-a777-777777777777',
+}
+
+// ============================================================================
 // RECORDING SESSION TESTS
 // ============================================================================
 
@@ -54,9 +72,9 @@ describe('recording.service', () => {
   describe('createRecordingSession', () => {
     it('returns success with created session', async () => {
       const mockSession = {
-        id: 'session-1',
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        id: IDS.session1,
+        customerId: IDS.cust1,
+        workerId: IDS.worker1,
         customer: {},
         worker: {},
         karuteRecord: null,
@@ -64,18 +82,18 @@ describe('recording.service', () => {
       mockSessionCreate.mockResolvedValue(mockSession)
 
       const result = await createRecordingSession({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: IDS.cust1,
+        workerId: IDS.worker1,
       })
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('session-1')
+        expect(result.data.id).toBe(IDS.session1)
       }
       expect(mockSessionCreate).toHaveBeenCalledWith({
         data: {
-          customerId: 'cust-1',
-          workerId: 'worker-1',
+          customerId: IDS.cust1,
+          workerId: IDS.worker1,
         },
         include: expect.objectContaining({
           customer: true,
@@ -88,7 +106,7 @@ describe('recording.service', () => {
     it('returns error on validation failure', async () => {
       const result = await createRecordingSession({
         customerId: '',
-        workerId: 'worker-1',
+        workerId: IDS.worker1,
       })
 
       expect(result.success).toBe(false)
@@ -103,8 +121,8 @@ describe('recording.service', () => {
       mockSessionCreate.mockRejectedValue(dbError)
 
       const result = await createRecordingSession({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: IDS.cust1,
+        workerId: IDS.worker1,
       })
 
       expect(result.success).toBe(false)
@@ -119,10 +137,10 @@ describe('recording.service', () => {
   describe('getRecordingSession', () => {
     it('returns success with session and ordered segments', async () => {
       const mockSession = {
-        id: 'session-1',
+        id: IDS.session1,
         segments: [
-          { id: 'seg-1', segmentIndex: 0 },
-          { id: 'seg-2', segmentIndex: 1 },
+          { id: IDS.seg1, segmentIndex: 0 },
+          { id: IDS.seg2, segmentIndex: 1 },
         ],
         customer: {},
         worker: {},
@@ -130,15 +148,15 @@ describe('recording.service', () => {
       }
       mockSessionFindUnique.mockResolvedValue(mockSession)
 
-      const result = await getRecordingSession('session-1')
+      const result = await getRecordingSession(IDS.session1)
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('session-1')
+        expect(result.data.id).toBe(IDS.session1)
         expect(result.data.segments).toHaveLength(2)
       }
       expect(mockSessionFindUnique).toHaveBeenCalledWith({
-        where: { id: 'session-1' },
+        where: { id: IDS.session1 },
         include: expect.objectContaining({
           segments: expect.objectContaining({ orderBy: { segmentIndex: 'asc' } }),
           customer: true,
@@ -162,7 +180,7 @@ describe('recording.service', () => {
   describe('updateRecordingSession', () => {
     it('returns success with updated session', async () => {
       const mockSession = {
-        id: 'session-1',
+        id: IDS.session1,
         audioStoragePath: 'session-1.webm',
         customer: {},
         worker: {},
@@ -171,16 +189,16 @@ describe('recording.service', () => {
       mockSessionUpdate.mockResolvedValue(mockSession)
 
       const result = await updateRecordingSession({
-        id: 'session-1',
+        id: IDS.session1,
         audioStoragePath: 'session-1.webm',
       })
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('session-1')
+        expect(result.data.id).toBe(IDS.session1)
       }
       expect(mockSessionUpdate).toHaveBeenCalledWith({
-        where: { id: 'session-1' },
+        where: { id: IDS.session1 },
         data: expect.objectContaining({ audioStoragePath: 'session-1.webm' }),
         include: expect.objectContaining({ customer: true, worker: true }),
       })
@@ -191,7 +209,7 @@ describe('recording.service', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Session ID is required')
+        expect(result.error).toContain('Session ID must be a valid UUID')
       }
       expect(mockSessionUpdate).not.toHaveBeenCalled()
     })
@@ -200,34 +218,34 @@ describe('recording.service', () => {
   describe('deleteRecordingSession', () => {
     it('returns success and deletes audio from storage', async () => {
       const mockSession = {
-        id: 'session-1',
+        id: IDS.session1,
         audioStoragePath: 'session-1.webm',
       }
       mockSessionFindUnique.mockResolvedValue(mockSession)
       mockSessionDelete.mockResolvedValue(mockSession)
       mockDeleteRecording.mockResolvedValue(undefined)
 
-      const result = await deleteRecordingSession('session-1')
+      const result = await deleteRecordingSession(IDS.session1)
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('session-1')
+        expect(result.data.id).toBe(IDS.session1)
       }
       expect(mockDeleteRecording).toHaveBeenCalledWith('session-1.webm')
       expect(mockSessionDelete).toHaveBeenCalledWith({
-        where: { id: 'session-1' },
+        where: { id: IDS.session1 },
       })
     })
 
     it('returns success when no audio file to clean up', async () => {
       const mockSession = {
-        id: 'session-2',
+        id: IDS.session2,
         audioStoragePath: null,
       }
       mockSessionFindUnique.mockResolvedValue(mockSession)
       mockSessionDelete.mockResolvedValue(mockSession)
 
-      const result = await deleteRecordingSession('session-2')
+      const result = await deleteRecordingSession(IDS.session2)
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).not.toHaveBeenCalled()
@@ -235,20 +253,20 @@ describe('recording.service', () => {
 
     it('still deletes session when audio cleanup fails (best-effort)', async () => {
       const mockSession = {
-        id: 'session-3',
+        id: IDS.session3,
         audioStoragePath: 'session-3.webm',
       }
       mockSessionFindUnique.mockResolvedValue(mockSession)
       mockSessionDelete.mockResolvedValue(mockSession)
       mockDeleteRecording.mockRejectedValue(new Error('storage down'))
 
-      const result = await deleteRecordingSession('session-3')
+      const result = await deleteRecordingSession(IDS.session3)
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('session-3')
+        expect(result.data.id).toBe(IDS.session3)
       }
-      expect(mockSessionDelete).toHaveBeenCalledWith({ where: { id: 'session-3' } })
+      expect(mockSessionDelete).toHaveBeenCalledWith({ where: { id: IDS.session3 } })
       expect(mockDeleteRecording).toHaveBeenCalledWith('session-3.webm')
     })
   })

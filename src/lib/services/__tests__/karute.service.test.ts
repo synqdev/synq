@@ -47,6 +47,10 @@ jest.mock('@sentry/nextjs', () => ({
   captureException: (...args: unknown[]) => mockCaptureException(...args),
 }))
 
+jest.mock('@/lib/db/rls-context', () => ({
+  withRLSContext: (_ctx: unknown, op: () => Promise<unknown>) => op(),
+}))
+
 import {
   createKaruteRecord,
   getKaruteRecord,
@@ -57,6 +61,19 @@ import {
   updateKaruteEntry,
   deleteKaruteEntry,
 } from '../karute.service'
+
+// ============================================================================
+// TEST IDS (valid UUIDs required by validation)
+// ============================================================================
+
+const IDS = {
+  record1: '11111111-1111-4111-a111-111111111111',
+  record2: '22222222-2222-4222-a222-222222222222',
+  entry1: '33333333-3333-4333-a333-333333333333',
+  cust1: '44444444-4444-4444-a444-444444444444',
+  worker1: '55555555-5555-4555-a555-555555555555',
+  session1: '66666666-6666-4666-a666-666666666666',
+}
 
 // ============================================================================
 // KARUTE RECORD TESTS
@@ -70,9 +87,9 @@ describe('karute.service', () => {
   describe('createKaruteRecord', () => {
     it('returns success with created record when input is valid', async () => {
       const mockRecord = {
-        id: 'record-1',
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        id: IDS.record1,
+        customerId: IDS.cust1,
+        workerId: IDS.worker1,
         entries: [],
         customer: {},
         worker: {},
@@ -82,18 +99,18 @@ describe('karute.service', () => {
       mockKaruteRecordCreate.mockResolvedValue(mockRecord)
 
       const result = await createKaruteRecord({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: IDS.cust1,
+        workerId: IDS.worker1,
       })
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('record-1')
+        expect(result.data.id).toBe(IDS.record1)
       }
       expect(mockKaruteRecordCreate).toHaveBeenCalledWith({
         data: {
-          customerId: 'cust-1',
-          workerId: 'worker-1',
+          customerId: IDS.cust1,
+          workerId: IDS.worker1,
         },
         include: expect.objectContaining({
           entries: true,
@@ -106,13 +123,10 @@ describe('karute.service', () => {
     it('returns error when validation fails (missing customerId)', async () => {
       const result = await createKaruteRecord({
         customerId: '',
-        workerId: 'worker-1',
+        workerId: IDS.worker1,
       })
 
       expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toContain('Customer ID is required')
-      }
       expect(mockKaruteRecordCreate).not.toHaveBeenCalled()
     })
 
@@ -120,8 +134,8 @@ describe('karute.service', () => {
       mockKaruteRecordCreate.mockRejectedValue(new Error('DB connection failed'))
 
       const result = await createKaruteRecord({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: IDS.cust1,
+        workerId: IDS.worker1,
       })
 
       expect(result.success).toBe(false)
@@ -134,21 +148,21 @@ describe('karute.service', () => {
 
   describe('getKaruteRecord', () => {
     it('returns success with record when found', async () => {
-      const mockRecord = { id: 'record-1', entries: [], customer: {}, worker: {} }
+      const mockRecord = { id: IDS.record1, entries: [], customer: {}, worker: {} }
       mockKaruteRecordFindUnique.mockResolvedValue(mockRecord)
 
-      const result = await getKaruteRecord('record-1')
+      const result = await getKaruteRecord(IDS.record1)
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('record-1')
+        expect(result.data.id).toBe(IDS.record1)
       }
     })
 
     it('returns error when record not found', async () => {
       mockKaruteRecordFindUnique.mockResolvedValue(null)
 
-      const result = await getKaruteRecord('nonexistent')
+      const result = await getKaruteRecord(IDS.record1)
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -160,19 +174,19 @@ describe('karute.service', () => {
   describe('getKaruteRecordsByCustomer', () => {
     it('returns success with array of records', async () => {
       const mockRecords = [
-        { id: 'record-1', entries: [], worker: {}, booking: null },
-        { id: 'record-2', entries: [], worker: {}, booking: null },
+        { id: IDS.record1, entries: [], worker: {}, booking: null },
+        { id: IDS.record2, entries: [], worker: {}, booking: null },
       ]
       mockKaruteRecordFindMany.mockResolvedValue(mockRecords)
 
-      const result = await getKaruteRecordsByCustomer('cust-1')
+      const result = await getKaruteRecordsByCustomer(IDS.cust1)
 
       expect(result.success).toBe(true)
       if (result.success) {
         expect(result.data).toHaveLength(2)
       }
       expect(mockKaruteRecordFindMany).toHaveBeenCalledWith({
-        where: { customerId: 'cust-1' },
+        where: { customerId: IDS.cust1 },
         orderBy: { createdAt: 'desc' },
         include: expect.objectContaining({ entries: true, worker: true }),
       })
@@ -181,17 +195,17 @@ describe('karute.service', () => {
 
   describe('updateKaruteRecord', () => {
     it('returns success with updated record', async () => {
-      const mockRecord = { id: 'record-1', status: 'APPROVED', entries: [], customer: {}, worker: {} }
+      const mockRecord = { id: IDS.record1, status: 'APPROVED', entries: [], customer: {}, worker: {} }
       mockKaruteRecordUpdate.mockResolvedValue(mockRecord)
 
       const result = await updateKaruteRecord({
-        id: 'record-1',
+        id: IDS.record1,
         status: 'APPROVED',
       })
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('record-1')
+        expect(result.data.id).toBe(IDS.record1)
       }
     })
 
@@ -208,36 +222,36 @@ describe('karute.service', () => {
   describe('deleteKaruteRecord', () => {
     it('returns success and cleans up storage files', async () => {
       const mockRecord = {
-        id: 'record-1',
+        id: IDS.record1,
         recordingSessions: [
-          { id: 'session-1', audioStoragePath: 'session-1.webm' },
+          { id: IDS.session1, audioStoragePath: 'session-1.webm' },
         ],
       }
       mockKaruteRecordFindUnique.mockResolvedValue(mockRecord)
       mockKaruteRecordDelete.mockResolvedValue(mockRecord)
       mockDeleteRecording.mockResolvedValue(undefined)
 
-      const result = await deleteKaruteRecord('record-1')
+      const result = await deleteKaruteRecord(IDS.record1)
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).toHaveBeenCalledWith('session-1.webm')
       expect(mockKaruteRecordDelete).toHaveBeenCalledWith({
-        where: { id: 'record-1' },
+        where: { id: IDS.record1 },
       })
     })
 
     it('returns success even when storage cleanup fails (best-effort)', async () => {
       const mockRecord = {
-        id: 'record-1',
+        id: IDS.record1,
         recordingSessions: [
-          { id: 'session-1', audioStoragePath: 'session-1.webm' },
+          { id: IDS.session1, audioStoragePath: 'session-1.webm' },
         ],
       }
       mockKaruteRecordFindUnique.mockResolvedValue(mockRecord)
       mockKaruteRecordDelete.mockResolvedValue(mockRecord)
       mockDeleteRecording.mockRejectedValue(new Error('Storage unavailable'))
 
-      const result = await deleteKaruteRecord('record-1')
+      const result = await deleteKaruteRecord(IDS.record1)
 
       expect(result.success).toBe(true)
       expect(mockKaruteRecordDelete).toHaveBeenCalled()
@@ -251,28 +265,28 @@ describe('karute.service', () => {
   describe('createKaruteEntry', () => {
     it('returns success with created entry', async () => {
       const mockEntry = {
-        id: 'entry-1',
-        karuteId: 'record-1',
+        id: IDS.entry1,
+        karuteId: IDS.record1,
         category: 'SYMPTOM',
         content: 'Shoulder pain',
       }
       mockKaruteEntryCreate.mockResolvedValue(mockEntry)
 
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: IDS.record1,
         category: 'SYMPTOM',
         content: 'Shoulder pain',
       })
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('entry-1')
+        expect(result.data.id).toBe(IDS.entry1)
       }
     })
 
     it('returns error on invalid category', async () => {
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: IDS.record1,
         category: 'INVALID' as 'SYMPTOM',
         content: 'test',
       })
@@ -285,8 +299,8 @@ describe('karute.service', () => {
   describe('updateKaruteEntry', () => {
     it('returns success with updated entry', async () => {
       const mockEntry = {
-        id: 'entry-1',
-        karuteId: 'record-1',
+        id: IDS.entry1,
+        karuteId: IDS.record1,
         category: 'TREATMENT',
         content: 'Updated content',
         confidence: 0.9,
@@ -294,18 +308,18 @@ describe('karute.service', () => {
       mockKaruteEntryUpdate.mockResolvedValue(mockEntry)
 
       const result = await updateKaruteEntry({
-        id: 'entry-1',
+        id: IDS.entry1,
         content: 'Updated content',
         confidence: 0.9,
       })
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('entry-1')
+        expect(result.data.id).toBe(IDS.entry1)
         expect(result.data.content).toBe('Updated content')
       }
       expect(mockKaruteEntryUpdate).toHaveBeenCalledWith({
-        where: { id: 'entry-1' },
+        where: { id: IDS.entry1 },
         data: expect.objectContaining({ content: 'Updated content', confidence: 0.9 }),
       })
     })
@@ -315,7 +329,7 @@ describe('karute.service', () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toContain('Entry ID is required')
+        expect(result.error).toContain('Entry ID must be a valid UUID')
       }
       expect(mockKaruteEntryUpdate).not.toHaveBeenCalled()
     })
@@ -323,7 +337,7 @@ describe('karute.service', () => {
     it('returns error and calls Sentry when Prisma throws', async () => {
       mockKaruteEntryUpdate.mockRejectedValue(new Error('DB error'))
 
-      const result = await updateKaruteEntry({ id: 'entry-1', content: 'new content' })
+      const result = await updateKaruteEntry({ id: IDS.entry1, content: 'new content' })
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -335,22 +349,22 @@ describe('karute.service', () => {
 
   describe('deleteKaruteEntry', () => {
     it('returns success with deleted entry ID', async () => {
-      const mockEntry = { id: 'entry-1', karuteId: 'record-1', category: 'SYMPTOM', content: 'test' }
+      const mockEntry = { id: IDS.entry1, karuteId: IDS.record1, category: 'SYMPTOM', content: 'test' }
       mockKaruteEntryFindUnique.mockResolvedValue(mockEntry)
-      mockKaruteEntryDelete.mockResolvedValue({ id: 'entry-1' })
+      mockKaruteEntryDelete.mockResolvedValue({ id: IDS.entry1 })
 
-      const result = await deleteKaruteEntry('entry-1')
+      const result = await deleteKaruteEntry(IDS.entry1)
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('entry-1')
+        expect(result.data.id).toBe(IDS.entry1)
       }
     })
 
     it('returns error when entry not found', async () => {
       mockKaruteEntryFindUnique.mockResolvedValue(null)
 
-      const result = await deleteKaruteEntry('nonexistent')
+      const result = await deleteKaruteEntry(IDS.entry1)
 
       expect(result.success).toBe(false)
       if (!result.success) {

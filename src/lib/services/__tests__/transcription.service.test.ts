@@ -54,6 +54,15 @@ jest.mock('@sentry/nextjs', () => ({
   captureException: (...args: unknown[]) => mockCaptureException(...args),
 }))
 
+// Polyfill AbortSignal.timeout for test environment
+if (!AbortSignal.timeout) {
+  AbortSignal.timeout = (ms: number) => {
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(new DOMException('TimeoutError', 'TimeoutError')), ms)
+    return controller.signal
+  }
+}
+
 // Mock global fetch for downloading audio
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -124,7 +133,8 @@ describe('transcription.service', () => {
       // Verify signed URL was fetched
       expect(mockGetRecordingSignedUrl).toHaveBeenCalledWith('session-1.webm')
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://storage.example.com/signed-url'
+        'https://storage.example.com/signed-url',
+        expect.objectContaining({ signal: expect.anything() })
       )
 
       // Verify OpenAI was called

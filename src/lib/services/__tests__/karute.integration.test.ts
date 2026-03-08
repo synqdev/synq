@@ -60,6 +60,10 @@ jest.mock('@/lib/storage/recording-storage', () => ({
   deleteRecording: (...args: unknown[]) => mockDeleteRecording(...args),
 }))
 
+jest.mock('@/lib/db/rls-context', () => ({
+  withRLSContext: (_ctx: unknown, op: () => Promise<unknown>) => op(),
+}))
+
 const mockCaptureException = jest.fn()
 jest.mock('@sentry/nextjs', () => ({
   captureException: (...args: unknown[]) => mockCaptureException(...args),
@@ -84,22 +88,39 @@ import {
 } from '../recording.service'
 
 // ============================================================================
+// TEST IDS (valid UUIDs required by validation)
+// ============================================================================
+
+const ID = {
+  record1: '11111111-1111-4111-a111-111111111111',
+  record2: '22222222-2222-4222-a222-222222222222',
+  entry1: '33333333-3333-4333-a333-333333333333',
+  entry2: '33333333-3333-4333-a333-333333333334',
+  cust1: '44444444-4444-4444-a444-444444444444',
+  worker1: '55555555-5555-4555-a555-555555555555',
+  session1: '66666666-6666-4666-a666-666666666666',
+  session2: '66666666-6666-4666-a666-666666666667',
+  booking1: '77777777-7777-4777-a777-777777777777',
+  karute1: '88888888-8888-4888-a888-888888888888',
+}
+
+// ============================================================================
 // TEST DATA FACTORIES
 // ============================================================================
 
 function makeKaruteRecord(overrides: Record<string, unknown> = {}) {
   return {
-    id: 'record-1',
-    customerId: 'cust-1',
-    workerId: 'worker-1',
+    id: ID.record1,
+    customerId: ID.cust1,
+    workerId: ID.worker1,
     bookingId: null,
     aiSummary: null,
     status: 'DRAFT',
     createdAt: new Date('2026-03-01'),
     updatedAt: new Date('2026-03-01'),
     entries: [],
-    customer: { id: 'cust-1', name: 'Test Customer' },
-    worker: { id: 'worker-1', name: 'Test Worker' },
+    customer: { id: ID.cust1, name: 'Test Customer' },
+    worker: { id: ID.worker1, name: 'Test Worker' },
     booking: null,
     recordingSessions: [],
     ...overrides,
@@ -108,8 +129,8 @@ function makeKaruteRecord(overrides: Record<string, unknown> = {}) {
 
 function makeKaruteEntry(overrides: Record<string, unknown> = {}) {
   return {
-    id: 'entry-1',
-    karuteId: 'record-1',
+    id: ID.entry1,
+    karuteId: ID.record1,
     category: 'SYMPTOM',
     content: 'Shoulder pain on the left side',
     originalQuote: 'My left shoulder really hurts',
@@ -122,10 +143,10 @@ function makeKaruteEntry(overrides: Record<string, unknown> = {}) {
 
 function makeRecordingSession(overrides: Record<string, unknown> = {}) {
   return {
-    id: 'session-1',
-    karuteRecordId: 'record-1',
-    workerId: 'worker-1',
-    customerId: 'cust-1',
+    id: ID.session1,
+    karuteRecordId: ID.record1,
+    workerId: ID.worker1,
+    customerId: ID.cust1,
     bookingId: null,
     audioStoragePath: null,
     durationSeconds: null,
@@ -133,8 +154,8 @@ function makeRecordingSession(overrides: Record<string, unknown> = {}) {
     startedAt: new Date('2026-03-01'),
     endedAt: null,
     createdAt: new Date('2026-03-01'),
-    customer: { id: 'cust-1', name: 'Test Customer' },
-    worker: { id: 'worker-1', name: 'Test Worker' },
+    customer: { id: ID.cust1, name: 'Test Customer' },
+    worker: { id: ID.worker1, name: 'Test Worker' },
     karuteRecord: null,
     segments: [],
     ...overrides,
@@ -160,8 +181,8 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordCreate.mockResolvedValue(record)
 
       const createResult = await createKaruteRecord({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
       })
 
       expect(createResult.success).toBe(true)
@@ -211,31 +232,31 @@ describe('Karute Foundation Integration Tests', () => {
 
       // Verify each entry was created with correct karuteId
       for (const call of mockKaruteEntryCreate.mock.calls) {
-        expect(call[0].data.karuteId).toBe('record-1')
+        expect(call[0].data.karuteId).toBe(ID.record1)
       }
     })
 
     it('creates a record with optional bookingId', async () => {
-      const record = makeKaruteRecord({ bookingId: 'booking-1' })
+      const record = makeKaruteRecord({ bookingId: ID.booking1 })
       mockKaruteRecordCreate.mockResolvedValue(record)
 
       const result = await createKaruteRecord({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
-        bookingId: 'booking-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
+        bookingId: ID.booking1,
       })
 
       expect(result.success).toBe(true)
       expect(mockKaruteRecordCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ bookingId: 'booking-1' }),
+          data: expect.objectContaining({ bookingId: ID.booking1 }),
         })
       )
     })
 
     it('fails to add entry with invalid category', async () => {
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: ID.record1,
         category: 'INVALID_CATEGORY' as 'SYMPTOM',
         content: 'test content',
       })
@@ -246,7 +267,7 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('fails to add entry with empty content', async () => {
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: ID.record1,
         category: 'SYMPTOM',
         content: '',
       })
@@ -265,7 +286,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordUpdate.mockResolvedValue(updatedRecord)
 
       const result = await updateKaruteRecord({
-        id: 'record-1',
+        id: ID.record1,
         status: 'REVIEW',
       })
 
@@ -275,7 +296,7 @@ describe('Karute Foundation Integration Tests', () => {
       }
       expect(mockKaruteRecordUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'record-1' },
+          where: { id: ID.record1 },
           data: { status: 'REVIEW' },
         })
       )
@@ -286,7 +307,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordUpdate.mockResolvedValue(updatedRecord)
 
       const result = await updateKaruteRecord({
-        id: 'record-1',
+        id: ID.record1,
         status: 'APPROVED',
       })
 
@@ -301,7 +322,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordUpdate.mockResolvedValue(updatedRecord)
 
       const result = await updateKaruteRecord({
-        id: 'record-1',
+        id: ID.record1,
         status: 'APPROVED',
       })
 
@@ -313,7 +334,7 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('rejects invalid status values via validation', async () => {
       const result = await updateKaruteRecord({
-        id: 'record-1',
+        id: ID.record1,
         status: 'INVALID_STATUS' as 'DRAFT',
       })
 
@@ -329,7 +350,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordUpdate.mockResolvedValue(updatedRecord)
 
       const result = await updateKaruteRecord({
-        id: 'record-1',
+        id: ID.record1,
         status: 'REVIEW',
         aiSummary: 'Patient reports shoulder pain. Deep tissue applied.',
       })
@@ -360,9 +381,9 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionCreate.mockResolvedValue(session)
 
       const createResult = await createRecordingSession({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
-        karuteRecordId: 'record-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
+        karuteRecordId: ID.record1,
       })
 
       expect(createResult.success).toBe(true)
@@ -372,7 +393,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionUpdate.mockResolvedValue(pausedSession)
 
       const pauseResult = await updateRecordingSession({
-        id: 'session-1',
+        id: ID.session1,
         status: 'PAUSED',
       })
 
@@ -383,7 +404,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionUpdate.mockResolvedValue(resumedSession)
 
       const resumeResult = await updateRecordingSession({
-        id: 'session-1',
+        id: ID.session1,
         status: 'RECORDING',
       })
 
@@ -399,7 +420,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionUpdate.mockResolvedValue(completedSession)
 
       const completeResult = await updateRecordingSession({
-        id: 'session-1',
+        id: ID.session1,
         status: 'COMPLETED',
         endedAt: new Date('2026-03-01T01:00:00Z'),
         durationSeconds: 3600,
@@ -417,19 +438,19 @@ describe('Karute Foundation Integration Tests', () => {
     })
 
     it('creates a session linked to a karute record', async () => {
-      const session = makeRecordingSession({ karuteRecordId: 'record-1' })
+      const session = makeRecordingSession({ karuteRecordId: ID.record1 })
       mockSessionCreate.mockResolvedValue(session)
 
       const result = await createRecordingSession({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
-        karuteRecordId: 'record-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
+        karuteRecordId: ID.record1,
       })
 
       expect(result.success).toBe(true)
       expect(mockSessionCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ karuteRecordId: 'record-1' }),
+          data: expect.objectContaining({ karuteRecordId: ID.record1 }),
         })
       )
     })
@@ -439,13 +460,13 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionCreate.mockResolvedValue(session)
 
       const result = await createRecordingSession({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
       })
 
       expect(result.success).toBe(true)
       const callData = mockSessionCreate.mock.calls[0][0].data
-      expect(callData).not.toHaveProperty('karuteRecordId')
+      expect(callData.karuteRecordId).toBeUndefined()
     })
 
     it('retrieves session with transcription segments', async () => {
@@ -457,7 +478,7 @@ describe('Karute Foundation Integration Tests', () => {
       })
       mockSessionFindUnique.mockResolvedValue(session)
 
-      const result = await getRecordingSession('session-1')
+      const result = await getRecordingSession(ID.session1)
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -467,7 +488,7 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('rejects invalid recording status via validation', async () => {
       const result = await updateRecordingSession({
-        id: 'session-1',
+        id: ID.session1,
         status: 'INVALID' as 'RECORDING',
       })
 
@@ -488,7 +509,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteEntryCreate.mockResolvedValue(entry)
 
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: ID.record1,
         category: 'SYMPTOM',
         content: 'Shoulder pain on the left side',
         originalQuote: 'My shoulder has been hurting for days',
@@ -507,7 +528,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteEntryCreate.mockResolvedValue(entry)
 
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: ID.record1,
         category: 'OTHER',
         content: 'General note',
       })
@@ -529,7 +550,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteEntryUpdate.mockResolvedValue(updatedEntry)
 
       const result = await updateKaruteEntry({
-        id: 'entry-1',
+        id: ID.entry1,
         category: 'TREATMENT',
         content: 'Updated treatment info',
       })
@@ -541,7 +562,7 @@ describe('Karute Foundation Integration Tests', () => {
       }
       expect(mockKaruteEntryUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'entry-1' },
+          where: { id: ID.entry1 },
           data: expect.objectContaining({
             category: 'TREATMENT',
             content: 'Updated treatment info',
@@ -555,7 +576,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteEntryUpdate.mockResolvedValue(updatedEntry)
 
       const result = await updateKaruteEntry({
-        id: 'entry-1',
+        id: ID.entry1,
         confidence: 0.95,
       })
 
@@ -567,7 +588,7 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('rejects confidence outside 0-1 range', async () => {
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: ID.record1,
         category: 'SYMPTOM',
         content: 'test',
         confidence: 1.5,
@@ -579,7 +600,7 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('rejects negative confidence', async () => {
       const result = await createKaruteEntry({
-        karuteId: 'record-1',
+        karuteId: ID.record1,
         category: 'SYMPTOM',
         content: 'test',
         confidence: -0.1,
@@ -591,15 +612,15 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('deletes an entry that exists', async () => {
       mockKaruteEntryFindUnique.mockResolvedValue(makeKaruteEntry())
-      mockKaruteEntryDelete.mockResolvedValue({ id: 'entry-1' })
+      mockKaruteEntryDelete.mockResolvedValue({ id: ID.entry1 })
 
-      const result = await deleteKaruteEntry('entry-1')
+      const result = await deleteKaruteEntry(ID.entry1)
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.id).toBe('entry-1')
+        expect(result.data.id).toBe(ID.entry1)
       }
-      expect(mockKaruteEntryDelete).toHaveBeenCalledWith({ where: { id: 'entry-1' } })
+      expect(mockKaruteEntryDelete).toHaveBeenCalledWith({ where: { id: ID.entry1 } })
     })
 
     it('returns error when deleting non-existent entry', async () => {
@@ -631,7 +652,7 @@ describe('Karute Foundation Integration Tests', () => {
         )
 
         const result = await createKaruteEntry({
-          karuteId: 'record-1',
+          karuteId: ID.record1,
           category,
           content: `Content for ${category}`,
         })
@@ -650,8 +671,8 @@ describe('Karute Foundation Integration Tests', () => {
     it('deletes karute record and cleans up multiple audio files', async () => {
       const record = makeKaruteRecord({
         recordingSessions: [
-          { id: 'session-1', audioStoragePath: 'recordings/session-1.webm' },
-          { id: 'session-2', audioStoragePath: 'recordings/session-2.webm' },
+          { id: ID.session1, audioStoragePath: 'recordings/session-1.webm' },
+          { id: ID.session2, audioStoragePath: 'recordings/session-2.webm' },
           { id: 'session-3', audioStoragePath: null },
         ],
       })
@@ -659,14 +680,14 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordDelete.mockResolvedValue(record)
       mockDeleteRecording.mockResolvedValue(undefined)
 
-      const result = await deleteKaruteRecord('record-1')
+      const result = await deleteKaruteRecord(ID.record1)
 
       expect(result.success).toBe(true)
       // Should only attempt to delete sessions with audio paths
       expect(mockDeleteRecording).toHaveBeenCalledTimes(2)
       expect(mockDeleteRecording).toHaveBeenCalledWith('recordings/session-1.webm')
       expect(mockDeleteRecording).toHaveBeenCalledWith('recordings/session-2.webm')
-      expect(mockKaruteRecordDelete).toHaveBeenCalledWith({ where: { id: 'record-1' } })
+      expect(mockKaruteRecordDelete).toHaveBeenCalledWith({ where: { id: ID.record1 } })
     })
 
     it('deletes karute record with no recording sessions', async () => {
@@ -674,7 +695,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordFindUnique.mockResolvedValue(record)
       mockKaruteRecordDelete.mockResolvedValue(record)
 
-      const result = await deleteKaruteRecord('record-1')
+      const result = await deleteKaruteRecord(ID.record1)
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).not.toHaveBeenCalled()
@@ -695,8 +716,8 @@ describe('Karute Foundation Integration Tests', () => {
     it('still deletes record when some audio cleanup fails (best-effort)', async () => {
       const record = makeKaruteRecord({
         recordingSessions: [
-          { id: 'session-1', audioStoragePath: 'recordings/session-1.webm' },
-          { id: 'session-2', audioStoragePath: 'recordings/session-2.webm' },
+          { id: ID.session1, audioStoragePath: 'recordings/session-1.webm' },
+          { id: ID.session2, audioStoragePath: 'recordings/session-2.webm' },
         ],
       })
       mockKaruteRecordFindUnique.mockResolvedValue(record)
@@ -705,7 +726,7 @@ describe('Karute Foundation Integration Tests', () => {
         .mockRejectedValueOnce(new Error('Storage error'))
         .mockResolvedValueOnce(undefined)
 
-      const result = await deleteKaruteRecord('record-1')
+      const result = await deleteKaruteRecord(ID.record1)
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).toHaveBeenCalledTimes(2)
@@ -719,11 +740,11 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionDelete.mockResolvedValue(session)
       mockDeleteRecording.mockResolvedValue(undefined)
 
-      const result = await deleteRecordingSession('session-1')
+      const result = await deleteRecordingSession(ID.session1)
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).toHaveBeenCalledWith('recordings/session-1.webm')
-      expect(mockSessionDelete).toHaveBeenCalledWith({ where: { id: 'session-1' } })
+      expect(mockSessionDelete).toHaveBeenCalledWith({ where: { id: ID.session1 } })
     })
 
     it('deletes recording session without audio (no cleanup needed)', async () => {
@@ -731,7 +752,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionFindUnique.mockResolvedValue(session)
       mockSessionDelete.mockResolvedValue(session)
 
-      const result = await deleteRecordingSession('session-1')
+      const result = await deleteRecordingSession(ID.session1)
 
       expect(result.success).toBe(true)
       expect(mockDeleteRecording).not.toHaveBeenCalled()
@@ -745,16 +766,16 @@ describe('Karute Foundation Integration Tests', () => {
     it('retrieves karute record with entries and recording sessions', async () => {
       const record = makeKaruteRecord({
         entries: [
-          makeKaruteEntry({ id: 'entry-1', category: 'SYMPTOM' }),
-          makeKaruteEntry({ id: 'entry-2', category: 'TREATMENT' }),
+          makeKaruteEntry({ id: ID.entry1, category: 'SYMPTOM' }),
+          makeKaruteEntry({ id: ID.entry2, category: 'TREATMENT' }),
         ],
         recordingSessions: [
-          makeRecordingSession({ id: 'session-1' }),
+          makeRecordingSession({ id: ID.session1 }),
         ],
       })
       mockKaruteRecordFindUnique.mockResolvedValue(record)
 
-      const result = await getKaruteRecord('record-1')
+      const result = await getKaruteRecord(ID.record1)
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -767,12 +788,12 @@ describe('Karute Foundation Integration Tests', () => {
 
     it('lists karute records by customer ordered by creation date', async () => {
       const records = [
-        makeKaruteRecord({ id: 'record-2', createdAt: new Date('2026-03-02') }),
-        makeKaruteRecord({ id: 'record-1', createdAt: new Date('2026-03-01') }),
+        makeKaruteRecord({ id: ID.record2, createdAt: new Date('2026-03-02') }),
+        makeKaruteRecord({ id: ID.record1, createdAt: new Date('2026-03-01') }),
       ]
       mockKaruteRecordFindMany.mockResolvedValue(records)
 
-      const result = await getKaruteRecordsByCustomer('cust-1')
+      const result = await getKaruteRecordsByCustomer(ID.cust1)
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -780,7 +801,7 @@ describe('Karute Foundation Integration Tests', () => {
       }
       expect(mockKaruteRecordFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { customerId: 'cust-1' },
+          where: { customerId: ID.cust1 },
           orderBy: { createdAt: 'desc' },
         })
       )
@@ -828,8 +849,8 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordCreate.mockRejectedValue(new Error('FK constraint violation'))
 
       const result = await createKaruteRecord({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
       })
 
       expect(result.success).toBe(false)
@@ -843,8 +864,8 @@ describe('Karute Foundation Integration Tests', () => {
       mockSessionCreate.mockRejectedValue(new Error('Connection timeout'))
 
       const result = await createRecordingSession({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
       })
 
       expect(result.success).toBe(false)
@@ -858,7 +879,7 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteEntryUpdate.mockRejectedValue(new Error('Record not found'))
 
       const result = await updateKaruteEntry({
-        id: 'entry-1',
+        id: ID.entry1,
         content: 'Updated content',
       })
 
@@ -873,8 +894,8 @@ describe('Karute Foundation Integration Tests', () => {
       mockKaruteRecordCreate.mockRejectedValue('string error')
 
       const result = await createKaruteRecord({
-        customerId: 'cust-1',
-        workerId: 'worker-1',
+        customerId: ID.cust1,
+        workerId: ID.worker1,
       })
 
       expect(result.success).toBe(false)

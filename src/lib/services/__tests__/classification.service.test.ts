@@ -127,6 +127,7 @@ describe('classification.service', () => {
           update: (...args: unknown[]) => mockRecordUpdate(...args),
         },
         karuteEntry: {
+          deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
           createMany: (...args: unknown[]) => mockEntryCreateMany(...args),
         },
       };
@@ -169,7 +170,8 @@ describe('classification.service', () => {
               strict: true,
             }),
           }),
-        })
+        }),
+        expect.objectContaining({ timeout: 60000 })
       );
     });
 

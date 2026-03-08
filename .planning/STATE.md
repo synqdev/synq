@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 
 ## Current Position
 
-Phase: 05-ai-classification-karute-ui (Plan 1 of 3)
-Plan: 05-01 complete
+Phase: 05-ai-classification-karute-ui (Plan 2 of 3)
+Plan: 05-02 complete
 Status: In progress
-Last activity: 2026-03-07 — Completed 05-01 (AI Classification Service)
+Last activity: 2026-03-07 — Completed 05-02 (Karute Editor UI)
 
-Progress: [###-----] 33%
+Progress: [#####---] 67%
 
 ### Open PRs
 
@@ -24,7 +24,7 @@ None
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
+- Total plans completed: 22
 - Average duration: 6 min
 - Total execution time: 1.5 hours
 
@@ -36,10 +36,10 @@ None
 | 02.1-staff-availability | 2 | 12 min | 6 min |
 | 03-karte-foundation | 3 | 8 min | 2.7 min |
 | 04-recording-transcription | 3 | 7 min | 2.3 min |
-| 05-ai-classification-karute-ui | 1 | 7 min | 7 min |
+| 05-ai-classification-karute-ui | 2 | 13 min | 6.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 3m, 2m, 2m, 3m, 7m
+- Last 5 plans: 2m, 2m, 3m, 7m, 6m
 - Trend: stable
 
 *Updated after each plan completion*
@@ -131,9 +131,10 @@ Recent decisions affecting current work:
 - Defensive parsing of diarized_json response (handle both speakers and segments fields) (04-02)
 - Pipeline orchestration in RecordingPanel: session create -> record -> upload -> transcribe -> fetch segments (04-03)
 - Segments API route added as deviation (component needed GET endpoint for transcription segments) (04-03)
-- z.toJSONSchema() with target draft-7 for OpenAI structured outputs (Zod v4 incompatible with zodResponseFormat) (05-01)
-- Collect segments from all recording sessions via flatMap for classification (05-01)
-- Long-running AI operations use API routes (not server actions) for timeout tolerance (05-01)
+- SWR revalidateOnFocus:false prevents clobbering inline edits during karute data refresh (05-02)
+- Category colors as lookup object for consistent badge coloring across karute components (05-02)
+- Collapsible EntryForm starts as dashed button to reduce visual clutter (05-02)
+- Manual confidence of 1.0 for manually-added entries (human-created = full confidence) (05-02)
 
 ### Roadmap Evolution
 
@@ -161,5 +162,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-07
-Stopped at: Completed 05-01-PLAN.md (AI Classification Service)
-Resume: Continue with 05-02 (Karute Editor UI).
+Stopped at: Completed 05-02-PLAN.md (Karute Editor UI)
+Resume: Continue with 05-03 (Karute list and dashboard integration).

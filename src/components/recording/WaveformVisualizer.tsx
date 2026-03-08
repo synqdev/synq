@@ -18,7 +18,7 @@ interface WaveformVisualizerProps {
 export function WaveformVisualizer({ analyserNode, isActive }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
 
   const drawIdleLine = useCallback((canvas: HTMLCanvasElement) => {
     const ctx = canvas.getContext('2d');

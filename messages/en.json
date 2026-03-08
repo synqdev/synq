@@ -337,7 +337,8 @@
       "salon": "Salon",
       "clinic": "Clinic",
       "standard": "Standard",
-      "high": "High"
+      "high": "High",
+      "loadError": "Failed to load settings"
     }
   },
   "auth": {

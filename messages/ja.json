@@ -337,7 +337,8 @@
       "salon": "サロン",
       "clinic": "クリニック",
       "standard": "標準",
-      "high": "高品質"
+      "high": "高品質",
+      "loadError": "設定の読み込みに失敗しました"
     }
   },
   "auth": {

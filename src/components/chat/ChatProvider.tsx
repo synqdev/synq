@@ -9,14 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import useSWR from 'swr'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  citations?: { karuteId: string; label: string }[]
-  createdAt: string
-}
+import type { Message } from './types'
 
 interface ChatContextValue {
   isOpen: boolean
@@ -32,7 +25,13 @@ interface ChatContextValue {
 
 const ChatContext = createContext<ChatContextValue | null>(null)
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch: ${res.status}`)
+  }
+  return res.json()
+}
 
 interface HistoryResponse {
   conversation: {

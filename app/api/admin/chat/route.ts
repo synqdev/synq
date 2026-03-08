@@ -55,13 +55,8 @@ export async function POST(request: Request) {
       conversationId = convResult.data.id
     }
 
-    // Save user message
-    const saveResult = await saveMessage(conversationId, 'user', message)
-    if (!saveResult.success) {
-      return NextResponse.json({ error: saveResult.error }, { status: 500 })
-    }
-
-    // Build context and get history
+    // Build context and get history BEFORE saving the user message
+    // to avoid including the new user message twice in the OpenAI context
     const [contextResult, historyResult] = await Promise.all([
       buildChatContext(customerId ?? null, locale),
       getChatHistory(conversationId),
@@ -72,6 +67,12 @@ export async function POST(request: Request) {
     }
     if (!historyResult.success) {
       return NextResponse.json({ error: historyResult.error }, { status: 500 })
+    }
+
+    // Save user message after fetching history (history won't include this message)
+    const saveResult = await saveMessage(conversationId, 'user', message)
+    if (!saveResult.success) {
+      return NextResponse.json({ error: saveResult.error }, { status: 500 })
     }
 
     const systemPrompt = contextResult.data

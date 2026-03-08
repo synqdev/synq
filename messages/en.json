@@ -290,7 +290,8 @@
       "recentTrends": "Recent treatment trends",
       "todaysAppointments": "Today's appointments",
       "error": "An error occurred",
-      "close": "Close"
+      "close": "Close",
+      "customerContextActive": "Customer context active"
     }
   },
   "auth": {

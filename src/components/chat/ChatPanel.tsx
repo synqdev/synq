@@ -126,7 +126,7 @@ export function ChatPanel() {
               {t('title')}
             </h2>
             {customerId && (
-              <p className="text-xs text-gray-500">Customer context active</p>
+              <p className="text-xs text-gray-500">{t('customerContextActive')}</p>
             )}
           </div>
           <button

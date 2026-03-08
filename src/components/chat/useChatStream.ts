@@ -33,9 +33,9 @@ export function useChatStream({
   const [streamingContent, setStreamingContent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const inFlightRef = useRef(false)
+  const isStreamingRef = useRef(false)
 
-  // Abort in-flight request on unmount
+  // Abort any in-flight request on unmount
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
@@ -49,10 +49,10 @@ export function useChatStream({
       conversationId: string | null,
       locale: string
     ) => {
-      // Prevent sending while already streaming (ref-based for synchronous mutual exclusion)
-      if (inFlightRef.current) return
-      inFlightRef.current = true
+      // Prevent sending while already streaming (ref avoids stale closure)
+      if (isStreamingRef.current) return
 
+      isStreamingRef.current = true
       setIsStreaming(true)
       setStreamingContent('')
       setError(null)
@@ -135,7 +135,7 @@ export function useChatStream({
           setError((err as Error).message || 'Stream failed')
         }
       } finally {
-        inFlightRef.current = false
+        isStreamingRef.current = false
         setIsStreaming(false)
         setStreamingContent(null)
         abortRef.current = null

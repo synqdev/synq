@@ -70,12 +70,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [data])
 
-  // Reset messages when customerId changes to null (global mode)
+  // Clear previous conversation immediately whenever the scope changes
   useEffect(() => {
-    if (customerId === null) {
-      setMessages([])
-      setConversationId(null)
-    }
+    setMessages([])
+    setConversationId(null)
   }, [customerId])
 
   const refreshHistory = useCallback(() => {

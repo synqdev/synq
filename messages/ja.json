@@ -268,6 +268,7 @@
       "price": "料金",
       "medicalRecords": "カルテ",
       "comingSoon": "準備中",
+      "askAi": "AIに質問",
       "notFound": "顧客が見つかりません",
       "intake": {
         "dropzone": "ファイルをドロップまたはクリックしてアップロード（PDF, JPG, PNG, WEBP, 最大10MB）",
@@ -290,7 +291,7 @@
       "todaysAppointments": "本日の予約一覧",
       "error": "エラーが発生しました",
       "close": "閉じる",
-      "customerContextActive": "顧客コンテキスト有効"
+      "customerContextActive": "お客様コンテキスト有効"
     }
   },
   "auth": {

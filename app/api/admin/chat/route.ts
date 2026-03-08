@@ -129,18 +129,21 @@ export async function POST(request: Request) {
           }
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
 
           // Save assistant response after streaming completes
           // Parse citations from the response
           const citations = parseCitations(fullContent)
-          await saveMessage(
+          const saveResult = await saveMessage(
             conversationId!,
             'assistant',
             fullContent,
             citations.length > 0 ? citations : undefined,
             totalTokens
           )
+          if (!saveResult.success) {
+            console.error('[chat/route] Failed to save assistant message', { conversationId, error: saveResult.error })
+          }
+          controller.close()
         } catch (error) {
           console.error('[chat/route] Streaming error', { error })
           controller.error(error)
@@ -152,7 +155,6 @@ export async function POST(request: Request) {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
       },
     })
   } catch (error) {

@@ -203,9 +203,11 @@
       "speaker": "話者 {label}",
       "errorPermission": "マイクへのアクセスが許可されていません",
       "errorNoMic": "マイクが見つかりません",
+      "errorMic": "マイクエラー",
       "errorUpload": "アップロードに失敗しました",
       "errorTranscription": "文字起こしに失敗しました",
-      "recordingComplete": "録音完了"
+      "recordingComplete": "録音完了",
+      "newRecording": "新規録音"
     },
     "customerDetail": {
       "title": "顧客詳細",

@@ -11,7 +11,7 @@
 
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useAudioRecorder, type RecordingErrorCode } from '@/hooks/useAudioRecorder';
 import { createRecordingSessionAction } from '@/app/actions/karute';
 import { Spinner } from '@/components/ui';
 import { WaveformVisualizer } from './WaveformVisualizer';
@@ -44,37 +44,59 @@ export function RecordingPanel({
   const recorder = useAudioRecorder();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionSegments, setTranscriptionSegments] = useState<
     TranscriptionSegment[]
   >([]);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [isTranscriptionComplete, setIsTranscriptionComplete] = useState(false);
 
-  const isProcessing = isUploading || isTranscribing;
+  const isProcessing = isStarting || isUploading || isTranscribing;
+
+  function translateRecorderError(code: RecordingErrorCode | null): string | null {
+    if (!code) return null;
+    switch (code) {
+      case 'ERROR_PERMISSION': return t('errorPermission');
+      case 'ERROR_NO_MIC': return t('errorNoMic');
+      case 'ERROR_UNKNOWN': return t('errorMic');
+    }
+  }
 
   const handleStart = useCallback(async () => {
-    try {
-      setPipelineError(null);
+    if (isStarting) return;
+    setIsStarting(true);
+    setPipelineError(null);
+    setIsTranscriptionComplete(false);
+    setTranscriptionSegments([]);
 
-      // Create recording session in DB
+    let recordingStarted = false;
+    try {
+      // Start mic first — avoids orphan DB sessions on permission failure
+      await recorder.startRecording();
+      recordingStarted = true;
+
+      // Create recording session in DB only after mic is confirmed
       const result = await createRecordingSessionAction({
         customerId,
         workerId,
         karuteRecordId,
         bookingId,
       });
-
       setSessionId(result.id);
-
-      // Start audio recording
-      await recorder.startRecording();
     } catch (err) {
-      setPipelineError(
-        err instanceof Error ? err.message : 'Failed to start recording'
-      );
+      if (recordingStarted) {
+        // DB creation failed after recording started — surface as pipeline error
+        setPipelineError(
+          err instanceof Error ? err.message : 'Failed to start recording'
+        );
+      }
+      // If !recordingStarted, recorder.error is already set with an error code
+    } finally {
+      setIsStarting(false);
     }
-  }, [customerId, workerId, karuteRecordId, bookingId, recorder]);
+  }, [isStarting, customerId, workerId, karuteRecordId, bookingId, recorder]);
 
   const handleStop = useCallback(async () => {
     if (!sessionId) return;
@@ -124,12 +146,14 @@ export function RecordingPanel({
         `/api/admin/recordings/${sessionId}/segments`
       );
 
-      if (segmentsRes.ok) {
-        const segmentsData = await segmentsRes.json();
-        setTranscriptionSegments(segmentsData.segments || []);
+      if (!segmentsRes.ok) {
+        throw new Error(t('errorTranscription'));
       }
 
+      const segmentsData = await segmentsRes.json();
+      setTranscriptionSegments(segmentsData.segments || []);
       setIsTranscribing(false);
+      setIsTranscriptionComplete(true);
     } catch (err) {
       setIsUploading(false);
       setIsTranscribing(false);
@@ -138,6 +162,14 @@ export function RecordingPanel({
       );
     }
   }, [sessionId, recorder, t]);
+
+  const handleNewRecording = useCallback(() => {
+    recorder.resetRecorder();
+    setSessionId(null);
+    setPipelineError(null);
+    setTranscriptionSegments([]);
+    setIsTranscriptionComplete(false);
+  }, [recorder]);
 
   return (
     <div className="rounded-xl bg-slate-900 p-6">
@@ -162,6 +194,7 @@ export function RecordingPanel({
           onPause={recorder.pauseRecording}
           onResume={recorder.resumeRecording}
           onStop={handleStop}
+          onNewRecording={handleNewRecording}
           disabled={isProcessing}
         />
       </div>
@@ -181,8 +214,8 @@ export function RecordingPanel({
         </div>
       )}
 
-      {/* Recording complete indicator */}
-      {recorder.status === 'stopped' && !isProcessing && !pipelineError && (
+      {/* Recording complete indicator (hidden once transcription results are ready) */}
+      {recorder.status === 'stopped' && !isProcessing && !pipelineError && !isTranscriptionComplete && (
         <p className="py-2 text-center text-sm font-medium text-teal-400">
           {t('recordingComplete')}
         </p>
@@ -191,12 +224,12 @@ export function RecordingPanel({
       {/* Error display */}
       {(pipelineError || recorder.error) && (
         <p className="py-2 text-center text-sm text-red-400">
-          {pipelineError || recorder.error}
+          {pipelineError ?? translateRecorderError(recorder.error)}
         </p>
       )}
 
       {/* Transcription results */}
-      {transcriptionSegments.length > 0 && (
+      {isTranscriptionComplete && (
         <div className="mt-4 border-t border-slate-700 pt-4">
           <h3 className="mb-3 text-sm font-medium text-slate-300">
             {t('transcriptionComplete')}

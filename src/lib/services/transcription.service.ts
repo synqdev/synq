@@ -61,6 +61,9 @@ function formatError(error: unknown): string {
 }
 
 function createOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
@@ -81,7 +84,8 @@ function createOpenAIClient(): OpenAI {
  * On error, status is set to FAILED (best-effort).
  */
 export async function transcribeRecording(
-  recordingSessionId: string
+  recordingSessionId: string,
+  language = 'ja'
 ): Promise<TranscriptionResult<{ segmentCount: number }>> {
   // 1. Find session
   const session = await prisma.recordingSession.findUnique({
@@ -106,6 +110,9 @@ export async function transcribeRecording(
     // 3. Get signed URL and download audio
     const signedUrl = await getRecordingSignedUrl(session.audioStoragePath);
     const response = await fetch(signedUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download audio: ${response.status} ${response.statusText}`);
+    }
     const arrayBuffer = await response.arrayBuffer();
     const audioFile = new File(
       [arrayBuffer],
@@ -118,8 +125,9 @@ export async function transcribeRecording(
     const transcription = await openai.audio.transcriptions.create({
       model: 'gpt-4o-transcribe-diarize',
       file: audioFile,
-      language: 'ja',
+      language,
       response_format: 'diarized_json',
+      chunking_strategy: 'auto',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
@@ -135,7 +143,7 @@ export async function transcribeRecording(
         content: segment.text,
         startMs: Math.round(segment.start * 1000),
         endMs: Math.round(segment.end * 1000),
-        language: 'ja',
+        language,
       })
     );
 

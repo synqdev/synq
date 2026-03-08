@@ -17,20 +17,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { recordingSessionId?: string }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { recordingSessionId } = body
-  if (!recordingSessionId) {
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    typeof (body as Record<string, unknown>).recordingSessionId !== 'string' ||
+    !(body as Record<string, unknown>).recordingSessionId
+  ) {
     return NextResponse.json(
       { error: 'recordingSessionId is required' },
       { status: 400 }
     )
   }
+
+  const { recordingSessionId } = body as { recordingSessionId: string }
 
   try {
     const result = await transcribeRecording(recordingSessionId)

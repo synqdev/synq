@@ -193,7 +193,7 @@ function SettingsTabContent({
   tSettings: ReturnType<typeof useTranslations>
   viewSettingsLabel: string
 }) {
-  const { data, isLoading } = useSWR<AdminSettingsData>(
+  const { data, isLoading, error } = useSWR<AdminSettingsData>(
     '/api/admin/settings',
     settingsFetcher,
     { revalidateOnFocus: false }
@@ -203,6 +203,14 @@ function SettingsTabContent({
     return (
       <div className="flex h-40 items-center justify-center">
         <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-40 items-center justify-center text-sm text-red-500">
+        {tSettings('loadError')}
       </div>
     )
   }

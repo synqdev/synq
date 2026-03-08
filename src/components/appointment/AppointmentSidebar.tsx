@@ -67,7 +67,7 @@ export function AppointmentSidebar({
 
   const currentIndex = todayBookingIds.indexOf(bookingId)
   const hasPrev = currentIndex > 0
-  const hasNext = currentIndex < todayBookingIds.length - 1
+  const hasNext = currentIndex >= 0 && currentIndex < todayBookingIds.length - 1
 
   const handleChatOpen = () => {
     setCustomerId(customerId)

@@ -80,45 +80,46 @@ export async function getOrCreateConversation(
   messages: { id: string; role: string; content: string; citations: unknown; tokenCount: number | null; createdAt: Date }[]
 }>> {
   try {
-    // Find most recent conversation for this customer (or global)
-    const existing = await prisma.chatConversation.findFirst({
-      where: { customerId: customerId ?? null },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          take: 50,
+    const result = await prisma.$transaction(async (tx) => {
+      // Find most recent conversation and its newest message for 24h check
+      const existing = await tx.chatConversation.findFirst({
+        where: { customerId: customerId ?? null },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1, // only newest message needed for 24h check
+          },
         },
-      },
-    })
+      })
 
-    // Check if we should reuse or create new
-    if (existing) {
-      const lastMessage = existing.messages[existing.messages.length - 1]
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      if (existing) {
+        const lastMessage = existing.messages[0] // newest (desc order)
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-      // Reuse if there are messages and the last one was within 24 hours
-      if (lastMessage && lastMessage.createdAt > twentyFourHoursAgo) {
-        return { success: true, data: existing }
+        // Reuse if no messages yet, or if last message was within 24 hours
+        if (!lastMessage || lastMessage.createdAt > twentyFourHoursAgo) {
+          // Fetch all messages in asc order for display
+          const allMessages = await tx.chatMessage.findMany({
+            where: { conversationId: existing.id },
+            orderBy: { createdAt: 'asc' },
+          })
+          return { ...existing, messages: allMessages }
+        }
       }
 
-      // If no messages yet, reuse the empty conversation
-      if (!lastMessage) {
-        return { success: true, data: existing }
-      }
-    }
-
-    // Create new conversation
-    const conversation = await prisma.chatConversation.create({
-      data: { customerId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
+      // Create new conversation
+      return tx.chatConversation.create({
+        data: { customerId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
         },
-      },
+      })
     })
 
-    return { success: true, data: conversation }
+    return { success: true, data: result }
   } catch (error) {
     captureChatError(error, { operation: 'getOrCreateConversation', customerId })
     return { success: false, error: formatError(error) }
@@ -138,14 +139,14 @@ export async function getChatHistory(
   try {
     const messages = await prisma.chatMessage.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: 20,
       select: { role: true, content: true },
     })
 
     return {
       success: true,
-      data: messages.map((m) => ({
+      data: messages.reverse().map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),

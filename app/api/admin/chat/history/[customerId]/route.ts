@@ -27,9 +27,13 @@ export async function GET(
     const result = await getOrCreateConversation(customerId)
 
     if (!result.success) {
+      console.warn('[chat/history] getOrCreateConversation failed', {
+        customerId,
+        error: result.error,
+      })
       return NextResponse.json(
-        { conversation: null, messages: [] },
-        { status: 200 }
+        { error: result.error },
+        { status: 500 }
       )
     }
 

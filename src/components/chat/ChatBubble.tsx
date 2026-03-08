@@ -96,7 +96,7 @@ export function ChatBubble({ role, content, citations, createdAt }: ChatBubblePr
             ) : (
               <Link
                 key={i}
-                href={`/admin/karute/${part.karuteId}`}
+                href={`/${locale}/admin/karute/${part.karuteId}`}
                 className={`inline-flex items-center text-xs font-medium ${
                   isUser
                     ? 'text-blue-200 hover:text-white underline'

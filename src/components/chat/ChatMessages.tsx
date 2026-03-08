@@ -3,14 +3,7 @@
 import { useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { ChatBubble } from './ChatBubble'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  citations?: { karuteId: string; label: string }[]
-  createdAt: string
-}
+import type { Message } from './types'
 
 interface ChatMessagesProps {
   messages: Message[]
@@ -54,9 +47,9 @@ export function ChatMessages({
       {messages.map((msg) => (
         <ChatBubble
           key={msg.id}
-          role={msg.role as 'user' | 'assistant'}
+          role={msg.role}
           content={msg.content}
-          citations={msg.citations as { karuteId: string; label: string }[] | undefined}
+          citations={msg.citations}
           createdAt={msg.createdAt}
         />
       ))}

@@ -24,29 +24,29 @@ export function QuickActions({
 
   if (isStreaming) return null
 
-  const customerActions = [
-    { key: 'summarizeLastVisit', query: '前回の施術まとめ' },
-    { key: 'showTreatmentHistory', query: '施術履歴を表示' },
-    { key: 'anyAllergies', query: 'アレルギー情報' },
-    { key: 'nextAppointment', query: '次回の予約' },
+  const customerActionKeys = [
+    'summarizeLastVisit',
+    'showTreatmentHistory',
+    'anyAllergies',
+    'nextAppointment',
   ]
 
-  const globalActions = [
-    { key: 'recentTrends', query: '最近の施術傾向' },
-    { key: 'todaysAppointments', query: '本日の予約一覧' },
+  const globalActionKeys = [
+    'recentTrends',
+    'todaysAppointments',
   ]
 
-  const actions = customerId ? customerActions : globalActions
+  const actionKeys = customerId ? customerActionKeys : globalActionKeys
 
   return (
     <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-hide">
-      {actions.map((action) => (
+      {actionKeys.map((key) => (
         <button
-          key={action.key}
-          onClick={() => onAction(action.query)}
+          key={key}
+          onClick={() => onAction(t(key))}
           className="flex-shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
         >
-          {t(action.key)}
+          {t(key)}
         </button>
       ))}
     </div>

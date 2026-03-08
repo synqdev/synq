@@ -1,696 +1,899 @@
-# Architecture Patterns: Wellness Booking Systems
+# Architecture Patterns: SYNQ Karte (AI Electronic Medical Records)
 
-**Domain:** Wellness/Spa Appointment Booking System
-**Researched:** 2026-02-04
-**Confidence:** MEDIUM (WebSearch patterns + Prisma official docs)
+**Domain:** AI-powered Karte (medical record) system with live transcription, integrated into existing Next.js 15 booking app
+**Researched:** 2026-03-07
+**Confidence:** MEDIUM (existing codebase analysis + WebSearch patterns for streaming/transcription APIs)
 
 ## Executive Summary
 
-Booking systems require careful architecture to handle the "double-bottleneck" problem: a slot is only available if BOTH the worker is free AND physical resources (beds) have capacity. This requires atomic transaction handling, efficient availability queries, and clear separation between public booking flows and admin management.
+The Karte feature adds three new capabilities to SYNQ: (1) audio recording of appointments, (2) live transcription with AI, and (3) structured karte generation from transcripts. These features layer on top of the existing Booking/Customer/Worker models and require new data models, streaming API routes, audio storage, and an AI provider abstraction.
 
-SYNQ's architecture must prioritize **concurrent booking prevention** and **efficient availability calculation** while maintaining separation between user-facing and admin concerns.
+The architecture follows the existing SYNQ patterns -- route groups, Prisma services, Supabase Storage, admin auth via JWT -- while introducing SSE-based streaming for live transcription and a provider-agnostic AI layer. Audio recording happens client-side via the MediaRecorder API, with chunked uploads to the server for both storage and real-time transcription.
 
 ## Recommended Architecture
 
-### High-Level Structure
+### High-Level System Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Next.js 15 App Router                    │
-├──────────────────────────┬──────────────────────────────────┤
-│   Public App Routes      │      Admin App Routes            │
-│   (/app/(public))        │      (/app/(admin))              │
-├──────────────────────────┴──────────────────────────────────┤
-│                  Server Actions Layer                        │
-│  (Booking mutations, availability queries, validation)       │
-├──────────────────────────────────────────────────────────────┤
-│              Domain Service Layer (Optional)                 │
-│  (Business logic: availability calculation, conflicts)       │
-├──────────────────────────────────────────────────────────────┤
-│                   Data Access Layer                          │
-│              Prisma Client + PostgreSQL                      │
-└──────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------+
+|                    Next.js 15 App Router                            |
++-------------------------------------------------------------------+
+|                                                                     |
+|  EXISTING                          NEW                              |
+|  /(admin)/admin/dashboard          /(admin)/admin/appointment/[id]  |
+|    - Timetable (tab nav)             - Recording controls           |
+|    - New: "Karte" column/link        - Live transcript viewer       |
+|    - New: Today's appointments       - Karte editor/viewer          |
+|      with karte status               - Past karte history           |
+|                                                                     |
++----------------------------+----------------------------------------+
+                             |
+        +--------------------+--------------------+
+        |                    |                    |
+  Server Actions       API Routes (new)     API Routes (existing)
+  (mutations)          /api/karte/*          /api/admin/*
+                       /api/transcription/*
+        |                    |                    |
+        +--------------------+--------------------+
+                             |
+              +--------------+--------------+
+              |              |              |
+        Service Layer   AI Provider    Supabase Storage
+        (Prisma)        Abstraction    (audio bucket)
+              |              |
+              |         +----+----+
+              |         |         |
+              |     OpenAI    (future:
+              |     API       Deepgram,
+              |               Google, etc)
+              |
+        PostgreSQL (Supabase)
 ```
 
 ### Component Boundaries
 
-| Component | Responsibility | Communicates With | Build Priority |
-|-----------|---------------|-------------------|----------------|
-| **Public Routes** | Customer-facing booking UI, slot selection, confirmation | Server Actions (read-only + booking mutations) | Phase 1 (MVP) |
-| **Admin Routes** | Shop management, worker schedules, resource config, booking oversight | Server Actions (full CRUD) | Phase 2 |
-| **Server Actions** | Handle mutations (bookings, cancellations), data fetching, form validation | Prisma Client, Domain Services | Phase 1 |
-| **Domain Services** | Availability calculation, double-bottleneck logic, conflict detection | Prisma Client | Phase 1 (critical) |
-| **Prisma Client** | Database queries, transactions, schema migrations | PostgreSQL | Phase 1 (foundation) |
-| **Database** | Data persistence, constraints, integrity | Prisma Client only | Phase 1 (foundation) |
+| Component | Responsibility | Communicates With | New/Modified |
+|-----------|---------------|-------------------|-------------|
+| **Appointment Page** | Recording UI, transcript display, karte viewer | API routes (SSE + REST), server actions | NEW |
+| **Recording Controls** | Start/stop/pause audio, MediaRecorder management, chunk upload | `/api/transcription/stream` | NEW |
+| **Transcript Viewer** | Display live + completed transcripts, speaker labels | SSE connection to transcription API | NEW |
+| **Karte Editor** | View/edit AI-generated structured karte | Server actions for save/update | NEW |
+| **Dashboard Karte Column** | Show karte status per booking on timetable | Existing calendar API (extended) | MODIFIED |
+| **Transcription API Route** | Receive audio chunks, forward to AI, stream results | AI Provider, Supabase Storage | NEW |
+| **Karte Generation API** | Generate structured karte from transcript | AI Provider, Prisma | NEW |
+| **AI Provider Abstraction** | Normalize interface across transcription/generation providers | OpenAI SDK (initially) | NEW |
+| **Audio Storage Service** | Upload/retrieve/delete audio files | Supabase Storage (`karte-audio` bucket) | NEW |
+| **Karte Service** | CRUD for Karte, Recording, Transcription models | Prisma Client | NEW |
 
-### Data Flow
+## New Prisma Models
 
-#### Booking Creation Flow (Critical Path)
+### Schema Extension
+
+```prisma
+// ============================================================================
+// KARTE ENUMS
+// ============================================================================
+
+enum KarteStatus {
+  DRAFT        // AI-generated, not yet reviewed
+  REVIEWED     // Practitioner has reviewed
+  FINALIZED    // Locked, no further edits
+}
+
+enum RecordingStatus {
+  RECORDING    // Currently being recorded
+  PROCESSING   // Upload/transcription in progress
+  COMPLETED    // Done
+  FAILED       // Error during processing
+}
+
+enum TranscriptionStatus {
+  PENDING      // Waiting to be processed
+  IN_PROGRESS  // Currently transcribing
+  COMPLETED    // Done
+  FAILED       // Error
+}
+
+// ============================================================================
+// KARTE MODELS
+// ============================================================================
+
+model Karte {
+  id              String        @id @default(uuid())
+  bookingId       String        @unique  // 1:1 with Booking
+  customerId      String
+  workerId        String        // Practitioner who created it
+  status          KarteStatus   @default(DRAFT)
+
+  // AI-generated structured content (JSON)
+  // Contains: chiefComplaint, subjective, objective, assessment, plan
+  content         Json?
+
+  // Free-form practitioner notes (supplements AI content)
+  notes           String?
+
+  // AI-generated tags for searchability
+  tags            String[]      @default([])
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  worker          Worker        @relation(fields: [workerId], references: [id])
+  recording       Recording?
+  transcription   Transcription?
+
+  @@index([customerId])
+  @@index([workerId])
+  @@index([createdAt])
+}
+
+model Recording {
+  id              String          @id @default(uuid())
+  karteId         String          @unique  // 1:1 with Karte
+  status          RecordingStatus @default(RECORDING)
+
+  // Supabase Storage path (karte-audio bucket)
+  audioPath       String?
+  durationSeconds Int?
+  mimeType        String          @default("audio/webm")
+  fileSizeBytes   Int?
+
+  startedAt       DateTime        @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  karte           Karte           @relation(fields: [karteId], references: [id], onDelete: Cascade)
+
+  @@index([karteId])
+}
+
+model Transcription {
+  id              String              @id @default(uuid())
+  karteId         String              @unique  // 1:1 with Karte
+  status          TranscriptionStatus @default(PENDING)
+
+  // Full transcript text
+  fullText        String?
+
+  // Structured segments with timestamps and speaker labels (JSON array)
+  // [{speaker: "practitioner"|"patient", start: 0.0, end: 5.2, text: "..."}]
+  segments        Json?
+
+  // Source language detected
+  language        String?             @default("ja")
+
+  // Translation (if requested)
+  translatedText  String?
+  translatedLang  String?
+
+  // AI model used
+  model           String?
+  processingTime  Int?                // milliseconds
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  karte           Karte               @relation(fields: [karteId], references: [id], onDelete: Cascade)
+
+  @@index([karteId])
+}
+```
+
+### Relation to Existing Models
 
 ```
-User selects slot → Public Route Component
-                          ↓
-            Server Action (createBooking)
-                          ↓
-    ┌─────────────────────────────────────┐
-    │  Interactive Transaction Boundary   │
-    │  (Serializable Isolation Level)     │
-    ├─────────────────────────────────────┤
-    │  1. Check Worker Availability       │
-    │  2. Check Resource Capacity         │
-    │  3. Calculate Conflicts             │
-    │  4. Insert Booking Record           │
-    │  5. Update Related Counters/Cache   │
-    └─────────────────────────────────────┘
-                          ↓
-              Success/Failure Response
-                          ↓
-                Revalidate Path/Cache
-                          ↓
-              Return Updated UI State
+Booking (existing)
+  |-- 1:1 --> Karte (new)
+                |-- 1:1 --> Recording (new)
+                |-- 1:1 --> Transcription (new)
+
+Customer (existing)
+  |-- 1:many --> Karte (new, via customerId)
+  |-- 1:many --> MedicalRecord (existing, intake forms)
+
+Worker (existing)
+  |-- 1:many --> Karte (new, via workerId)
 ```
 
-#### Availability Query Flow
+Add to existing models:
 
-```
-User requests date → Public Route Component
-                          ↓
-              Server Action (getAvailability)
-                          ↓
-            Domain Service (calculateSlots)
-                          ↓
-    ┌───────────────────────────────────────┐
-    │  Efficient Query Strategy:            │
-    │  1. Get all bookings for date range   │
-    │  2. Get worker schedules              │
-    │  3. Get resource capacity config      │
-    │  4. Calculate available slots         │
-    │     (workers free AND beds available) │
-    └───────────────────────────────────────┘
-                          ↓
-              Return available time slots
-                          ↓
-                Display to user
+```prisma
+// Add to Customer model:
+kartes          Karte[]
+
+// Add to Worker model:
+kartes          Karte[]
+
+// Note: Booking does NOT get a relation field added.
+// Karte references bookingId but Booking schema stays unchanged.
+// This avoids modifying the core booking flow.
+// Query karte from booking: prisma.karte.findUnique({ where: { bookingId } })
 ```
 
-## Core Data Model
+**Design Decision:** Karte has `bookingId @unique` for a clean 1:1 relationship, but the relation is defined one-directionally from Karte to avoid touching the Booking model. This keeps the existing booking flow untouched and migration-safe.
 
-### Essential Tables
+## Route Structure
 
-Based on research of booking system patterns and SYNQ's specific requirements:
+### New Routes
+
+```
+app/
+  [locale]/
+    (admin)/
+      admin/
+        appointment/
+          [id]/
+            page.tsx          # Main appointment karte page
+            layout.tsx        # Appointment-specific layout
+        dashboard/
+          page.tsx            # MODIFIED: add karte status indicators
+  api/
+    karte/
+      [bookingId]/
+        route.ts              # GET karte, PUT update karte
+      [bookingId]/
+        generate/
+          route.ts            # POST: trigger AI karte generation (SSE)
+    transcription/
+      stream/
+        route.ts              # POST: receive audio chunk, return transcript delta (SSE)
+      [karteId]/
+        route.ts              # GET full transcription, PUT manual edits
+    recording/
+      upload/
+        route.ts              # POST: upload audio chunk to Supabase Storage
+      [karteId]/
+        route.ts              # GET recording metadata, DELETE recording
+```
+
+**Why extend (admin) route group, not create new:** The appointment page is an admin-only feature (practitioners use it). It shares the admin auth middleware, layout patterns, and styling. A new route group would duplicate auth logic for no benefit.
+
+**Why `/admin/appointment/[id]` not `/admin/karte/[id]`:** The URL represents what the practitioner navigates to -- they go to an appointment, which happens to contain a karte. The appointment ID (booking ID) is the natural navigation key from the dashboard timetable.
+
+## Data Flows
+
+### Flow 1: Start Recording and Live Transcription
+
+```
+Practitioner clicks "Start Recording"
+         |
+         v
+[Browser: MediaRecorder API]
+  - getUserMedia({ audio: true })
+  - new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' })
+  - mediaRecorder.start(5000)  // 5-second chunks
+         |
+         v
+[On dataavailable event every 5s]
+  - Collect audio Blob chunk
+  - POST /api/recording/upload (FormData with chunk + karteId + chunkIndex)
+  - Simultaneously: POST /api/transcription/stream (FormData with audio chunk)
+         |                                    |
+         v                                    v
+[API: /api/recording/upload]         [API: /api/transcription/stream]
+  - Append to temp file or             - Forward chunk to OpenAI
+    upload chunk to Supabase              gpt-4o-mini-transcribe
+  - Return { success: true }            - Return SSE stream:
+                                           data: {"delta": "...", "segment": {...}}
+                                           data: {"delta": "...", "segment": {...}}
+         |                                    |
+         v                                    v
+[Supabase Storage]                   [Browser: EventSource / fetch + reader]
+  karte-audio/{karteId}/               - Append transcript text to display
+    chunk-000.webm                     - Update segments array
+    chunk-001.webm                     - Show live text to practitioner
+    ...
+```
+
+### Flow 2: Stop Recording and Finalize
+
+```
+Practitioner clicks "Stop Recording"
+         |
+         v
+[Browser]
+  - mediaRecorder.stop()
+  - Upload final chunk
+  - POST /api/recording/upload/finalize
+         |
+         v
+[API: finalize]
+  - Concatenate chunks in Supabase Storage (or keep as multi-part)
+  - Update Recording: status=COMPLETED, durationSeconds, fileSizeBytes
+  - Update Transcription: status=COMPLETED, fullText (accumulated)
+  - Return { recordingId, transcriptionId }
+         |
+         v
+[Browser: Auto-trigger karte generation]
+  - POST /api/karte/{bookingId}/generate (SSE)
+         |
+         v
+[API: generate karte]
+  - Load full transcription text
+  - Send to OpenAI with structured prompt
+  - Stream structured JSON response via SSE:
+      data: {"field": "chiefComplaint", "delta": "..."}
+      data: {"field": "subjective", "delta": "..."}
+      ...
+      data: {"done": true, "karte": {...}}
+  - Save completed Karte to DB
+         |
+         v
+[Browser: Karte Editor]
+  - Display AI-generated content field by field
+  - Practitioner can edit, add notes
+  - Save via server action (updateKarte)
+```
+
+### Flow 3: View Patient Karte History
+
+```
+Practitioner opens customer detail page
+  or appointment page "History" tab
+         |
+         v
+[Server Component]
+  - prisma.karte.findMany({
+      where: { customerId },
+      orderBy: { createdAt: 'desc' },
+      include: { transcription: { select: { fullText: true } } }
+    })
+         |
+         v
+[Karte History List]
+  - Show date, service, status, tags
+  - Click to expand: show content, transcript
+  - Link to full appointment page
+```
+
+## Streaming Architecture: SSE Over WebSocket
+
+**Decision: Use Server-Sent Events (SSE), not WebSocket.**
+
+**Rationale:**
+
+| Factor | SSE | WebSocket |
+|--------|-----|-----------|
+| Direction | Server-to-client (sufficient for transcription deltas) | Bidirectional |
+| Next.js support | Native via ReadableStream in Route Handlers | Requires custom server, breaks serverless deployment |
+| Vercel deployment | Works out of the box | Not supported on serverless |
+| Complexity | Low (standard HTTP) | High (connection management, heartbeats) |
+| Auth | Standard cookies/headers on initial request | Custom auth handshake needed |
+| Reconnection | Built into EventSource API | Manual implementation |
+| Our use case | Transcription results flow server-to-client; audio flows client-to-server via POST | Bidirectional not needed |
+
+**Audio upload is client-to-server via POST requests, not streaming.** The client sends audio chunks every 5 seconds as FormData POSTs. This is simpler and more reliable than WebSocket binary streaming, works with existing auth middleware, and allows retry on individual chunks.
+
+### SSE Route Handler Pattern
 
 ```typescript
-// Shops (Multi-tenant ready)
-model Shop {
-  id              String    @id @default(cuid())
-  name            String
-  timezone        String    // Critical for date/time handling
-  resourceCapacity Int      // Total beds/rooms
-  // ... other shop config
-  workers         Worker[]
-  services        Service[]
-  bookings        Booking[]
-}
+// app/api/transcription/stream/route.ts
+import { NextRequest } from 'next/server'
+import { getAdminSession } from '@/lib/auth/admin'
 
-// Workers (Staff who provide services)
-model Worker {
-  id              String    @id @default(cuid())
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id])
-  name            String
-  email           String?
-  // ... contact info
-  bookings        Booking[]
-  schedules       WorkerSchedule[]
-  serviceIds      String[]  // Which services can this worker provide
-}
+export const runtime = 'nodejs'  // Required for streaming
+export const dynamic = 'force-dynamic'
 
-// Services offered
-model Service {
-  id              String    @id @default(cuid())
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id])
-  name            String
-  durationMinutes Int       // How long does this service take
-  price           Decimal
-  description     String?
-  bookings        Booking[]
-}
+export async function POST(request: NextRequest) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) {
+    return new Response('Unauthorized', { status: 401 })
+  }
 
-// Bookings (Core transactional record)
-model Booking {
-  id              String    @id @default(cuid())
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id])
-  workerId        String
-  worker          Worker    @relation(fields: [workerId], references: [id])
-  serviceId       String
-  service         Service   @relation(fields: [serviceId], references: [id])
+  const formData = await request.formData()
+  const audioChunk = formData.get('audio') as File
+  const karteId = formData.get('karteId') as string
 
-  // Customer info
-  customerName    String
-  customerEmail   String
-  customerPhone   String?
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder()
 
-  // Time slot
-  startTime       DateTime
-  endTime         DateTime  // Calculated from startTime + service.durationMinutes
+      try {
+        // Forward audio to OpenAI transcription API
+        const transcriptionResult = await transcribeChunk(audioChunk)
 
-  // Status tracking
-  status          BookingStatus @default(PENDING)
+        // Send transcript delta as SSE event
+        const event = `data: ${JSON.stringify({
+          type: 'transcript_delta',
+          text: transcriptionResult.text,
+          segments: transcriptionResult.segments,
+        })}\n\n`
+        controller.enqueue(encoder.encode(event))
 
-  // Concurrency control
-  version         Int       @default(0)  // Optimistic locking
+        // Signal completion of this chunk
+        controller.enqueue(encoder.encode('data: {"type":"chunk_complete"}\n\n'))
+      } catch (error) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'error', message: String(error) })}\n\n`)
+        )
+      } finally {
+        controller.close()
+      }
+    },
+  })
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([shopId, startTime, endTime]) // Critical for availability queries
-  @@index([workerId, startTime, endTime]) // Worker availability
-  @@index([status])
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-  NO_SHOW
-}
-
-// Worker schedules (when workers are available)
-model WorkerSchedule {
-  id              String    @id @default(cuid())
-  workerId        String
-  worker          Worker    @relation(fields: [workerId], references: [id])
-
-  // Recurring schedule pattern
-  dayOfWeek       Int       // 0=Sunday, 6=Saturday
-  startTime       String    // "09:00" format
-  endTime         String    // "17:00" format
-
-  // Or one-off availability/unavailability
-  specificDate    DateTime?
-  isAvailable     Boolean   @default(true)
-
-  @@index([workerId, dayOfWeek])
-  @@index([workerId, specificDate])
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',  // Prevent nginx buffering
+    },
+  })
 }
 ```
 
-### Key Schema Design Decisions
+### Client-Side SSE Consumption
 
-1. **Denormalized Time Fields**: Both `startTime` and `endTime` on Booking for faster range queries
-2. **Composite Indexes**: Critical for "find all bookings in time range" queries
-3. **Version Field**: Enables optimistic locking for concurrent booking prevention
-4. **Status Enum**: Clear booking lifecycle management
-5. **Timezone Storage**: On Shop model to handle date/time correctly across regions
+```typescript
+// hooks/useTranscriptionStream.ts
+'use client'
+
+import { useState, useCallback, useRef } from 'react'
+
+interface TranscriptSegment {
+  speaker: string
+  start: number
+  end: number
+  text: string
+}
+
+export function useTranscriptionStream(karteId: string) {
+  const [transcript, setTranscript] = useState('')
+  const [segments, setSegments] = useState<TranscriptSegment[]>([])
+  const [isStreaming, setIsStreaming] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const sendChunk = useCallback(async (audioBlob: Blob) => {
+    const formData = new FormData()
+    formData.append('audio', audioBlob, 'chunk.webm')
+    formData.append('karteId', karteId)
+
+    try {
+      const response = await fetch('/api/transcription/stream', {
+        method: 'POST',
+        body: formData,
+        // No Content-Type header -- browser sets multipart boundary
+      })
+
+      if (!response.ok || !response.body) return
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const text = decoder.decode(value)
+        const lines = text.split('\n')
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = JSON.parse(line.slice(6))
+
+          if (data.type === 'transcript_delta') {
+            setTranscript(prev => prev + ' ' + data.text)
+            if (data.segments) {
+              setSegments(prev => [...prev, ...data.segments])
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Transcription stream error:', error)
+    }
+  }, [karteId])
+
+  return { transcript, segments, isStreaming, sendChunk }
+}
+```
+
+## AI Provider Abstraction
+
+### Interface Design
+
+```typescript
+// lib/ai/types.ts
+export interface TranscriptionResult {
+  text: string
+  segments: Array<{
+    speaker?: string
+    start: number
+    end: number
+    text: string
+  }>
+  language: string
+  duration: number
+}
+
+export interface KarteContent {
+  chiefComplaint: string    // 主訴
+  subjective: string        // 自覚症状 (S)
+  objective: string         // 他覚所見 (O)
+  assessment: string        // 評価 (A)
+  plan: string              // 計画 (P)
+  tags: string[]
+}
+
+export interface TranscriptionProvider {
+  transcribeChunk(audio: Blob, language?: string): Promise<TranscriptionResult>
+  transcribeFull(audioPath: string, language?: string): Promise<TranscriptionResult>
+}
+
+export interface KarteGenerationProvider {
+  generateKarte(
+    transcript: string,
+    context: { serviceName: string; customerName: string; practitionerName: string }
+  ): AsyncGenerator<{ field: keyof KarteContent; delta: string }>
+}
+
+// lib/ai/provider.ts
+export function getTranscriptionProvider(): TranscriptionProvider {
+  const provider = process.env.TRANSCRIPTION_PROVIDER || 'openai'
+  switch (provider) {
+    case 'openai': return new OpenAITranscriptionProvider()
+    // Future: case 'deepgram': return new DeepgramProvider()
+    default: throw new Error(`Unknown transcription provider: ${provider}`)
+  }
+}
+
+export function getKarteGenerationProvider(): KarteGenerationProvider {
+  const provider = process.env.KARTE_GENERATION_PROVIDER || 'openai'
+  switch (provider) {
+    case 'openai': return new OpenAIKarteProvider()
+    default: throw new Error(`Unknown karte provider: ${provider}`)
+  }
+}
+```
+
+### OpenAI Implementation
+
+```typescript
+// lib/ai/providers/openai.ts
+import OpenAI from 'openai'
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+export class OpenAITranscriptionProvider implements TranscriptionProvider {
+  async transcribeChunk(audio: Blob, language = 'ja'): Promise<TranscriptionResult> {
+    const file = new File([audio], 'chunk.webm', { type: 'audio/webm' })
+
+    const response = await openai.audio.transcriptions.create({
+      model: 'gpt-4o-mini-transcribe',
+      file,
+      language,
+      response_format: 'verbose_json',
+      timestamp_granularities: ['segment'],
+    })
+
+    return {
+      text: response.text,
+      segments: (response.segments ?? []).map(s => ({
+        start: s.start,
+        end: s.end,
+        text: s.text,
+      })),
+      language: response.language ?? language,
+      duration: response.duration ?? 0,
+    }
+  }
+
+  async transcribeFull(audioPath: string, language = 'ja'): Promise<TranscriptionResult> {
+    // Download from Supabase Storage, then transcribe
+    // Use gpt-4o-transcribe for full-file (higher accuracy)
+    // ...implementation
+  }
+}
+```
+
+**Model choice:** Use `gpt-4o-mini-transcribe` for live chunk transcription (fast, cheap) and `gpt-4o-transcribe` for full-file re-transcription (higher accuracy). OpenAI recommends `gpt-4o-mini-transcribe` for best results per their December 2025 release notes.
+
+**Japanese language:** Both gpt-4o-transcribe models support Japanese well. The `language` parameter hint improves accuracy. For a wellness/bodywork context, a custom prompt can be added to guide medical terminology recognition.
+
+## Audio Storage Strategy
+
+### Supabase Storage Configuration
+
+```
+Bucket: karte-audio
+  ├── {karteId}/
+  │   ├── full.webm           # Concatenated final recording
+  │   └── chunks/             # Optional: keep raw chunks for reprocessing
+  │       ├── 000.webm
+  │       ├── 001.webm
+  │       └── ...
+```
+
+**Storage approach:**
+
+1. During recording: upload each 5-second chunk to `karte-audio/{karteId}/chunks/{index}.webm`
+2. On finalize: concatenate server-side into `karte-audio/{karteId}/full.webm`
+3. Clean up chunks after successful concatenation (optional, keep for debugging initially)
+4. Use signed URLs for playback (same pattern as existing intake-forms)
+
+**Why Supabase Storage over alternatives:** Already in use for intake forms. Same auth patterns, same SDK, same infrastructure. No new vendor needed.
+
+**File size estimation:** 5-second chunks at opus codec ~ 10-15KB each. A 60-minute appointment produces ~720 chunks = ~10MB total. Well within Supabase Storage limits.
+
+### Audio Storage Service
+
+```typescript
+// lib/storage/karte-audio.ts
+// Follows same pattern as existing supabase-storage.ts
+
+const BUCKET = 'karte-audio'
+
+export async function uploadAudioChunk(
+  karteId: string,
+  chunkIndex: number,
+  audioBlob: Blob
+): Promise<{ path: string }> {
+  const path = `${karteId}/chunks/${String(chunkIndex).padStart(3, '0')}.webm`
+  // ... upload via Supabase client (same pattern as uploadIntakeForm)
+}
+
+export async function finalizeRecording(karteId: string): Promise<{ path: string }> {
+  // List chunks, download, concatenate, upload as full.webm
+  // Or: keep chunks as-is and store manifest JSON
+}
+
+export async function getAudioSignedUrl(path: string): Promise<string> {
+  // Same as existing getSignedUrl but for karte-audio bucket
+}
+
+export async function deleteRecording(karteId: string): Promise<void> {
+  // Delete all files under {karteId}/ prefix
+}
+```
+
+## Karte Content Structure (JSON Schema)
+
+The `Karte.content` field stores structured JSON following a SOAP-inspired format adapted for Japanese bodywork:
+
+```typescript
+interface KarteContent {
+  // 主訴 - Chief complaint: what the patient reports
+  chiefComplaint: string
+
+  // 自覚症状 (S) - Subjective: patient's own description of symptoms
+  subjective: string
+
+  // 他覚所見 (O) - Objective: practitioner's observations during treatment
+  objective: string
+
+  // 評価 (A) - Assessment: practitioner's evaluation
+  assessment: string
+
+  // 施術計画 (P) - Plan: treatment plan and recommendations
+  plan: string
+
+  // AI-extracted tags for searchability
+  tags: string[]
+
+  // Metadata
+  generatedAt: string          // ISO timestamp
+  model: string                // AI model used
+  transcriptLength: number     // chars of source transcript
+}
+```
+
+## Integration Points with Existing Code
+
+### 1. Dashboard Timetable (Modified)
+
+The existing timetable shows bookings per worker per time slot. Add a karte status indicator:
+
+```typescript
+// Extend the existing AdminCalendarData bookings response
+interface AdminCalendarBooking {
+  // ... existing fields
+  karteStatus: KarteStatus | null  // null = no karte created yet
+}
+```
+
+Modify `/api/admin/calendar/route.ts` to include karte status:
+
+```typescript
+const bookings = await prisma.booking.findMany({
+  where: { /* existing filters */ },
+  include: {
+    // ... existing includes
+  },
+})
+
+// Batch-fetch karte statuses for all bookings
+const karteStatuses = await prisma.karte.findMany({
+  where: { bookingId: { in: bookings.map(b => b.id) } },
+  select: { bookingId: true, status: true },
+})
+
+const karteMap = new Map(karteStatuses.map(k => [k.bookingId, k.status]))
+
+// Add to response
+const enrichedBookings = bookings.map(b => ({
+  ...b,
+  karteStatus: karteMap.get(b.id) ?? null,
+}))
+```
+
+### 2. Customer Detail Page (Modified)
+
+Add a "Karte History" section to the existing customer detail page at `/admin/customers/[id]`:
+
+```typescript
+// Fetch kartes alongside existing medical records
+const [medicalRecords, kartes] = await Promise.all([
+  getMedicalRecordsWithSignedUrls(customerId),
+  prisma.karte.findMany({
+    where: { customerId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      bookingId: true,
+      status: true,
+      tags: true,
+      content: true,
+      createdAt: true,
+    },
+  }),
+])
+```
+
+### 3. Auth (Unchanged)
+
+All new API routes use the existing `getAdminSession()` pattern. No auth changes needed.
 
 ## Patterns to Follow
 
-### Pattern 1: Transaction-Wrapped Booking Creation
+### Pattern 1: Chunked Upload with Server-Side Accumulation
 
-**What:** All booking mutations must execute within serializable transactions
+**What:** Client sends audio chunks via FormData POST every 5 seconds. Server stores and processes independently.
 
-**When:** Every create/update/cancel operation on bookings
+**When:** During live recording sessions.
 
-**Why:** Prevents double-booking race conditions where two users book same slot simultaneously
+**Why:** Reliable over spotty connections (each chunk is independent HTTP request with automatic retry). No WebSocket complexity. Works with existing middleware and auth.
 
-**Example:**
-```typescript
-// server-action: create-booking.ts
-'use server'
+**Key detail:** The client maintains a chunk counter and sends `chunkIndex` with each upload. If a chunk fails, the client retries that specific chunk. The server can detect gaps and request re-uploads.
 
-import { prisma } from '@/lib/prisma'
+### Pattern 2: Provider Abstraction for AI Services
 
-export async function createBooking(data: BookingInput) {
-  try {
-    const result = await prisma.$transaction(
-      async (tx) => {
-        // 1. Check worker availability
-        const workerConflicts = await tx.booking.findFirst({
-          where: {
-            workerId: data.workerId,
-            status: { in: ['PENDING', 'CONFIRMED'] },
-            OR: [
-              {
-                startTime: { lte: data.startTime },
-                endTime: { gt: data.startTime },
-              },
-              {
-                startTime: { lt: data.endTime },
-                endTime: { gte: data.endTime },
-              },
-            ],
-          },
-        })
+**What:** Abstract transcription and karte generation behind interfaces. Implementations are injected via factory function based on environment config.
 
-        if (workerConflicts) {
-          throw new Error('Worker not available')
-        }
+**When:** All AI API calls.
 
-        // 2. Check resource capacity (beds)
-        const concurrentBookingsCount = await tx.booking.count({
-          where: {
-            shopId: data.shopId,
-            status: { in: ['PENDING', 'CONFIRMED'] },
-            OR: [
-              {
-                startTime: { lte: data.startTime },
-                endTime: { gt: data.startTime },
-              },
-              {
-                startTime: { lt: data.endTime },
-                endTime: { gte: data.endTime },
-              },
-            ],
-          },
-        })
+**Why:** Allows switching from OpenAI to Deepgram (or others) without touching route handlers or service layer. Particularly important for transcription -- Deepgram offers real-time WebSocket streaming that may be preferable later, and pricing/accuracy landscape shifts frequently.
 
-        const shop = await tx.shop.findUnique({
-          where: { id: data.shopId },
-          select: { resourceCapacity: true },
-        })
+### Pattern 3: Optimistic UI with Server Reconciliation
 
-        if (concurrentBookingsCount >= shop!.resourceCapacity) {
-          throw new Error('No beds available')
-        }
+**What:** Show transcript text immediately in UI as SSE events arrive. Reconcile with server state on completion.
 
-        // 3. Create booking
-        const booking = await tx.booking.create({
-          data: {
-            ...data,
-            status: 'CONFIRMED',
-            version: 0,
-          },
-        })
+**When:** Live transcription display.
 
-        return booking
-      },
-      {
-        isolationLevel: 'Serializable', // Critical!
-        maxWait: 5000, // 5 seconds max wait
-        timeout: 10000, // 10 seconds max transaction time
-      }
-    )
+**Why:** Perceived latency must be minimal. The practitioner needs to see words appearing in near-real-time during the appointment. Final reconciliation ensures accuracy.
 
-    revalidatePath('/bookings')
-    return { success: true, booking: result }
-  } catch (error) {
-    if (error.code === 'P2034') {
-      // Serialization failure - retry
-      return { success: false, error: 'Slot no longer available' }
-    }
-    throw error
-  }
-}
-```
+### Pattern 4: JSON Content Fields for Flexible Schema
 
-**Source Confidence:** HIGH (Prisma official docs + WebSearch patterns)
+**What:** Store karte content and transcription segments as Prisma `Json` fields rather than separate tables/columns.
 
-### Pattern 2: Pre-Query Availability Calculation
+**When:** Storing structured AI output.
 
-**What:** Calculate available slots before presenting to user, not during booking
-
-**When:** User navigates to booking calendar/picker
-
-**Why:** Reduces failed bookings, better UX, separates read from write operations
-
-**Example:**
-```typescript
-// domain/availability.ts
-
-export async function calculateAvailableSlots(
-  shopId: string,
-  date: Date,
-  serviceId: string
-): Promise<TimeSlot[]> {
-  const service = await prisma.service.findUnique({
-    where: { id: serviceId },
-    select: { durationMinutes: true },
-  })
-
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: { resourceCapacity: true },
-  })
-
-  // Get all bookings for this date
-  const startOfDay = startOfDate(date)
-  const endOfDay = endOfDate(date)
-
-  const bookings = await prisma.booking.findMany({
-    where: {
-      shopId,
-      status: { in: ['PENDING', 'CONFIRMED'] },
-      startTime: { gte: startOfDay },
-      endTime: { lte: endOfDay },
-    },
-    select: {
-      workerId: true,
-      startTime: true,
-      endTime: true,
-    },
-  })
-
-  // Get workers who can perform this service
-  const eligibleWorkers = await prisma.worker.findMany({
-    where: {
-      shopId,
-      serviceIds: { has: serviceId },
-    },
-    include: {
-      schedules: {
-        where: {
-          OR: [
-            { dayOfWeek: date.getDay() },
-            { specificDate: date },
-          ],
-          isAvailable: true,
-        },
-      },
-    },
-  })
-
-  // Generate potential slots (e.g., 30-min intervals from 9am-5pm)
-  const potentialSlots = generateTimeSlots(startOfDay, endOfDay, 30)
-
-  // Filter slots where BOTH worker AND bed available
-  const availableSlots = potentialSlots.filter((slot) => {
-    // Check: At least one worker is free
-    const hasAvailableWorker = eligibleWorkers.some((worker) => {
-      const isInSchedule = worker.schedules.length > 0
-      const hasNoConflict = !bookings.some(
-        (b) =>
-          b.workerId === worker.id &&
-          slotsOverlap(slot, { start: b.startTime, end: b.endTime })
-      )
-      return isInSchedule && hasNoConflict
-    })
-
-    // Check: Bed capacity not exceeded
-    const concurrentBookings = bookings.filter((b) =>
-      slotsOverlap(slot, { start: b.startTime, end: b.endTime })
-    )
-    const hasCapacity = concurrentBookings.length < shop!.resourceCapacity
-
-    return hasAvailableWorker && hasCapacity
-  })
-
-  return availableSlots
-}
-```
-
-**Source Confidence:** MEDIUM (Derived from WebSearch patterns)
-
-### Pattern 3: Route Segment Separation
-
-**What:** Separate public and admin routes using Next.js 15 route groups
-
-**When:** Application structure setup (Phase 1)
-
-**Why:** Clear security boundaries, different layouts, easier middleware application
-
-**Example:**
-```
-app/
-├── (public)/              # Customer-facing
-│   ├── layout.tsx         # Public layout (header, footer)
-│   ├── page.tsx           # Landing page
-│   ├── booking/
-│   │   ├── [shopId]/
-│   │   │   └── page.tsx   # Booking calendar
-│   │   └── confirm/
-│   │       └── page.tsx   # Confirmation page
-│   └── api/               # Public API routes if needed
-│
-├── (admin)/               # Admin-only
-│   ├── layout.tsx         # Admin layout (sidebar, nav)
-│   ├── middleware.ts      # Auth enforcement
-│   ├── dashboard/
-│   │   └── page.tsx       # Overview
-│   ├── bookings/
-│   │   ├── page.tsx       # Booking list/calendar
-│   │   └── [id]/
-│   │       └── page.tsx   # Booking detail
-│   ├── workers/
-│   │   └── page.tsx       # Worker management
-│   └── settings/
-│       └── page.tsx       # Shop settings
-│
-└── actions/               # Server Actions (shared)
-    ├── public/            # Public-safe actions
-    │   ├── get-availability.ts
-    │   └── create-booking.ts
-    └── admin/             # Admin-only actions
-        ├── manage-workers.ts
-        └── update-shop-settings.ts
-```
-
-**Source Confidence:** HIGH (Next.js official patterns)
-
-### Pattern 4: Optimistic Locking as Fallback
-
-**What:** Use version field to detect concurrent modifications
-
-**When:** As alternative to serializable transactions for lower-contention scenarios
-
-**Why:** Better performance in some cases, retry is acceptable
-
-**Example:**
-```typescript
-// Update booking status with optimistic locking
-export async function updateBookingStatus(
-  bookingId: string,
-  currentVersion: number,
-  newStatus: BookingStatus
-) {
-  const result = await prisma.booking.updateMany({
-    where: {
-      id: bookingId,
-      version: currentVersion, // Only update if version matches
-    },
-    data: {
-      status: newStatus,
-      version: { increment: 1 },
-    },
-  })
-
-  if (result.count === 0) {
-    throw new Error('Booking was modified by another request')
-  }
-
-  return result
-}
-```
-
-**Source Confidence:** HIGH (Prisma docs + WebSearch verification)
+**Why:** AI output structure may evolve (new fields, different formats). JSON avoids schema migrations for content changes. Query by content fields using Prisma's JSON filtering when needed. The outer schema (Karte, Recording, Transcription models) remains stable while inner content evolves.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Check-Then-Act Without Transaction
+### Anti-Pattern 1: WebSocket for Transcription
 
-**What:** Querying availability, then creating booking in separate operations
+**What:** Using WebSocket for bidirectional audio streaming.
 
-**Why bad:** Race condition window - another booking can slip in between check and insert
+**Why bad:** Breaks serverless deployment (Vercel). Requires custom server. Connection management overhead. Not needed -- audio goes client-to-server (POST), transcripts go server-to-client (SSE).
 
-**Consequences:** Double-bookings, angry customers, operational nightmare
+**Instead:** POST for uploads, SSE for streaming responses.
 
-**Instead:** Always wrap check + insert in serializable transaction (see Pattern 1)
+### Anti-Pattern 2: Client-Side Audio Processing
 
-**Source:** [Preventing Double Booking in Databases with Two-Phase Locking](https://medium.com/@oyebisijemil_41110/preventing-double-booking-in-databases-with-two-phase-locking-9a4538650496)
+**What:** Running transcription models in the browser (e.g., whisper.cpp via WASM).
 
-### Anti-Pattern 2: Client-Side Availability Calculation
+**Why bad:** Huge download (>100MB model), drains battery, inconsistent quality across devices, no GPU acceleration on most devices.
 
-**What:** Fetching all bookings to client, calculating availability in React component
+**Instead:** Server-side transcription via API. Client only handles recording and chunk uploads.
 
-**Why bad:**
-- Exposes booking data unnecessarily
-- Slow (network overhead)
-- Not secure (calculations can be bypassed)
-- Race conditions (data stale by time of booking)
+### Anti-Pattern 3: Single Large Audio Upload
 
-**Instead:** Always calculate availability server-side, only return available slots
+**What:** Recording entire appointment audio, then uploading as one file at the end.
 
-### Anti-Pattern 3: Missing Indexes on Time Range Queries
+**Why bad:** No live transcription possible. Large upload can fail. If browser crashes, entire recording is lost.
 
-**What:** Querying bookings by date range without proper composite indexes
+**Instead:** 5-second chunk uploads throughout recording. Each chunk is independently stored and transcribed.
 
-**Why bad:** Table scans become prohibitively slow as bookings grow (>1000 records)
+### Anti-Pattern 4: Storing Audio in Database
 
-**Consequences:** Availability queries take seconds, poor UX, timeout errors
+**What:** Putting audio binary data in PostgreSQL.
 
-**Detection:** Query times >100ms even with <1000 bookings
+**Why bad:** Bloats database, slow queries, expensive storage, no CDN benefit, no streaming playback.
 
-**Instead:** Add composite indexes on `(shopId, startTime, endTime)` and `(workerId, startTime, endTime)`
+**Instead:** Supabase Storage (object storage) with signed URLs for access. Same pattern already used for intake forms.
 
-**Source:** [How to Design a Database for Booking and Reservation Systems](https://www.geeksforgeeks.org/dbms/how-to-design-a-database-for-booking-and-reservation-systems/)
+### Anti-Pattern 5: Tight Coupling to OpenAI API Shape
 
-### Anti-Pattern 4: Storing Only Start Time
+**What:** Using OpenAI SDK types directly in route handlers and components.
 
-**What:** Calculating end time on-the-fly by adding service duration
+**Why bad:** Vendor lock-in. When Deepgram or Google offers better Japanese transcription, refactoring touches every file.
 
-**Why bad:**
-- Can't efficiently query "bookings overlapping with time range"
-- Requires function-based index or denormalization anyway
-- Complex queries are slower and error-prone
+**Instead:** Provider abstraction with internal types. Only the provider implementation file imports the vendor SDK.
 
-**Instead:** Denormalize: store both `startTime` and `endTime`, update both during booking creation
+## Build Order (Dependency-Driven)
 
-### Anti-Pattern 5: Mixing Admin and Public Queries in Same Components
+The features have clear dependencies that dictate build order:
 
-**What:** Same React Server Component used for both public and admin views
+```
+Phase 1: Data Foundation
+  |
+  ├── Prisma models (Karte, Recording, Transcription)
+  ├── Karte service (CRUD operations)
+  ├── Audio storage service (Supabase bucket setup)
+  └── AI provider abstraction (interfaces + OpenAI impl)
+        |
+Phase 2: Recording & Transcription
+  |
+  ├── MediaRecorder hook (client-side audio capture)
+  ├── Audio upload API route
+  ├── Transcription stream API route (SSE)
+  ├── Transcription viewer component
+  └── Recording controls component
+        |
+Phase 3: Karte Generation & Display
+  |
+  ├── Karte generation API route (SSE)
+  ├── Karte editor/viewer component
+  ├── Karte history component
+  └── Save/update server actions
+        |
+Phase 4: Dashboard Integration
+  |
+  ├── Extend calendar API with karte status
+  ├── Appointment page (combines recording + karte)
+  ├── Dashboard karte status indicators
+  └── Customer detail karte history section
+```
 
-**Why bad:**
-- Security risks (accidental data exposure)
-- Different data access patterns (admin needs more)
-- Harder to optimize caching strategies
-- Confusing code paths
-
-**Instead:** Use route groups to physically separate concerns (see Pattern 3)
-
-## Query Optimization Strategies
-
-### Critical Queries to Optimize
-
-| Query Type | Frequency | Optimization |
-|------------|-----------|--------------|
-| **Get available slots for date** | Very High (every page load) | Composite indexes + query result caching (5min TTL) |
-| **Check worker availability** | High (during booking) | Index on `(workerId, startTime, endTime)` + transaction |
-| **Check resource capacity** | High (during booking) | Count query + index on `(shopId, status, startTime)` |
-| **List bookings for day (admin)** | Medium | Index on `(shopId, startTime)` + pagination |
-| **Get booking detail** | Low | Primary key lookup (fast) |
-
-### Caching Strategy
-
-**Availability Queries:**
-- Cache for 5 minutes (acceptable staleness)
-- Invalidate on booking creation/cancellation
-- Use Next.js `unstable_cache` or React Cache
-
-**Static Data:**
-- Workers, Services, Shop settings
-- Cache for 1 hour
-- Invalidate on admin updates
-
-**No Caching:**
-- Booking mutations (always fresh)
-- Admin booking list (real-time important)
+**Why this order:**
+1. Models and services first -- everything depends on data layer
+2. Recording and transcription second -- this is the core new capability and the hardest technically (streaming, audio handling)
+3. Karte generation third -- depends on transcription output existing
+4. Dashboard integration last -- depends on all the above working, and is lower risk (extending existing UI)
 
 ## Scalability Considerations
 
-| Concern | At 100 bookings/day | At 1,000 bookings/day | At 10,000 bookings/day |
-|---------|---------------------|----------------------|------------------------|
-| **Database reads** | Simple queries with indexes work fine | Add query result caching (5min TTL) | Read replicas for availability queries, write to primary for bookings |
-| **Concurrent bookings** | Serializable transactions sufficient | Same + add retry logic with exponential backoff | Consider optimistic locking for lower-contention time slots, keep serializable for hot slots |
-| **Availability calculation** | Calculate on-demand | Cache results per date/service combo | Pre-calculate for next 7 days, update async on booking changes |
-| **Data size** | Single table fine | Single table fine | Partition bookings by date (yearly or quarterly) |
-| **Admin queries** | No optimization needed | Add pagination (50 records/page) | Add date range filters, separate analytics queries to replica |
-
-### When to Introduce Complexity
-
-**Now (Phase 1):**
-- Proper indexes
-- Serializable transactions
-- Basic caching (Next.js built-in)
-
-**Later (If >1000 bookings/day):**
-- Query result caching with Redis
-- Background job for pre-calculating availability
-- Read replicas
-
-**Much Later (If >10,000 bookings/day):**
-- Event sourcing pattern
-- Separate booking service with dedicated DB
-- CQRS (Command Query Responsibility Segregation)
-
-## Build Order Recommendations
-
-Based on component dependencies:
-
-### Phase 1: Foundation (MVP)
-1. **Database schema** - Define all models, migrations
-2. **Domain services** - Availability calculation, booking logic
-3. **Public routes skeleton** - Basic layout, navigation
-4. **Server actions** - createBooking, getAvailability (with transactions)
-5. **Public booking UI** - Calendar, slot selection, confirmation
-
-**Critical Path:** Database → Domain Services → Server Actions → UI
-
-**Why This Order:** Can't build UI without actions, can't build actions without domain logic, can't build domain logic without schema
-
-### Phase 2: Admin Tools
-1. **Admin routes skeleton** - Layout, auth middleware
-2. **Admin server actions** - CRUD for workers, services, settings
-3. **Admin booking management** - View, cancel, reschedule
-4. **Worker schedule management**
-5. **Shop settings**
-
-**Dependencies:** Requires Phase 1 schema, but can build in parallel with Phase 1 UI
-
-### Phase 3: Enhancements
-1. **Notifications** - Email confirmations, reminders
-2. **Analytics** - Booking trends, worker utilization
-3. **Advanced features** - Recurring bookings, waiting list
-4. **Performance optimization** - Caching, query optimization
-
-**Dependencies:** Requires solid Phase 1 and Phase 2 foundation
-
-## Technology-Specific Notes
-
-### Next.js 15 Server Actions
-
-**Best Practices:**
-- Use `'use server'` directive for server-only logic
-- Always revalidate paths after mutations: `revalidatePath('/bookings')`
-- Return serializable data only (no functions, no Date objects that aren't serialized)
-- Handle errors with try/catch, return error states to client
-
-**Source:** [Modern Full Stack Application Architecture Using Next.js 15+](https://softwaremill.com/modern-full-stack-application-architecture-using-next-js-15/)
-
-### Prisma with PostgreSQL
-
-**Transaction Gotchas:**
-- Serializable isolation can throw P2034 errors - implement retry logic
-- Interactive transactions hold DB connections - keep them short (<5 seconds)
-- Batch operations are NOT transactional unless wrapped in `$transaction`
-
-**Source:** [Transactions and batch queries (Reference) | Prisma Documentation](https://www.prisma.io/docs/orm/prisma-client/queries/transactions)
-
-### Supabase Considerations
-
-**Integration Points:**
-- Supabase Auth for admin authentication (if using)
-- Direct PostgreSQL connection via Prisma (bypass Supabase client for booking logic)
-- Row Level Security (RLS) policies for additional protection (optional, Prisma handles most access control)
-
-**Why Direct Connection:** Booking transactions need fine-grained control that Supabase client doesn't expose
-
-## Security Boundaries
-
-| Layer | Public Access | Admin Access | Implementation |
-|-------|--------------|--------------|----------------|
-| **Routes** | `/booking/*` | `/admin/*` | Next.js route groups + middleware |
-| **Server Actions** | Read availability, create own booking | Full CRUD on all resources | Function-level auth checks |
-| **Database** | Via server actions only | Via server actions only | No direct client access |
-| **Business Logic** | Limited to booking creation | Full system management | Service layer authorization |
-
-**Key Principle:** Never trust client. Always validate permissions server-side, even in server actions.
+| Concern | At 10 appointments/day | At 100 appointments/day | At 1,000 appointments/day |
+|---------|------------------------|-------------------------|--------------------------|
+| **Audio storage** | ~100MB/day, Supabase free tier | ~1GB/day, Supabase Pro | ~10GB/day, consider S3 or cleanup policies |
+| **Transcription API cost** | ~$0.36/day (60min avg) | ~$3.60/day | ~$36/day, consider Deepgram or self-hosted Whisper |
+| **SSE connections** | No concern | No concern | Monitor server memory per connection |
+| **Database** | Minimal impact | Add indexes on karte queries | Partition kartes by date if needed |
+| **Concurrent recordings** | 1-3 simultaneous, fine | 5-10, fine with chunked approach | Consider queue for transcription API calls |
 
 ## Sources
 
 **HIGH Confidence:**
-- [Transactions and batch queries (Reference) | Prisma Documentation](https://www.prisma.io/docs/orm/prisma-client/queries/transactions)
-- [Modern Full Stack Application Architecture Using Next.js 15+](https://softwaremill.com/modern-full-stack-application-architecture-using-next-js-15/)
-- [Building a Real-Time Booking System with Next.js 14: A Practical Guide](https://medium.com/@abdulrehmanikram9710/building-a-real-time-booking-system-with-next-js-14-a-practical-guide-d67d7f944d76)
+- Existing SYNQ codebase analysis (Prisma schema, storage patterns, auth patterns, API routes)
+- [OpenAI Speech to Text API Docs](https://developers.openai.com/api/docs/guides/speech-to-text)
+- [OpenAI GPT-4o Transcribe Model](https://developers.openai.com/api/docs/models/gpt-4o-transcribe)
+- [MediaRecorder API - MDN](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder)
+- [Supabase Storage Standard Uploads](https://supabase.com/docs/guides/storage/uploads/standard-uploads)
 
 **MEDIUM Confidence:**
-- [How to Design a Database for Booking and Reservation Systems - GeeksforGeeks](https://www.geeksforgeeks.org/dbms/how-to-design-a-database-for-booking-and-reservation-systems/)
-- [Preventing Double Booking in Databases with Two-Phase Locking](https://medium.com/@oyebisijemil_41110/preventing-double-booking-in-databases-with-two-phase-locking-9a4538650496)
-- [Solving Double Booking at Scale: System Design Patterns from Top Tech Companies](https://itnext.io/solving-double-booking-at-scale-system-design-patterns-from-top-tech-companies-4c5a3311d8ea)
-- [A Database Model for a Hotel Reservation Booking App and Channel Manager | Redgate](https://www.red-gate.com/blog/a-database-model-for-a-hotel-reservation-booking-app-and-channel-manager)
-- [A Database Model to Manage Appointments and Organize Schedules | Vertabelo](https://vertabelo.com/blog/a-database-model-to-manage-appointments-and-organize-schedules/)
+- [Streaming in Next.js 15: WebSockets vs Server-Sent Events](https://hackernoon.com/streaming-in-nextjs-15-websockets-vs-server-sent-events) - SSE vs WebSocket comparison for Next.js
+- [Fixing Slow SSE Streaming in Next.js and Vercel](https://medium.com/@oyetoketoby80/fixing-slow-sse-server-sent-events-streaming-in-next-js-and-vercel-99f42fbdb996) - SSE gotchas
+- [Using SSE to stream LLM responses in Next.js](https://upstash.com/blog/sse-streaming-llm-responses) - SSE pattern with ReadableStream
+- [Best Speech-to-Text APIs in 2026](https://deepgram.com/learn/best-speech-to-text-apis-2026) - Provider comparison
+- [OpenAI Realtime Transcription API](https://developers.openai.com/api/docs/guides/realtime-transcription/) - Realtime API alternative
 
-**LOW Confidence (Community Patterns):**
-- [Row update with DB Row Lock (SELECT FOR UPDATE) · Issue #1918 · prisma/prisma](https://github.com/prisma/prisma/issues/1918)
-- [Table design for booking/appointment system - SitePoint Forums](https://www.sitepoint.com/community/t/table-design-for-booking-appointment-system/332123)
+**LOW Confidence:**
+- [Streaming and Caching with Supabase (ElevenLabs)](https://elevenlabs.io/docs/eleven-api/guides/cookbooks/text-to-speech/streaming-and-caching-with-supabase) - Audio + Supabase patterns (different use case but informative)
+- Japanese EMR architecture patterns (limited English-language sources available)

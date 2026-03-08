@@ -2,7 +2,7 @@
 
 ## Overview
 
-SYNQ delivers a wellness booking system with double-bottleneck scheduling logic for Japanese markets. Phase 1 is the MVP with complete booking flow, Phase 2 adds CRM and reporting for parity with current systems, and Phase 3 delivers the differentiation features from the product mindmap.
+SYNQ delivers a wellness booking system with double-bottleneck scheduling logic for Japanese markets. Phase 1 is the MVP with complete booking flow, Phase 2 adds CRM and reporting for parity with current systems. v2.0 (Phases 3-7) adds AI-powered electronic medical records (Karte). Phases 8-9 deliver payments and differentiation.
 
 ## Phases
 
@@ -14,8 +14,13 @@ SYNQ delivers a wellness booking system with double-bottleneck scheduling logic 
 - [ ] **Phase 01.1: Post-MVP UI Enhancements (Inserted)** - Prototype calendar, data table, updated types/exports
 - [x] **Phase 2: Parity** - CRM, customer management, employee KPIs, sales reporting
 - [x] **Phase 2.1: Staff Availability (INSERTED)** - Staff self-service page to set working hours by day of week
-- [ ] **Phase 3: Payments & Membership** - Stripe/Apple Pay checkout, membership plans, QR codes, user & admin payment pages
-- [ ] **Phase 4: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
+- [ ] **Phase 3: Karte Foundation** - Schema (karute_records, karute_entries, recording_sessions, transcription_segments), storage bucket, API layer
+- [ ] **Phase 4: Recording & Transcription** - In-browser audio recording with timer/waveform, upload to storage, Whisper transcription
+- [ ] **Phase 5: AI Classification & Karute UI** - AI classifies transcript into karute entries, karute view/edit UI, approval workflow
+- [ ] **Phase 6: Ask AI Chat** - Chat interface to query karute/customer data, streaming OpenAI responses
+- [ ] **Phase 7: Appointment View & Dashboard** - Per-appointment page, dashboard with today's appointments, sidebar navigation
+- [ ] **Phase 8: Payments & Membership** - Stripe/Apple Pay checkout, membership plans, QR codes, user & admin payment pages
+- [ ] **Phase 9: Differentiation** - Multi-session tickets, loyalty tiers, dynamic pricing, customer app (mindmap vision)
 
 ## Phase Details
 
@@ -121,10 +126,96 @@ Plans:
 - [x] 02.1-01-PLAN.md — Validation schema, server action, and i18n translations (Wave 1)
 - [x] 02.1-02-PLAN.md — Schedule editor UI page and workers table navigation (Wave 2)
 
-### Phase 3: Payments & Membership
+### Phase 3: Karte Foundation
+**Goal**: Database schema for karute system (karute_records, karute_entries, recording_sessions, transcription_segments), Supabase Storage bucket for audio recordings, and API/service layer for CRUD operations
+**Depends on**: Phase 2.1 (needs existing customer/worker models)
+**Branch**: `phase-3/karte-foundation`
+**Reference**: [liampwww/synq-karute](https://github.com/liampwww/synq-karute) — owner's prototype
+
+**Success Criteria** (what must be TRUE):
+  1. Karute-related tables exist with proper indexes and RLS policies
+  2. Supabase Storage bucket configured for audio recordings
+  3. Service layer for karute CRUD operations
+  4. API endpoints for karute records and entries
+  5. Integration with existing Customer model
+
+**Plans:** 3 plans in 3 waves
+
+Plans:
+- [ ] 03-01-PLAN.md — Prisma schema, RLS policies, storage bucket, recording-storage module (Wave 1)
+- [ ] 03-02-PLAN.md — Zod validation schemas, karute service, recording service (Wave 2)
+- [ ] 03-03-PLAN.md — Server actions, audio upload API route, unit tests (Wave 3)
+
+### Phase 4: Recording & Transcription
+**Goal**: In-browser audio recording with timer and waveform visualization, audio upload to Supabase Storage, OpenAI Whisper transcription with segment storage
+**Depends on**: Phase 3
+**Branch**: `phase-4/recording-transcription`
+
+**Success Criteria** (what must be TRUE):
+  1. Staff can record audio in-browser with start/pause/stop controls
+  2. Timer and waveform visualization during recording
+  3. Audio uploaded to Supabase Storage bucket
+  4. Whisper API transcribes audio to Japanese text segments
+  5. Transcription segments stored with timestamps and speaker labels
+
+**Plans:** 3 plans in 2 waves
+
+Plans:
+- [ ] 04-01-PLAN.md — useAudioRecorder hook and MIME utility with tests (Wave 1)
+- [ ] 04-02-PLAN.md — Transcription service, API route, and tests (Wave 1)
+- [ ] 04-03-PLAN.md — Recording UI components, pipeline wiring, and i18n (Wave 2)
+
+### Phase 5: AI Classification & Karute UI
+**Goal**: AI classifies transcription into structured karute entries (symptom, treatment, preference, lifestyle, etc.), karute view/edit UI with approval workflow (draft → review → approved)
+**Depends on**: Phase 4
+**Branch**: `phase-5/ai-classification-karute-ui`
+
+**Success Criteria** (what must be TRUE):
+  1. AI classifies transcript into karute entry categories with confidence scores
+  2. AI generates summary for each karute record
+  3. Staff can view, edit, add, and delete karute entries
+  4. Approval workflow: draft → review → approved
+  5. Karute export as formatted text
+  6. Per-customer karute history view
+
+Plans:
+- [ ] TBD (to be planned)
+
+### Phase 6: Ask AI Chat
+**Goal**: Chat interface where staff can ask questions about customers and their karute history, with streaming AI responses powered by OpenAI, supporting customer-scoped and global query modes
+**Depends on**: Phase 5
+**Branch**: `phase-6/ask-ai-chat`
+
+**Success Criteria** (what must be TRUE):
+  1. Staff can open AI chat interface
+  2. Chat queries karute records and customer data as context
+  3. Responses stream in real-time (SSE)
+  4. Customer-scoped mode: ask about a specific customer's history
+  5. Global mode: ask across all recent karute records
+  6. Japanese-first responses
+
+Plans:
+- [ ] TBD (to be planned)
+
+### Phase 7: Appointment View & Dashboard Integration
+**Goal**: Per-appointment page at `/{locale}/appointment/{id}` with recording, karute, and settings access. Dashboard integration showing today's appointments with karute access. Dark navy sidebar navigation for appointment-level interface
+**Depends on**: Phase 6
+**Branch**: `phase-7/appointment-view-dashboard`
+
+**Success Criteria** (what must be TRUE):
+  1. Appointment page at `/{locale}/appointment/{id}` with tabbed interface
+  2. Dashboard shows today's appointments with quick karute access
+  3. Dark navy sidebar navigation for appointment context
+  4. Full i18n (en/ja) for all new pages
+  5. Settings page for AI provider config and business type templates
+
+Plans:
+- [ ] TBD (to be planned)
+
+### Phase 8: Payments & Membership
 **Goal**: Prepaid session packs with Stripe one-time checkout, QR code redemption for in-location scanning, user-facing payment pages, admin payment management, backend schema and webhook integration
 **Depends on**: Phase 2
-**Requirements**: PAY-01 (Stripe checkout), PAY-02 (Apple Pay), PAY-03 (webhooks), MEM-01 (session pack plans), MEM-02 (QR codes), MEM-03 (QR scan redemption), MEM-04 (admin plan management), MEM-05 (admin payment views)
+**Branch**: `phase-8/payments-membership`
 
 **Success Criteria** (what must be TRUE):
   1. Customer can purchase prepaid session packs via Stripe one-time checkout
@@ -136,20 +227,12 @@ Plans:
   7. Stripe webhook correctly processes checkout.session.completed (one-time payment)
   8. Checkout flow handles success, failure, and cancellation gracefully
 
-**Plans:** 6 plans in 5 waves
-
 Plans:
-- [ ] 03-01-PLAN.md — Foundation: schema (with enums), packages, Stripe client, validations (Wave 1)
-- [ ] 03-02-PLAN.md — Webhook handler (process-then-mark) and payment/membership services (Wave 2)
-- [ ] 03-03-PLAN.md — Admin session pack plan management (Wave 3)
-- [ ] 03-04-PLAN.md — Customer checkout flow with Stripe one-time payment (Wave 4)
-- [ ] 03-05-PLAN.md — QR code generation, session redemption, and staff scanner (Wave 3)
-- [ ] 03-06-PLAN.md — Admin payment views, navigation, i18n, and end-to-end verification (Wave 5)
+- [ ] TBD (to be planned)
 
-### Phase 4: Differentiation
+### Phase 9: Differentiation
 **Goal**: Deliver full mindmap vision with loyalty program, dynamic pricing, and customer app features
-**Depends on**: Phase 3
-**Requirements**: (from mindmap - to be detailed when Phase 3 completes)
+**Depends on**: Phase 8
 
 **Success Criteria** (what must be TRUE):
   1. Customer can purchase and use multi-session tickets (回数券)
@@ -166,7 +249,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Current priority order: 1 -> 2 -> 2.1 -> 3 -> 01.1 -> 4 (01.1 temporarily deferred)
+- v1.0: 1 → 2 → 2.1 (complete)
+- v2.0: 3 → 4 → 5 → 6 → 7 (SYNQ Karte)
+- Deferred: 01.1, 8, 9
+
+**Branching Strategy (v2.0+):**
+- Each phase gets an integration branch off `main`
+- Each task = PR into the phase integration branch
+- Integration branch merged to `main` by user/orchestrator when phase complete
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -174,5 +264,10 @@ Current priority order: 1 -> 2 -> 2.1 -> 3 -> 01.1 -> 4 (01.1 temporarily deferr
 | 01.1 Post-MVP UI Enhancements | 0/1 | Deferred | - |
 | 2. Parity | 8/8 | Complete | 2026-02-25 |
 | 2.1 Staff Availability | 2/2 | Complete | 2026-02-26 |
-| 3. Payments & Membership | 0/6 | Planned | - |
-| 4. Differentiation | 0/? | Not started | - |
+| 3. Karte Foundation | 0/3 | Not started | - |
+| 4. Recording & Transcription | 0/3 | Not started | - |
+| 5. AI Classification & Karute UI | 0/? | Not started | - |
+| 6. Ask AI Chat | 0/? | Not started | - |
+| 7. Appointment View & Dashboard | 0/? | Not started | - |
+| 8. Payments & Membership | 0/? | Deferred | - |
+| 9. Differentiation | 0/? | Deferred | - |

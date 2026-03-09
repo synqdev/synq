@@ -127,6 +127,8 @@
       "notFound": "スタッフがいません",
       "confirmDelete": "このスタッフを削除しますか？",
       "schedule": "シフト",
+      "loadingSchedule": "シフト読み込み中...",
+      "loadScheduleError": "シフトの読み込みに失敗しました。再度お試しください。",
       "createdSuccess": "スタッフを作成しました",
       "createFailed": "スタッフの作成に失敗しました",
       "updateFailed": "スタッフの更新に失敗しました",

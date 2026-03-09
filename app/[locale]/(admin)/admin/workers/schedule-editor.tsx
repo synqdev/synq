@@ -14,11 +14,10 @@ interface ScheduleEditorProps {
   onClose: () => void
 }
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
 export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose }: ScheduleEditorProps) {
   const tCommon = useTranslations('common')
   const tSchedule = useTranslations('admin.scheduleEditor')
+  const tDays = useTranslations('admin.schedulePage.days')
   const timeOptions = useMemo(() => generateTimeSlots('06:00', '23:30', 30), [])
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedules)
 
@@ -78,7 +77,7 @@ export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose
             />
 
             <span className="w-12 shrink-0 text-sm font-medium text-gray-700">
-              {DAY_LABELS[day.dayOfWeek]}
+              {tDays(String(day.dayOfWeek))}
             </span>
 
             <button

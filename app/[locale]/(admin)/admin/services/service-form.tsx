@@ -46,9 +46,9 @@ export function ServiceForm({ mode, service, onCancel }: ServiceFormProps) {
         await updateService(formData)
       }
       return { success: true, error: null }
-    } catch (error) {
+    } catch {
       const fallback = mode === 'create' ? tServices('createFailed') : tServices('updateFailed')
-      return { success: false, error: error instanceof Error ? error.message : fallback }
+      return { success: false, error: fallback }
     }
   }
 

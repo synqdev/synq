@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteWorker } from '@/app/actions/workers'
+import { DaySchedule, DEFAULT_SCHEDULES } from '@/lib/types/worker-schedule'
 import { WorkerForm } from './worker-form'
 import { ScheduleEditor } from './schedule-editor'
 
@@ -16,23 +17,9 @@ interface Worker {
   createdAt: Date
 }
 
-interface DaySchedule {
-  dayOfWeek: number
-  startTime: string
-  endTime: string
-  isAvailable: boolean
-}
-
 interface WorkerTableProps {
   workers: Worker[]
 }
-
-const DEFAULT_SCHEDULES: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
-  dayOfWeek: i,
-  startTime: '09:00',
-  endTime: '18:00',
-  isAvailable: false,
-}))
 
 export function WorkerTable({ workers }: WorkerTableProps) {
   const router = useRouter()
@@ -42,12 +29,14 @@ export function WorkerTable({ workers }: WorkerTableProps) {
   const [scheduleId, setScheduleId] = useState<string | null>(null)
   const [scheduleData, setScheduleData] = useState<DaySchedule[]>(DEFAULT_SCHEDULES)
   const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (!scheduleId) return
     const controller = new AbortController()
     setScheduleLoading(true)
+    setScheduleError(null)
     fetch(`/api/admin/workers/${scheduleId}/schedule`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load schedule: ${res.status}`)
@@ -64,7 +53,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
       .catch((err: unknown) => {
         if (controller.signal.aborted) return
         console.error('[worker-table] Failed to load schedule', err)
-        setScheduleData(DEFAULT_SCHEDULES)
+        setScheduleError(tWorkers('loadScheduleError'))
       })
       .finally(() => {
         if (!controller.signal.aborted) setScheduleLoading(false)
@@ -72,7 +61,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
     return () => {
       controller.abort()
     }
-  }, [scheduleId])
+  }, [scheduleId, tWorkers])
 
   const handleDelete = (id: string, name: string) => {
     if (!confirm(`${tWorkers('confirmDelete')}\n\n${name}`)) return
@@ -155,7 +144,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                           onClick={() => toggleSchedule(worker.id)}
                           className={scheduleId === worker.id ? 'bg-primary-50 border-primary-300' : ''}
                         >
-                          Schedule
+                          {tWorkers('schedule')}
                         </Button>
                         <Button
                           variant="outline"
@@ -185,7 +174,9 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                 <tr>
                   <td colSpan={4} className="border-t border-gray-100 bg-gray-50 px-4 py-4">
                     {scheduleLoading ? (
-                      <p className="text-sm text-gray-500">Loading schedule...</p>
+                      <p className="text-sm text-gray-500">{tWorkers('loadingSchedule')}</p>
+                    ) : scheduleError ? (
+                      <p className="text-sm text-red-600">{scheduleError}</p>
                     ) : (
                       <ScheduleEditor
                         workerId={worker.id}

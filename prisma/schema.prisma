@@ -182,9 +182,10 @@ model Booking {
   recordingSessions RecordingSession[]
 
   // Indexes for efficient availability queries (double-bottleneck logic)
-  @@index([startsAt, endsAt])
-  @@index([workerId, startsAt, endsAt])
-  @@index([resourceId, startsAt, endsAt])
+  // Status is leading column since all conflict queries filter by status
+  @@index([status, startsAt, endsAt])
+  @@index([workerId, status, startsAt, endsAt])
+  @@index([resourceId, status, startsAt, endsAt])
 }
 
 // ============================================================================

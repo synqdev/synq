@@ -266,6 +266,7 @@ const prismaMock = {
   },
   resource: {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
   },
 };
 
@@ -288,15 +289,12 @@ describe('Booking Service', () => {
   describe('createBooking', () => {
     it('should create a booking with available slot and auto-assigned resource', async () => {
       // Mock worker availability (no conflicts)
-      prismaMock.booking.findMany.mockResolvedValueOnce([]);
-
-      // Mock resource availability check
-      // First call is findMany (finding all resources)
-      prismaMock.resource.findMany.mockResolvedValueOnce([
-        { id: 'res-1', name: 'Resource 1', isActive: true },
-      ]);
-      // Second call is count (checking conflict for res-1) - no conflicts
       prismaMock.booking.count.mockResolvedValueOnce(0);
+
+      // Mock resource auto-assignment (single query finds first available)
+      prismaMock.resource.findFirst.mockResolvedValueOnce(
+        { id: 'res-1', name: 'Resource 1' },
+      );
 
       // Mock creation
       const createdBooking = { id: 'booking-1', ...validBookingInput, status: 'CONFIRMED' };
@@ -322,11 +320,10 @@ describe('Booking Service', () => {
       };
 
       // Mock worker availability (no conflicts)
-      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+      prismaMock.booking.count.mockResolvedValueOnce(0);
 
-      // Mock specified resource availability (checking conflicts directly)
-      // Note: Logic calls tx.booking.findMany for resource conflicts when ID is provided
-      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+      // Mock specified resource availability (no conflicts)
+      prismaMock.booking.count.mockResolvedValueOnce(0);
 
       const createdBooking = { id: 'booking-2', ...inputWithResource, status: 'CONFIRMED' };
       prismaMock.booking.create.mockResolvedValueOnce(createdBooking);
@@ -349,7 +346,7 @@ describe('Booking Service', () => {
 
     it('should fail when worker is not available', async () => {
       // Mock worker availability (conflict found)
-      prismaMock.booking.findMany.mockResolvedValueOnce([{ id: 'conflict-1' }]);
+      prismaMock.booking.count.mockResolvedValueOnce(1);
 
       const result = await createBooking(validBookingInput);
 
@@ -367,10 +364,10 @@ describe('Booking Service', () => {
       };
 
       // Mock worker availability (no conflicts)
-      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+      prismaMock.booking.count.mockResolvedValueOnce(0);
 
       // Mock resource availability (conflict found)
-      prismaMock.booking.findMany.mockResolvedValueOnce([{ id: 'conflict-res' }]);
+      prismaMock.booking.count.mockResolvedValueOnce(1);
 
       const result = await createBooking(inputWithResource);
 
@@ -381,15 +378,11 @@ describe('Booking Service', () => {
     });
 
     it('should fail when no auto-assigned resource is available', async () => {
-      // Mock worker availability
-      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+      // Mock worker availability (no conflicts)
+      prismaMock.booking.count.mockResolvedValueOnce(0);
 
-      // Mock resource finding
-      prismaMock.resource.findMany.mockResolvedValueOnce([
-        { id: 'res-1', name: 'Resource 1' },
-      ]);
-      // Mock conflict for res-1
-      prismaMock.booking.count.mockResolvedValueOnce(1);
+      // Mock resource auto-assignment (none available)
+      prismaMock.resource.findFirst.mockResolvedValueOnce(null);
 
       const result = await createBooking(validBookingInput);
 
@@ -400,11 +393,11 @@ describe('Booking Service', () => {
     });
 
     it('should return null if no resources exist in DB (auto-assign)', async () => {
-      // Mock worker availability
-      prismaMock.booking.findMany.mockResolvedValueOnce([]);
+      // Mock worker availability (no conflicts)
+      prismaMock.booking.count.mockResolvedValueOnce(0);
 
-      // Mock resource finding - empty list
-      prismaMock.resource.findMany.mockResolvedValueOnce([]);
+      // Mock resource auto-assignment (none exist)
+      prismaMock.resource.findFirst.mockResolvedValueOnce(null);
 
       const result = await createBooking(validBookingInput);
 
@@ -426,9 +419,8 @@ describe('Booking Service', () => {
         .mockImplementationOnce((cb) => cb(prismaMock)); // Succeed 2nd time
 
       // Setup success mocks for 2nd attempt
-      prismaMock.booking.findMany.mockResolvedValueOnce([]); // Worker ok
-      prismaMock.resource.findMany.mockResolvedValueOnce([{ id: 'res-1' }]); // Find res
-      prismaMock.booking.count.mockResolvedValueOnce(0); // Res ok
+      prismaMock.booking.count.mockResolvedValueOnce(0); // Worker ok
+      prismaMock.resource.findFirst.mockResolvedValueOnce({ id: 'res-1', name: 'Resource 1' }); // Find res
       prismaMock.booking.create.mockResolvedValueOnce({ id: 'booking-retry' });
 
       const result = await createBooking(validBookingInput);

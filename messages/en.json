@@ -26,7 +26,11 @@
     "minutes": "min",
     "localeJa": "日本語",
     "localeEn": "English",
-    "schedule": "Schedule"
+    "schedule": "Schedule",
+    "on": "On",
+    "off": "Off",
+    "locale": "Locale",
+    "notes": "Notes"
   },
   "booking": {
     "title": "Booking",
@@ -52,6 +56,7 @@
     "confirmBooking": "Confirm Booking",
     "bookingInProgress": "Booking...",
     "selectWorker": "Select worker",
+    "bookNow": "Book Now",
     "confirm": "Book Now",
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
@@ -121,7 +126,18 @@
       "add": "Add Worker",
       "notFound": "No workers found",
       "confirmDelete": "Are you sure you want to delete this worker?",
-      "schedule": "Schedule"
+      "schedule": "Schedule",
+      "createdSuccess": "Worker created successfully",
+      "createFailed": "Failed to create worker",
+      "updateFailed": "Failed to update worker",
+      "namePlaceholder": "e.g., Tanaka",
+      "nameJaPlaceholder": "e.g., \u7530\u4e2d"
+    },
+    "scheduleEditor": {
+      "title": "Schedule: {name}",
+      "saveSchedule": "Save Schedule",
+      "saved": "Saved",
+      "saveFailed": "Save failed"
     },
     "schedulePage": {
       "title": "Schedule Management",
@@ -154,14 +170,23 @@
       "duration": "Duration",
       "price": "Price",
       "notFound": "No services found",
-      "confirmDelete": "Are you sure you want to delete this service?"
+      "confirmDelete": "Are you sure you want to delete this service?",
+      "createdSuccess": "Service created successfully",
+      "createFailed": "Failed to create service",
+      "updateFailed": "Failed to update service",
+      "namePlaceholder": "e.g., Shiatsu",
+      "nameJaPlaceholder": "e.g., \u6307\u5727"
     },
     "resourcesPage": {
       "title": "Resource Management",
       "subtitle": "Treatment Beds/Rooms",
       "add": "Add Resource",
       "notFound": "No resources found",
-      "confirmDelete": "Are you sure you want to delete this resource?"
+      "confirmDelete": "Are you sure you want to delete this resource?",
+      "createdSuccess": "Resource created successfully",
+      "createFailed": "Failed to create resource",
+      "updateFailed": "Failed to update resource",
+      "namePlaceholder": "e.g., Bed 1"
     },
     "customersPage": {
       "title": "Customer Management",
@@ -276,6 +301,11 @@
       "exportPDF": "Export PDF",
       "exportText": "Export Text"
     },
+    "customerInfo": {
+      "viewFullProfile": "View full profile",
+      "visitCount": "Visit count",
+      "lastVisit": "Last visit"
+    },
     "customerDetail": {
       "title": "Customer Detail",
       "backToList": "Back to Customer List",
@@ -336,7 +366,10 @@
     "signOut": "Sign Out",
     "register": "Register",
     "email": "Email",
-    "password": "Password"
+    "password": "Password",
+    "username": "Username",
+    "loggingIn": "Logging in...",
+    "adminLogin": "Admin Login"
   },
   "welcome": {
     "title": "Welcome to SYNQ",

@@ -34,28 +34,24 @@ interface FormState {
   error: string | null
 }
 
-async function createServiceAction(_prevState: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await createService(formData)
-    return { success: true, error: null }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create service' }
-  }
-}
-
-async function updateServiceAction(_prevState: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await updateService(formData)
-    return { success: true, error: null }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to update service' }
-  }
-}
-
 export function ServiceForm({ mode, service, onCancel }: ServiceFormProps) {
   const tCommon = useTranslations('common')
   const tServices = useTranslations('admin.servicesPage')
-  const action = mode === 'create' ? createServiceAction : updateServiceAction
+
+  const action = async (_prevState: FormState, formData: FormData): Promise<FormState> => {
+    try {
+      if (mode === 'create') {
+        await createService(formData)
+      } else {
+        await updateService(formData)
+      }
+      return { success: true, error: null }
+    } catch (error) {
+      const fallback = mode === 'create' ? tServices('createFailed') : tServices('updateFailed')
+      return { success: false, error: error instanceof Error ? error.message : fallback }
+    }
+  }
+
   const [state, formAction, isPending] = useActionState(action, { success: false, error: null })
 
   return (
@@ -70,7 +66,7 @@ export function ServiceForm({ mode, service, onCancel }: ServiceFormProps) {
 
       {state.success && mode === 'create' && (
         <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
-          Service created successfully
+          {tServices('createdSuccess')}
         </div>
       )}
 
@@ -80,14 +76,14 @@ export function ServiceForm({ mode, service, onCancel }: ServiceFormProps) {
           label={tCommon('name')}
           defaultValue={service?.name || ''}
           required
-          placeholder="e.g., 指圧"
+          placeholder={tServices('nameJaPlaceholder')}
         />
 
         <Input
           name="nameEn"
           label={tCommon('nameEn')}
           defaultValue={service?.nameEn || ''}
-          placeholder="e.g., Shiatsu"
+          placeholder={tServices('namePlaceholder')}
         />
       </div>
 

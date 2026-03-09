@@ -8,12 +8,14 @@
  */
 
 import { useActionState } from 'react'
+import { useTranslations } from 'next-intl'
 import { adminLogin, type AdminLoginFormState } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardBody, CardFooter } from '@/components/ui/card'
 
 export default function AdminLoginPage() {
+  const tAuth = useTranslations('auth')
   const [state, formAction, isPending] = useActionState<
     AdminLoginFormState,
     FormData
@@ -24,7 +26,7 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <h1 className="text-xl font-semibold text-center" data-testid="admin-login-heading">
-            Admin Login
+            {tAuth('adminLogin')}
           </h1>
         </CardHeader>
         <form action={formAction}>
@@ -42,7 +44,7 @@ export default function AdminLoginPage() {
                 htmlFor="username"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Username
+                {tAuth('username')}
               </label>
               <Input
                 id="username"
@@ -59,7 +61,7 @@ export default function AdminLoginPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Password
+                {tAuth('password')}
               </label>
               <Input
                 id="password"
@@ -79,7 +81,7 @@ export default function AdminLoginPage() {
               disabled={isPending}
               data-testid="admin-login-submit"
             >
-              {isPending ? 'Logging in...' : 'Login'}
+              {isPending ? tAuth('loggingIn') : tAuth('login')}
             </Button>
           </CardFooter>
         </form>

@@ -26,7 +26,8 @@ function formatDate(value: string | null, locale: string): string {
 }
 
 export function CustomerInfoPanel({ customer, appLocale }: CustomerInfoPanelProps) {
-  const t = useTranslations('admin.appointment')
+  const tCommon = useTranslations('common')
+  const tInfo = useTranslations('admin.customerInfo')
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
@@ -36,38 +37,38 @@ export function CustomerInfoPanel({ customer, appLocale }: CustomerInfoPanelProp
           href={`/${appLocale}/admin/customers/${customer.id}`}
           className="text-sm text-primary-600 hover:underline"
         >
-          {appLocale === 'ja' ? '詳細を見る' : 'View full profile'}
+          {tInfo('viewFullProfile')}
         </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <span className="text-xs text-gray-500">
-            {appLocale === 'ja' ? 'メールアドレス' : 'Email'}
+            {tCommon('email')}
           </span>
           <p className="text-sm font-medium text-gray-900">{customer.email}</p>
         </div>
         <div>
           <span className="text-xs text-gray-500">
-            {appLocale === 'ja' ? '電話番号' : 'Phone'}
+            {tCommon('phone')}
           </span>
           <p className="text-sm font-medium text-gray-900">{customer.phone || '-'}</p>
         </div>
         <div>
           <span className="text-xs text-gray-500">
-            {appLocale === 'ja' ? '言語' : 'Locale'}
+            {tCommon('locale')}
           </span>
           <p className="text-sm font-medium text-gray-900">{customer.locale}</p>
         </div>
         <div>
           <span className="text-xs text-gray-500">
-            {appLocale === 'ja' ? '来院回数' : 'Visit count'}
+            {tInfo('visitCount')}
           </span>
           <p className="text-sm font-medium text-gray-900">{customer.visitCount}</p>
         </div>
         <div>
           <span className="text-xs text-gray-500">
-            {appLocale === 'ja' ? '最終来院日' : 'Last visit'}
+            {tInfo('lastVisit')}
           </span>
           <p className="text-sm font-medium text-gray-900">
             {formatDate(customer.lastVisitDate, appLocale)}
@@ -78,7 +79,7 @@ export function CustomerInfoPanel({ customer, appLocale }: CustomerInfoPanelProp
       {customer.notes && (
         <div className="mt-4 border-t border-gray-100 pt-4">
           <span className="text-xs text-gray-500">
-            {appLocale === 'ja' ? 'メモ' : 'Notes'}
+            {tCommon('notes')}
           </span>
           <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{customer.notes}</p>
         </div>

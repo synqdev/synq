@@ -30,27 +30,24 @@ interface FormState {
   error: string | null
 }
 
-async function createResourceAction(_prevState: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await createResource(formData)
-    return { success: true, error: null }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create resource' }
-  }
-}
-
-async function updateResourceAction(_prevState: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await updateResource(formData)
-    return { success: true, error: null }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to update resource' }
-  }
-}
-
 export function ResourceForm({ mode, resource, onCancel }: ResourceFormProps) {
   const tCommon = useTranslations('common')
-  const action = mode === 'create' ? createResourceAction : updateResourceAction
+  const tResources = useTranslations('admin.resourcesPage')
+
+  const action = async (_prevState: FormState, formData: FormData): Promise<FormState> => {
+    try {
+      if (mode === 'create') {
+        await createResource(formData)
+      } else {
+        await updateResource(formData)
+      }
+      return { success: true, error: null }
+    } catch (error) {
+      const fallback = mode === 'create' ? tResources('createFailed') : tResources('updateFailed')
+      return { success: false, error: error instanceof Error ? error.message : fallback }
+    }
+  }
+
   const [state, formAction, isPending] = useActionState(action, { success: false, error: null })
 
   return (
@@ -65,7 +62,7 @@ export function ResourceForm({ mode, resource, onCancel }: ResourceFormProps) {
 
       {state.success && mode === 'create' && (
         <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
-          Resource created successfully
+          {tResources('createdSuccess')}
         </div>
       )}
 
@@ -75,7 +72,7 @@ export function ResourceForm({ mode, resource, onCancel }: ResourceFormProps) {
           label={tCommon('name')}
           defaultValue={resource?.name || ''}
           required
-          placeholder="e.g., Bed 1 / ベッド1"
+          placeholder={tResources('namePlaceholder')}
         />
 
         <div>

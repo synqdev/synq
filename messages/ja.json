@@ -26,7 +26,11 @@
     "minutes": "分",
     "localeJa": "日本語",
     "localeEn": "English",
-    "schedule": "スケジュール"
+    "schedule": "スケジュール",
+    "on": "オン",
+    "off": "オフ",
+    "locale": "言語",
+    "notes": "メモ"
   },
   "booking": {
     "title": "予約",
@@ -52,6 +56,7 @@
     "confirmBooking": "予約を確定",
     "bookingInProgress": "予約中...",
     "selectWorker": "スタッフを選択",
+    "bookNow": "予約する",
     "confirm": "予約する",
     "confirmed": "予約確定",
     "cancelled": "キャンセル済み",
@@ -121,7 +126,18 @@
       "add": "新規スタッフ追加",
       "notFound": "スタッフがいません",
       "confirmDelete": "このスタッフを削除しますか？",
-      "schedule": "シフト"
+      "schedule": "シフト",
+      "createdSuccess": "スタッフを作成しました",
+      "createFailed": "スタッフの作成に失敗しました",
+      "updateFailed": "スタッフの更新に失敗しました",
+      "namePlaceholder": "例: Tanaka",
+      "nameJaPlaceholder": "例: 田中"
+    },
+    "scheduleEditor": {
+      "title": "シフト: {name}",
+      "saveSchedule": "シフト保存",
+      "saved": "保存しました",
+      "saveFailed": "保存に失敗しました"
     },
     "schedulePage": {
       "title": "シフト管理",
@@ -154,14 +170,23 @@
       "duration": "時間",
       "price": "料金",
       "notFound": "サービスがありません",
-      "confirmDelete": "このサービスを削除しますか？"
+      "confirmDelete": "このサービスを削除しますか？",
+      "createdSuccess": "サービスを作成しました",
+      "createFailed": "サービスの作成に失敗しました",
+      "updateFailed": "サービスの更新に失敗しました",
+      "namePlaceholder": "例: Shiatsu",
+      "nameJaPlaceholder": "例: 指圧"
     },
     "resourcesPage": {
       "title": "ベッド管理",
       "subtitle": "施術ベッド・部屋",
       "add": "新規ベッド追加",
       "notFound": "ベッドがありません",
-      "confirmDelete": "このベッドを削除しますか？"
+      "confirmDelete": "このベッドを削除しますか？",
+      "createdSuccess": "ベッドを作成しました",
+      "createFailed": "ベッドの作成に失敗しました",
+      "updateFailed": "ベッドの更新に失敗しました",
+      "namePlaceholder": "例: ベッド1"
     },
     "customersPage": {
       "title": "顧客管理",
@@ -276,6 +301,11 @@
       "exportPDF": "PDF出力",
       "exportText": "テキスト出力"
     },
+    "customerInfo": {
+      "viewFullProfile": "詳細を見る",
+      "visitCount": "来院回数",
+      "lastVisit": "最終来院日"
+    },
     "customerDetail": {
       "title": "顧客詳細",
       "backToList": "顧客一覧に戻る",
@@ -336,7 +366,10 @@
     "signOut": "サインアウト",
     "register": "登録",
     "email": "メールアドレス",
-    "password": "パスワード"
+    "password": "パスワード",
+    "username": "ユーザー名",
+    "loggingIn": "ログイン中...",
+    "adminLogin": "管理者ログイン"
   },
   "welcome": {
     "title": "SYNQへようこそ",

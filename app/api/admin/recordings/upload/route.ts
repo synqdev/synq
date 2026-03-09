@@ -21,7 +21,7 @@ const ALLOWED_TYPES = [
   'audio/ogg;codecs=opus',
   'audio/ogg',
 ]
-const MAX_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_SIZE = 25 * 1024 * 1024 // 25MB — OpenAI Whisper transcription limit
 
 export async function POST(request: NextRequest) {
   const isAdmin = await getAdminSession()
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: 'File too large' }, { status: 400 })
+    return NextResponse.json({ error: 'File too large (max 25MB)' }, { status: 400 })
   }
 
   try {

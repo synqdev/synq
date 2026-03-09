@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
   // Check if admin or appointment route (after locale prefix, excluding login)
   // Matches: /ja/admin/dashboard, /en/admin/dashboard, /ja/appointment/123, etc.
   // Excludes: /ja/admin/login, /en/admin/login
-  const isAdminRoute = pathname.match(/^\/[a-z]{2}\/(admin\/(?!login)|appointment\/)/)
+  const isAdminRoute = /^\/[a-z]{2}\/(?:admin(?:\/(?!login(?:\/|$)).*)?$|appointment(?:\/.*)?$)/.test(pathname)
 
   if (isAdminRoute) {
     const sessionCookie = request.cookies.get('admin_session')

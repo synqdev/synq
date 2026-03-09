@@ -15,6 +15,7 @@ export async function GET(
   }
 
   const { id } = await params
+  const safeId = id.replace(/[^A-Za-z0-9_-]/g, '') || 'record'
   const format = request.nextUrl.searchParams.get('format') || 'pdf'
 
   try {
@@ -28,7 +29,7 @@ export async function GET(
         headers: {
           'Cache-Control': 'private, no-store, max-age=0',
           'Content-Type': 'text/plain; charset=utf-8',
-          'Content-Disposition': `attachment; filename=karute-${id}.txt`,
+          'Content-Disposition': `attachment; filename="karute-${safeId}.txt"`,
         },
       })
     }
@@ -43,7 +44,7 @@ export async function GET(
       headers: {
         'Cache-Control': 'private, no-store, max-age=0',
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=karute-${id}.pdf`,
+        'Content-Disposition': `attachment; filename="karute-${safeId}.pdf"`,
       },
     })
   } catch (error) {

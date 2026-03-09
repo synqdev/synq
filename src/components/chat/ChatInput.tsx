@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 
 interface ChatInputProps {
-  onSend: (message: string) => void
+  onSend: (message: string) => Promise<void> | void
   isStreaming: boolean
 }
 
@@ -16,18 +16,24 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
   const t = useTranslations('admin.chat')
   const [value, setValue] = useState('')
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = value.trim()
     if (!trimmed || isStreaming) return
-    onSend(trimmed)
-    setValue('')
+    try {
+      await onSend(trimmed)
+      setValue('')
+    } catch {
+      // Keep draft intact on failure so the user can retry
+    }
   }, [value, isStreaming, onSend])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Ignore Enter during IME composition (e.g. Japanese input)
+      if (e.nativeEvent.isComposing) return
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        handleSend()
+        void handleSend()
       }
     },
     [handleSend]
@@ -46,7 +52,7 @@ export function ChatInput({ onSend, isStreaming }: ChatInputProps) {
         className="flex-1 rounded-full border border-gray-300 bg-gray-50 px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
       />
       <button
-        onClick={handleSend}
+        onClick={() => void handleSend()}
         disabled={isStreaming || !value.trim()}
         className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
         aria-label={t('send')}

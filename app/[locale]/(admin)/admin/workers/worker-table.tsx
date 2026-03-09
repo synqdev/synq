@@ -46,18 +46,32 @@ export function WorkerTable({ workers }: WorkerTableProps) {
 
   useEffect(() => {
     if (!scheduleId) return
+    const controller = new AbortController()
     setScheduleLoading(true)
-    fetch(`/api/admin/workers/${scheduleId}/schedule`)
-      .then((res) => res.json())
+    fetch(`/api/admin/workers/${scheduleId}/schedule`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to load schedule: ${res.status}`)
+        return res.json()
+      })
       .then((data) => {
+        if (controller.signal.aborted) return
         if (data.schedules) {
           setScheduleData(data.schedules)
         } else {
           setScheduleData(DEFAULT_SCHEDULES)
         }
       })
-      .catch(() => setScheduleData(DEFAULT_SCHEDULES))
-      .finally(() => setScheduleLoading(false))
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return
+        console.error('[worker-table] Failed to load schedule', err)
+        setScheduleData(DEFAULT_SCHEDULES)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setScheduleLoading(false)
+      })
+    return () => {
+      controller.abort()
+    }
   }, [scheduleId])
 
   const handleDelete = (id: string, name: string) => {

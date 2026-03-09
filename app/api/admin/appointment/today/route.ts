@@ -32,6 +32,13 @@ export async function GET(request: NextRequest) {
   const dateStr =
     searchParams.get('date') || formatInTimeZone(new Date()).date
 
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return NextResponse.json(
+      { error: 'Invalid date. Expected YYYY-MM-DD' },
+      { status: 400 }
+    )
+  }
+
   // Calculate day boundaries in JST
   const startOfDay = toZonedTime(dateStr, '00:00')
   const endOfDay = new Date(startOfDay)

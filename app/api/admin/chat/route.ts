@@ -96,16 +96,22 @@ export async function POST(request: Request) {
 
     // Create OpenAI streaming completion
     const openai = getOpenAI()
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system' as const, content: systemPrompt },
-        ...history,
-        { role: 'user' as const, content: message },
-      ],
-      stream: true,
-      stream_options: { include_usage: true },
-    })
+    const abortController = new AbortController()
+    request.signal.addEventListener('abort', () => abortController.abort())
+
+    const stream = await openai.chat.completions.create(
+      {
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system' as const, content: systemPrompt },
+          ...history,
+          { role: 'user' as const, content: message },
+        ],
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      { signal: abortController.signal }
+    )
 
     // Convert to ReadableStream for SSE
     const encoder = new TextEncoder()
@@ -144,8 +150,6 @@ export async function POST(request: Request) {
             }
           }
 
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-
           // Save assistant response after streaming completes
           // Parse citations from the response
           const citations = parseCitations(fullContent)
@@ -159,8 +163,13 @@ export async function POST(request: Request) {
           if (!saveResult.success) {
             console.error('[chat/route] Failed to save assistant message', { conversationId, error: saveResult.error })
           }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
           controller.close()
         } catch (error) {
+          if (abortController.signal.aborted) {
+            controller.close()
+            return
+          }
           console.error('[chat/route] Streaming error', { error })
           controller.error(error)
         }

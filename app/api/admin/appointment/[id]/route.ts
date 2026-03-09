@@ -28,56 +28,62 @@ export async function GET(
 
   const { id } = await params
 
-  const booking = await prisma.booking.findUnique({
-    where: { id },
-    include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          locale: true,
-          notes: true,
+  let booking
+  try {
+    booking = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            locale: true,
+            notes: true,
+          },
+        },
+        worker: {
+          select: {
+            id: true,
+            name: true,
+            nameEn: true,
+          },
+        },
+        service: {
+          select: {
+            id: true,
+            name: true,
+            nameEn: true,
+            duration: true,
+          },
+        },
+        karuteRecords: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            aiSummary: true,
+          },
+        },
+        recordingSessions: {
+          orderBy: { startedAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            startedAt: true,
+            endedAt: true,
+            audioStoragePath: true,
+            durationSeconds: true,
+          },
         },
       },
-      worker: {
-        select: {
-          id: true,
-          name: true,
-          nameEn: true,
-        },
-      },
-      service: {
-        select: {
-          id: true,
-          name: true,
-          nameEn: true,
-          duration: true,
-        },
-      },
-      karuteRecords: {
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          aiSummary: true,
-        },
-      },
-      recordingSessions: {
-        orderBy: { startedAt: 'desc' },
-        select: {
-          id: true,
-          status: true,
-          startedAt: true,
-          endedAt: true,
-          audioStoragePath: true,
-          durationSeconds: true,
-        },
-      },
-    },
-  })
+    })
+  } catch (error) {
+    console.error('[appointment/route] Failed to fetch booking', { id, error })
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
 
   if (!booking) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })

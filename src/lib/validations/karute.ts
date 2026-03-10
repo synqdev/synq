@@ -60,13 +60,13 @@ export const createKaruteEntrySchema = z.object({
   category: karuteEntryCategorySchema,
   content: z.string().min(1, { message: 'Content is required' }),
   originalQuote: z.string().optional(),
-  confidence: z.number().min(0).max(1).default(0),
+  confidence: z.number().min(0).max(1).optional().default(0),
   tags: z.array(z.string()).optional(),
   segmentIndices: z.array(z.number().int().nonnegative()).optional(),
   displayOrder: z.number().int().nonnegative().optional(),
 });
 
-export type CreateKaruteEntryInput = z.infer<typeof createKaruteEntrySchema>;
+export type CreateKaruteEntryInput = z.input<typeof createKaruteEntrySchema>;
 
 /**
  * Schema for updating an existing karute entry.

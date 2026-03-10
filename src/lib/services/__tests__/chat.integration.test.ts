@@ -25,6 +25,7 @@ const mockMessageCount = jest.fn();
 const mockCustomerFindUnique = jest.fn();
 const mockKaruteRecordFindMany = jest.fn();
 const mockBookingFindMany = jest.fn();
+const mockBookingCount = jest.fn();
 const mockTransaction = jest.fn();
 
 jest.mock('@/lib/db/client', () => ({
@@ -47,6 +48,7 @@ jest.mock('@/lib/db/client', () => ({
     },
     booking: {
       findMany: (...args: unknown[]) => mockBookingFindMany(...args),
+      count: (...args: unknown[]) => mockBookingCount(...args),
     },
     $transaction: (...args: unknown[]) => mockTransaction(...args),
   },
@@ -493,6 +495,7 @@ describe('getChatHistory', () => {
 describe('buildChatContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockBookingCount.mockResolvedValue(5);
   });
 
   it('builds customer-scoped context with profile, karute records, and bookings', async () => {

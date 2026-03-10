@@ -48,7 +48,10 @@ jest.mock('@sentry/nextjs', () => ({
 }))
 
 jest.mock('@/lib/db/rls-context', () => ({
-  withRLSContext: (_ctx: unknown, op: () => Promise<unknown>) => op(),
+  withRLSContext: async (_ctx: unknown, op: (tx: unknown) => Promise<unknown>) => {
+    const { prisma } = require('@/lib/db/client')
+    return op(prisma)
+  },
 }))
 
 import {

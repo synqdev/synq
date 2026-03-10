@@ -180,6 +180,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '11:00'),
           customerName: '山田太郎',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -227,6 +228,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '11:00'),
           customerName: '山田太郎',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -255,6 +257,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '10:30'),
           customerName: '30min',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
         {
           id: 'booking-2',
@@ -263,6 +266,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '12:00'),
           customerName: '60min',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
         {
           id: 'booking-3',
@@ -271,6 +275,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '14:30'),
           customerName: '90min',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -292,6 +297,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '11:00'),
           customerName: '山田',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
         {
           id: 'booking-2',
@@ -300,6 +306,7 @@ describe('Calendar Mappers', () => {
           endsAt: toZonedTime('2026-02-10', '15:00'),
           customerName: '佐藤',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -355,6 +362,7 @@ describe('Calendar Mappers', () => {
           endsAt: new Date('2026-02-10T11:00:00'),
           customerName: '山田',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -403,6 +411,7 @@ describe('Calendar Mappers', () => {
           endsAt: new Date('2026-02-10T13:00:00'),
           customerName: '山田',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -468,6 +477,7 @@ describe('Calendar Mappers', () => {
           endsAt: new Date('2026-02-10T11:00:00'),
           customerName: '山田',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 
@@ -500,6 +510,7 @@ describe('Calendar Mappers', () => {
           endsAt: new Date('2026-02-10T11:00:00'),
           customerName: '山田太郎',
           status: 'CONFIRMED',
+          serviceId: 'service-1',
         },
       ]
 

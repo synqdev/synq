@@ -49,8 +49,8 @@ export async function createAdminSession(): Promise<string> {
  */
 export async function verifyAdminSession(token: string): Promise<boolean> {
   try {
-    await jwtVerify(token, SECRET)
-    return true
+    const { payload } = await jwtVerify(token, SECRET)
+    return payload.role === 'admin'
   } catch {
     return false
   }

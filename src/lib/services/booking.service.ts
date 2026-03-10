@@ -115,21 +115,16 @@ export async function createBooking(
       const booking = await prisma.$transaction(
         async (tx) => {
           // Check worker availability within transaction
-          const workerConflicts = await tx.booking.findMany({
+          const workerConflictCount = await tx.booking.count({
             where: {
               workerId: validated.workerId,
               status: { in: ['CONFIRMED', 'PENDING'] },
-              OR: [
-                // Existing booking starts before our end AND ends after our start
-                {
-                  startsAt: { lt: endsAt },
-                  endsAt: { gt: startsAt },
-                },
-              ],
+              startsAt: { lt: endsAt },
+              endsAt: { gt: startsAt },
             },
           });
 
-          if (workerConflicts.length > 0) {
+          if (workerConflictCount > 0) {
             throw new Error('Worker not available at this time');
           }
 
@@ -149,25 +144,21 @@ export async function createBooking(
             resourceId = availableResource.id;
           } else {
             // Verify specified resource is available
-            const resourceConflicts = await tx.booking.findMany({
+            const resourceConflictCount = await tx.booking.count({
               where: {
                 resourceId,
                 status: { in: ['CONFIRMED', 'PENDING'] },
-                OR: [
-                  {
-                    startsAt: { lt: endsAt },
-                    endsAt: { gt: startsAt },
-                  },
-                ],
+                startsAt: { lt: endsAt },
+                endsAt: { gt: startsAt },
               },
             });
 
-            if (resourceConflicts.length > 0) {
+            if (resourceConflictCount > 0) {
               throw new Error('Resource not available at this time');
             }
           }
 
-          // Create booking
+          // Create booking with relations for downstream use (e.g. email)
           return tx.booking.create({
             data: {
               customerId: validated.customerId,
@@ -177,6 +168,11 @@ export async function createBooking(
               startsAt,
               endsAt,
               status: 'CONFIRMED',
+            },
+            include: {
+              customer: true,
+              worker: true,
+              service: true,
             },
           });
         },
@@ -237,33 +233,23 @@ async function findAvailableResource(
   startsAt: Date,
   endsAt: Date
 ): Promise<{ id: string; name: string } | null> {
-  // Get all active resources
-  const resources = await tx.resource.findMany({
-    where: { isActive: true },
-    orderBy: { name: 'asc' }, // Consistent ordering for deterministic assignment
+  // Single query: find first active resource with no conflicting bookings
+  const available = await tx.resource.findFirst({
+    where: {
+      isActive: true,
+      bookings: {
+        none: {
+          status: { in: ['CONFIRMED', 'PENDING'] },
+          startsAt: { lt: endsAt },
+          endsAt: { gt: startsAt },
+        },
+      },
+    },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true },
   });
 
-  // Check each resource for conflicts
-  for (const resource of resources) {
-    const conflicts = await tx.booking.count({
-      where: {
-        resourceId: resource.id,
-        status: { in: ['CONFIRMED', 'PENDING'] },
-        OR: [
-          {
-            startsAt: { lt: endsAt },
-            endsAt: { gt: startsAt },
-          },
-        ],
-      },
-    });
-
-    if (conflicts === 0) {
-      return resource;
-    }
-  }
-
-  return null;
+  return available;
 }
 
 /**

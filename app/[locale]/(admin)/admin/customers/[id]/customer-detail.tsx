@@ -7,7 +7,9 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { useChatContext } from '@/components/chat'
 import { IntakeUpload } from './intake-upload'
+import { KaruteHistory } from '@/components/karute'
 
 interface WorkerOption {
   id: string
@@ -96,12 +98,19 @@ const statusStyles: Record<string, string> = {
 export function CustomerDetail({ customerId, locale, workers }: CustomerDetailProps) {
   const t = useTranslations('admin.customerDetail')
   const tCommon = useTranslations('common')
+  const { setCustomerId, setIsOpen } = useChatContext()
+
+  const handleAskAi = useCallback(() => {
+    setCustomerId(customerId)
+    setIsOpen(true)
+  }, [customerId, setCustomerId, setIsOpen])
 
   const { data: customer, error, isLoading, mutate } = useSWR<CustomerDetailData>(
     `/api/admin/customers/${customerId}`,
     fetcher
   )
 
+  const [activeTab, setActiveTab] = useState<'details' | 'karute'>('details')
   const [notes, setNotes] = useState('')
   const [notesChanged, setNotesChanged] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -199,9 +208,22 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         &larr; {t('backToList')}
       </Link>
 
-      {/* Customer Info */}
+      {/* Customer Info (always visible) */}
       <section className="rounded-lg border border-secondary-200 p-4">
-        <h2 className="mb-4 text-xl font-bold text-secondary-900">{customer.name}</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-secondary-900">{customer.name}</h2>
+          <Button variant="outline" size="sm" onClick={handleAskAi}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="mr-1.5 h-4 w-4"
+            >
+              <path d="M10 1a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 1ZM5.05 3.05a.75.75 0 0 1 1.06 0l1.062 1.06A.75.75 0 1 1 6.11 5.173L5.05 4.11a.75.75 0 0 1 0-1.06ZM14.95 3.05a.75.75 0 0 1 0 1.06l-1.06 1.062a.75.75 0 0 1-1.062-1.061l1.061-1.06a.75.75 0 0 1 1.06 0ZM3 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 3 8ZM14 8a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 14 8ZM7.172 13.828a.75.75 0 0 1 0 1.061l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM12.828 13.828a.75.75 0 0 1 1.061 0l1.06 1.06a.75.75 0 0 1-1.06 1.061l-1.06-1.06a.75.75 0 0 1 0-1.061ZM10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM9.25 14a.75.75 0 0 1 .75-.75h.01a.75.75 0 0 1 0 1.5H10a.75.75 0 0 1-.75-.75Z" />
+            </svg>
+            {t('askAi')}
+          </Button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <span className="text-sm text-secondary-500">{tCommon('email')}</span>
@@ -245,6 +267,37 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         </div>
       </section>
 
+      {/* Tab Navigation */}
+      <div className="flex border-b border-secondary-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('details')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'details'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-secondary-500 hover:text-secondary-700'
+          }`}
+        >
+          {t('detailsTab')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('karute')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'karute'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-secondary-500 hover:text-secondary-700'
+          }`}
+        >
+          {t('karuteTab')}
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'karute' ? (
+        <KaruteHistory customerId={customerId} locale={locale} />
+      ) : (
+      <>
       {/* Notes */}
       <section className="rounded-lg border border-secondary-200 p-4">
         <h3 className="mb-3 text-lg font-semibold text-secondary-900">{t('notes')}</h3>
@@ -323,6 +376,8 @@ export function CustomerDetail({ customerId, locale, workers }: CustomerDetailPr
         <h3 className="mb-3 text-lg font-semibold text-secondary-900">{t('medicalRecords')}</h3>
         <IntakeUpload customerId={customerId} locale={locale} />
       </section>
+      </>
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useActionState, useEffect, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { upsertWorkerSchedule } from '@/app/actions/worker-schedule'
 import { generateTimeSlots } from '@/lib/utils/time'
@@ -13,9 +14,10 @@ interface ScheduleEditorProps {
   onClose: () => void
 }
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
 export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose }: ScheduleEditorProps) {
+  const tCommon = useTranslations('common')
+  const tSchedule = useTranslations('admin.scheduleEditor')
+  const tDays = useTranslations('admin.schedulePage.days')
   const timeOptions = useMemo(() => generateTimeSlots('06:00', '23:30', 30), [])
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedules)
 
@@ -51,14 +53,14 @@ export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-gray-900">
-          Schedule: {workerName}
+          {tSchedule('title', { name: workerName })}
         </h4>
         <button
           type="button"
           onClick={onClose}
           className="text-sm text-gray-500 hover:text-gray-700"
         >
-          Close
+          {tCommon('close')}
         </button>
       </div>
 
@@ -75,7 +77,7 @@ export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose
             />
 
             <span className="w-12 shrink-0 text-sm font-medium text-gray-700">
-              {DAY_LABELS[day.dayOfWeek]}
+              {tDays(String(day.dayOfWeek))}
             </span>
 
             <button
@@ -89,7 +91,7 @@ export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose
                 }
               `}
             >
-              {day.isAvailable ? 'On' : 'Off'}
+              {day.isAvailable ? tCommon('on') : tCommon('off')}
             </button>
 
             <div
@@ -128,15 +130,15 @@ export function ScheduleEditor({ workerId, workerName, initialSchedules, onClose
 
         <div className="flex items-center gap-3 border-t border-gray-200 pt-3">
           <Button type="submit" size="sm" loading={isPending}>
-            Save Schedule
+            {tSchedule('saveSchedule')}
           </Button>
 
           <span aria-live="polite" className="text-sm font-medium">
             {state?.success === true && (
-              <span className="text-green-600">Saved</span>
+              <span className="text-green-600">{tSchedule('saved')}</span>
             )}
             {state?.success === false && (
-              <span className="text-red-600">{state.error ?? 'Save failed'}</span>
+              <span className="text-red-600">{state.error ?? tSchedule('saveFailed')}</span>
             )}
           </span>
         </div>

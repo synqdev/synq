@@ -26,7 +26,11 @@
     "minutes": "min",
     "localeJa": "日本語",
     "localeEn": "English",
-    "schedule": "Schedule"
+    "schedule": "Schedule",
+    "on": "On",
+    "off": "Off",
+    "locale": "Locale",
+    "notes": "Notes"
   },
   "booking": {
     "title": "Booking",
@@ -52,6 +56,7 @@
     "confirmBooking": "Confirm Booking",
     "bookingInProgress": "Booking...",
     "selectWorker": "Select worker",
+    "bookNow": "Book Now",
     "confirm": "Book Now",
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
@@ -121,7 +126,20 @@
       "add": "Add Worker",
       "notFound": "No workers found",
       "confirmDelete": "Are you sure you want to delete this worker?",
-      "schedule": "Schedule"
+      "schedule": "Schedule",
+      "loadingSchedule": "Loading schedule...",
+      "loadScheduleError": "Failed to load schedule. Please try again.",
+      "createdSuccess": "Worker created successfully",
+      "createFailed": "Failed to create worker",
+      "updateFailed": "Failed to update worker",
+      "namePlaceholder": "e.g., Tanaka",
+      "nameJaPlaceholder": "e.g., \u7530\u4e2d"
+    },
+    "scheduleEditor": {
+      "title": "Schedule: {name}",
+      "saveSchedule": "Save Schedule",
+      "saved": "Saved",
+      "saveFailed": "Save failed"
     },
     "schedulePage": {
       "title": "Schedule Management",
@@ -154,14 +172,23 @@
       "duration": "Duration",
       "price": "Price",
       "notFound": "No services found",
-      "confirmDelete": "Are you sure you want to delete this service?"
+      "confirmDelete": "Are you sure you want to delete this service?",
+      "createdSuccess": "Service created successfully",
+      "createFailed": "Failed to create service",
+      "updateFailed": "Failed to update service",
+      "namePlaceholder": "e.g., Shiatsu",
+      "nameJaPlaceholder": "e.g., \u6307\u5727"
     },
     "resourcesPage": {
       "title": "Resource Management",
       "subtitle": "Treatment Beds/Rooms",
       "add": "Add Resource",
       "notFound": "No resources found",
-      "confirmDelete": "Are you sure you want to delete this resource?"
+      "confirmDelete": "Are you sure you want to delete this resource?",
+      "createdSuccess": "Resource created successfully",
+      "createFailed": "Failed to create resource",
+      "updateFailed": "Failed to update resource",
+      "namePlaceholder": "e.g., Bed 1"
     },
     "customersPage": {
       "title": "Customer Management",
@@ -217,6 +244,70 @@
       "exportBookings": "Export Bookings CSV",
       "exporting": "Exporting..."
     },
+    "recording": {
+      "startRecording": "Start Recording",
+      "pauseRecording": "Pause",
+      "resumeRecording": "Resume",
+      "stopRecording": "Stop Recording",
+      "uploading": "Uploading...",
+      "transcribing": "Transcribing...",
+      "transcriptionComplete": "Transcription Complete",
+      "noSegments": "No transcription segments",
+      "speaker": "Speaker {label}",
+      "errorPermission": "Microphone access denied",
+      "errorNoMic": "No microphone found",
+      "errorMic": "Microphone error",
+      "errorUpload": "Upload failed",
+      "errorTranscription": "Transcription failed",
+      "recordingComplete": "Recording Complete",
+      "newRecording": "New Recording"
+    },
+    "karuteEditor": {
+      "title": "Karute Editor",
+      "summary": "Summary",
+      "entries": "Entries",
+      "addEntry": "Add Entry",
+      "classify": "Run AI Classification",
+      "classifying": "Classifying...",
+      "reclassify": "Reclassify",
+      "reclassifyConfirm": "Existing entries will be deleted. Reclassify?",
+      "transcript": "Transcript",
+      "noTranscript": "No transcript available",
+      "noEntries": "No entries yet",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this entry?",
+      "submitReview": "Submit for Review",
+      "approve": "Approve",
+      "backToDraft": "Back to Draft",
+      "reopen": "Reopen",
+      "category": "Category",
+      "content": "Content",
+      "originalQuote": "Original Quote",
+      "confidence": "Confidence",
+      "lowConfidence": "Low Confidence",
+      "tags": "Tags",
+      "customer": "Customer",
+      "practitioner": "Practitioner",
+      "date": "Date",
+      "categories": {
+        "SYMPTOM": "Symptom",
+        "TREATMENT": "Treatment",
+        "BODY_AREA": "Body Area",
+        "PREFERENCE": "Preference",
+        "LIFESTYLE": "Lifestyle",
+        "NEXT_VISIT": "Next Visit",
+        "OTHER": "Other"
+      },
+      "exportPDF": "Export PDF",
+      "exportText": "Export Text"
+    },
+    "customerInfo": {
+      "viewFullProfile": "View full profile",
+      "visitCount": "Visit count",
+      "lastVisit": "Last visit"
+    },
     "customerDetail": {
       "title": "Customer Detail",
       "backToList": "Back to Customer List",
@@ -239,12 +330,36 @@
       "price": "Price",
       "medicalRecords": "Medical Records",
       "comingSoon": "Coming soon",
+      "askAi": "Ask AI",
       "notFound": "Customer not found",
+      "karuteTab": "Karute",
+      "detailsTab": "Details",
+      "karuteLoadError": "Failed to load data",
+      "noKaruteRecords": "No karute records",
+      "entries": "entries",
+      "viewKarute": "View Karute",
       "intake": {
         "dropzone": "Drop files here or click to upload (PDF, JPG, PNG, WEBP, max 10MB)",
         "uploading": "Uploading...",
         "noFiles": "No intake forms uploaded yet"
       }
+    },
+    "chat": {
+      "title": "AI Chat",
+      "placeholder": "Type a question...",
+      "send": "Send",
+      "emptyCustomer": "Ask a question about this customer",
+      "emptyGlobal": "Ask a question",
+      "newChat": "New Chat",
+      "summarizeLastVisit": "Summarize last visit",
+      "showTreatmentHistory": "Show treatment history",
+      "anyAllergies": "Any allergies?",
+      "nextAppointment": "Next appointment",
+      "recentTrends": "Recent treatment trends",
+      "todaysAppointments": "Today's appointments",
+      "error": "An error occurred",
+      "close": "Close",
+      "customerContextActive": "Customer context active"
     }
   },
   "auth": {
@@ -253,7 +368,10 @@
     "signOut": "Sign Out",
     "register": "Register",
     "email": "Email",
-    "password": "Password"
+    "password": "Password",
+    "username": "Username",
+    "loggingIn": "Logging in...",
+    "adminLogin": "Admin Login"
   },
   "welcome": {
     "title": "Welcome to SYNQ",

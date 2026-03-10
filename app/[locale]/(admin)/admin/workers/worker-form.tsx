@@ -31,27 +31,24 @@ interface FormState {
   error: string | null
 }
 
-async function createWorkerAction(_prevState: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await createWorker(formData)
-    return { success: true, error: null }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create worker' }
-  }
-}
-
-async function updateWorkerAction(_prevState: FormState, formData: FormData): Promise<FormState> {
-  try {
-    await updateWorker(formData)
-    return { success: true, error: null }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to update worker' }
-  }
-}
-
 export function WorkerForm({ mode, worker, onCancel }: WorkerFormProps) {
   const tCommon = useTranslations('common')
-  const action = mode === 'create' ? createWorkerAction : updateWorkerAction
+  const tWorkers = useTranslations('admin.workersPage')
+
+  const action = async (_prevState: FormState, formData: FormData): Promise<FormState> => {
+    try {
+      if (mode === 'create') {
+        await createWorker(formData)
+      } else {
+        await updateWorker(formData)
+      }
+      return { success: true, error: null }
+    } catch (error) {
+      const fallback = mode === 'create' ? tWorkers('createFailed') : tWorkers('updateFailed')
+      return { success: false, error: error instanceof Error ? error.message : fallback }
+    }
+  }
+
   const [state, formAction, isPending] = useActionState(action, { success: false, error: null })
 
   return (
@@ -66,7 +63,7 @@ export function WorkerForm({ mode, worker, onCancel }: WorkerFormProps) {
 
       {state.success && mode === 'create' && (
         <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
-          Worker created successfully
+          {tWorkers('createdSuccess')}
         </div>
       )}
 
@@ -76,14 +73,14 @@ export function WorkerForm({ mode, worker, onCancel }: WorkerFormProps) {
           label={tCommon('name')}
           defaultValue={worker?.name || ''}
           required
-          placeholder="e.g., 田中"
+          placeholder={tWorkers('nameJaPlaceholder')}
         />
 
         <Input
           name="nameEn"
           label={tCommon('nameEn')}
           defaultValue={worker?.nameEn || ''}
-          placeholder="e.g., Tanaka"
+          placeholder={tWorkers('namePlaceholder')}
         />
       </div>
 

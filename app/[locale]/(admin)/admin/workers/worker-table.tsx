@@ -1,21 +1,13 @@
 'use client'
 
-/**
- * Worker Table Component
- *
- * Displays workers in a table with edit and delete actions.
- * Uses modal for editing and confirmation for deletion.
- */
-
-import { useState, useTransition } from 'react'
-import Link from 'next/link'
+import { Fragment, useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations, useLocale } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { deleteWorker } from '@/app/actions/workers'
+import { DaySchedule, DEFAULT_SCHEDULES } from '@/lib/types/worker-schedule'
 import { WorkerForm } from './worker-form'
 import { ScheduleEditor } from './schedule-editor'
-import { type DaySchedule, DEFAULT_SCHEDULES } from '@/lib/types/worker-schedule'
 
 interface Worker {
   id: string
@@ -31,36 +23,45 @@ interface WorkerTableProps {
 
 export function WorkerTable({ workers }: WorkerTableProps) {
   const router = useRouter()
-  const locale = useLocale()
   const tCommon = useTranslations('common')
   const tWorkers = useTranslations('admin.workersPage')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [scheduleId, setScheduleId] = useState<string | null>(null)
   const [scheduleData, setScheduleData] = useState<DaySchedule[]>(DEFAULT_SCHEDULES)
   const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (!scheduleId) return
     const controller = new AbortController()
     setScheduleLoading(true)
+    setScheduleError(null)
     fetch(`/api/admin/workers/${scheduleId}/schedule`, { signal: controller.signal })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to load schedule: ${res.status}`)
+        return res.json()
+      })
       .then((data) => {
+        if (controller.signal.aborted) return
         if (data.schedules) {
           setScheduleData(data.schedules)
         } else {
           setScheduleData(DEFAULT_SCHEDULES)
         }
       })
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setScheduleData(DEFAULT_SCHEDULES)
-        }
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return
+        console.error('[worker-table] Failed to load schedule', err)
+        setScheduleError(tWorkers('loadScheduleError'))
       })
-      .finally(() => setScheduleLoading(false))
-    return () => controller.abort()
-  }, [scheduleId])
+      .finally(() => {
+        if (!controller.signal.aborted) setScheduleLoading(false)
+      })
+    return () => {
+      controller.abort()
+    }
+  }, [scheduleId, tWorkers])
 
   const handleDelete = (id: string, name: string) => {
     if (!confirm(`${tWorkers('confirmDelete')}\n\n${name}`)) return
@@ -117,40 +118,20 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                       onCancel={handleEditCancel}
                     />
                   </td>
-                  <td className="px-4 py-3 text-secondary-600">
-                    {worker.nameEn || '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${worker.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                        }`}
-                    >
-                      {worker.isActive ? tCommon('active') : tCommon('inactive')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/${locale}/admin/workers/${worker.id}/schedule`}
-                        className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-primary-600 hover:bg-primary-50 hover:text-primary-800 transition-colors"
-                      >
-                        {tWorkers('schedule')}
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingId(worker.id)}
-                      >
-                        {tCommon('edit')}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(worker.id, worker.name)}
-                        disabled={isPending}
-                        className="text-red-600 hover:bg-red-50"
+                ) : (
+                  <>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {worker.name}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {worker.nameEn || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${worker.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                          }`}
                       >
                         {worker.isActive ? tCommon('active') : tCommon('inactive')}
                       </span>
@@ -163,7 +144,7 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                           onClick={() => toggleSchedule(worker.id)}
                           className={scheduleId === worker.id ? 'bg-primary-50 border-primary-300' : ''}
                         >
-                          {tCommon('schedule')}
+                          {tWorkers('schedule')}
                         </Button>
                         <Button
                           variant="outline"
@@ -193,7 +174,9 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                 <tr>
                   <td colSpan={4} className="border-t border-gray-100 bg-gray-50 px-4 py-4">
                     {scheduleLoading ? (
-                      <p className="text-sm text-gray-500">{tCommon('loading')}</p>
+                      <p className="text-sm text-gray-500">{tWorkers('loadingSchedule')}</p>
+                    ) : scheduleError ? (
+                      <p className="text-sm text-red-600">{scheduleError}</p>
                     ) : (
                       <ScheduleEditor
                         workerId={worker.id}

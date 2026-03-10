@@ -4,11 +4,10 @@
  * POST: Creates a new booking
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createBooking } from '@/lib/services/booking.service'
 import { formatInTimeZone } from '@/lib/utils/time'
 import { sendBookingConfirmation } from '@/lib/email/send'
-import { prisma } from '@/lib/db/client'
 import { z } from 'zod'
 import { getLocaleDateTag } from '@/lib/i18n/locale'
 
@@ -72,52 +71,42 @@ export async function POST(request: NextRequest) {
 
     console.log('[Booking API] Booking created successfully:', result.booking.id)
 
-    // Fetch booking with related data for email
-    const booking = await prisma.booking.findUnique({
-      where: { id: result.booking.id },
-      include: {
-        customer: true,
-        worker: true,
-        service: true,
-      },
+    const booking = result.booking
+
+    // Get locale from request (default to 'ja')
+    const locale = request.headers.get('Accept-Language')?.startsWith('en') ? 'en' : 'ja'
+
+    // Format date for email — use the original startsAt timestamp with business timezone
+    // to avoid day-shift on non-UTC runtimes when parsing a bare YYYY-MM-DD string
+    const formattedDate = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'Asia/Tokyo',
+    }).format(new Date(startsAt))
+
+    // Schedule email after response is sent (Next.js 15 `after()`)
+    // This ensures the email side-effect survives serverless function shutdown
+    after(async () => {
+      try {
+        const emailResult = await sendBookingConfirmation({
+          to: booking.customer.email,
+          customerName: booking.customer.name,
+          serviceName: booking.service.name,
+          workerName: booking.worker.name,
+          date: formattedDate,
+          time: startParts.time,
+          locale: locale as 'ja' | 'en',
+        })
+        if (emailResult) {
+          console.log('[Booking API] Email sent successfully:', emailResult.id)
+        }
+      } catch (err) {
+        console.error('[Booking API] Failed to send booking confirmation email:', err)
+      }
     })
 
-    if (booking) {
-      // Get locale from request (default to 'ja')
-      const locale = request.headers.get('Accept-Language')?.startsWith('en') ? 'en' : 'ja'
-
-      // Format date for email
-      const bookingDate = new Date(startParts.date)
-      const formattedDate = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }).format(bookingDate)
-
-      console.log('[Booking API] Sending confirmation email to:', booking.customer.email)
-
-      // Send confirmation email (non-blocking - failures logged but don't prevent response)
-      const emailResult = await sendBookingConfirmation({
-        to: booking.customer.email,
-        customerName: booking.customer.name,
-        serviceName: booking.service.name,
-        workerName: booking.worker.name,
-        date: formattedDate,
-        time: startParts.time,
-        locale: locale as 'ja' | 'en',
-      }).catch((err) => {
-        console.error('[Booking API] Failed to send booking confirmation email:', err)
-        return null
-      })
-
-      if (emailResult) {
-        console.log('[Booking API] Email sent successfully:', emailResult.id)
-      } else {
-        console.log('[Booking API] Email not sent (check logs above)')
-      }
-    }
-
-    return NextResponse.json({ booking: result.booking }, { status: 201 })
+    return NextResponse.json({ booking: { id: booking.id } }, { status: 201 })
   } catch (error) {
     console.error('Booking creation error:', error)
     return NextResponse.json(

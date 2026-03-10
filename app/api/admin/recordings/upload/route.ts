@@ -1,0 +1,91 @@
+/**
+ * Audio Upload API Route
+ *
+ * POST /api/admin/recordings/upload
+ *
+ * Accepts audio file uploads with MIME type and size validation.
+ * Uploads to Supabase Storage and persists the storage path on the recording session.
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSession } from '@/lib/auth/admin'
+import { uploadRecording, deleteRecording } from '@/lib/storage/recording-storage'
+import { updateRecordingSession } from '@/lib/services/recording.service'
+
+// Include codec-qualified variants that browsers emit (e.g. audio/webm;codecs=opus)
+const ALLOWED_TYPES = [
+  'audio/webm;codecs=opus',
+  'audio/webm',
+  'audio/mp4',
+  'audio/wav',
+  'audio/ogg;codecs=opus',
+  'audio/ogg',
+]
+const MAX_SIZE = 25 * 1024 * 1024 // 25MB — OpenAI Whisper transcription limit
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export async function POST(request: NextRequest) {
+  const isAdmin = await getAdminSession()
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const formData = await request.formData()
+  const file = formData.get('file')
+  const recordingSessionId = formData.get('recordingSessionId')
+
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  }
+
+  if (typeof recordingSessionId !== 'string' || !recordingSessionId) {
+    return NextResponse.json({ error: 'recordingSessionId is required' }, { status: 400 })
+  }
+
+  if (!UUID_REGEX.test(recordingSessionId)) {
+    return NextResponse.json({ error: 'recordingSessionId must be a valid UUID' }, { status: 400 })
+  }
+
+  // Accept both exact match and base MIME type (strip codec params for comparison)
+  const baseMimeType = file.type.split(';')[0].trim()
+  const isAllowed = ALLOWED_TYPES.includes(file.type) || ALLOWED_TYPES.includes(baseMimeType)
+  if (!isAllowed) {
+    return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
+  }
+
+  if (file.size > MAX_SIZE) {
+    return NextResponse.json({ error: 'File too large (max 25MB)' }, { status: 400 })
+  }
+
+  try {
+    const uploadResult = await uploadRecording(recordingSessionId, file)
+
+    const sessionResult = await updateRecordingSession({
+      id: recordingSessionId,
+      audioStoragePath: uploadResult.path,
+    })
+
+    if (!sessionResult.success) {
+      // Roll back the uploaded file to avoid orphaned storage objects
+      try {
+        await deleteRecording(uploadResult.path)
+      } catch (cleanupError) {
+        console.error('[recordings/upload] Failed to clean up orphaned file', {
+          path: uploadResult.path,
+          cleanupError,
+        })
+      }
+      return NextResponse.json({ error: sessionResult.error }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, path: uploadResult.path })
+  } catch (error) {
+    console.error('[recordings/upload] Upload failed', {
+      error,
+      recordingSessionId,
+      fileSize: file instanceof File ? file.size : undefined,
+      fileType: file instanceof File ? file.type : undefined,
+    })
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+  }
+}

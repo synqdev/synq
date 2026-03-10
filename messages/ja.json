@@ -26,7 +26,11 @@
     "minutes": "分",
     "localeJa": "日本語",
     "localeEn": "English",
-    "schedule": "スケジュール"
+    "schedule": "スケジュール",
+    "on": "オン",
+    "off": "オフ",
+    "locale": "言語",
+    "notes": "メモ"
   },
   "booking": {
     "title": "予約",
@@ -52,6 +56,7 @@
     "confirmBooking": "予約を確定",
     "bookingInProgress": "予約中...",
     "selectWorker": "スタッフを選択",
+    "bookNow": "予約する",
     "confirm": "予約する",
     "confirmed": "予約確定",
     "cancelled": "キャンセル済み",
@@ -121,7 +126,20 @@
       "add": "新規スタッフ追加",
       "notFound": "スタッフがいません",
       "confirmDelete": "このスタッフを削除しますか？",
-      "schedule": "シフト"
+      "schedule": "シフト",
+      "loadingSchedule": "シフト読み込み中...",
+      "loadScheduleError": "シフトの読み込みに失敗しました。再度お試しください。",
+      "createdSuccess": "スタッフを作成しました",
+      "createFailed": "スタッフの作成に失敗しました",
+      "updateFailed": "スタッフの更新に失敗しました",
+      "namePlaceholder": "例: Tanaka",
+      "nameJaPlaceholder": "例: 田中"
+    },
+    "scheduleEditor": {
+      "title": "シフト: {name}",
+      "saveSchedule": "シフト保存",
+      "saved": "保存しました",
+      "saveFailed": "保存に失敗しました"
     },
     "schedulePage": {
       "title": "シフト管理",
@@ -154,14 +172,23 @@
       "duration": "時間",
       "price": "料金",
       "notFound": "サービスがありません",
-      "confirmDelete": "このサービスを削除しますか？"
+      "confirmDelete": "このサービスを削除しますか？",
+      "createdSuccess": "サービスを作成しました",
+      "createFailed": "サービスの作成に失敗しました",
+      "updateFailed": "サービスの更新に失敗しました",
+      "namePlaceholder": "例: Shiatsu",
+      "nameJaPlaceholder": "例: 指圧"
     },
     "resourcesPage": {
       "title": "ベッド管理",
       "subtitle": "施術ベッド・部屋",
       "add": "新規ベッド追加",
       "notFound": "ベッドがありません",
-      "confirmDelete": "このベッドを削除しますか？"
+      "confirmDelete": "このベッドを削除しますか？",
+      "createdSuccess": "ベッドを作成しました",
+      "createFailed": "ベッドの作成に失敗しました",
+      "updateFailed": "ベッドの更新に失敗しました",
+      "namePlaceholder": "例: ベッド1"
     },
     "customersPage": {
       "title": "顧客管理",
@@ -217,6 +244,70 @@
       "exportBookings": "予約CSV出力",
       "exporting": "出力中..."
     },
+    "recording": {
+      "startRecording": "録音開始",
+      "pauseRecording": "一時停止",
+      "resumeRecording": "再開",
+      "stopRecording": "録音停止",
+      "uploading": "アップロード中...",
+      "transcribing": "文字起こし中...",
+      "transcriptionComplete": "文字起こし完了",
+      "noSegments": "文字起こし結果がありません",
+      "speaker": "話者 {label}",
+      "errorPermission": "マイクへのアクセスが許可されていません",
+      "errorNoMic": "マイクが見つかりません",
+      "errorMic": "マイクエラー",
+      "errorUpload": "アップロードに失敗しました",
+      "errorTranscription": "文字起こしに失敗しました",
+      "recordingComplete": "録音完了",
+      "newRecording": "新規録音"
+    },
+    "karuteEditor": {
+      "title": "カルテ編集",
+      "summary": "サマリー",
+      "entries": "エントリ",
+      "addEntry": "エントリを追加",
+      "classify": "AI分類を実行",
+      "classifying": "分類中...",
+      "reclassify": "再分類",
+      "reclassifyConfirm": "既存のエントリが削除されます。再分類しますか？",
+      "transcript": "トランスクリプト",
+      "noTranscript": "トランスクリプトがありません",
+      "noEntries": "エントリがありません",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "削除",
+      "deleteConfirm": "このエントリを削除しますか？",
+      "submitReview": "レビューに提出",
+      "approve": "承認",
+      "backToDraft": "下書きに戻す",
+      "reopen": "再開",
+      "category": "カテゴリ",
+      "content": "内容",
+      "originalQuote": "原文引用",
+      "confidence": "信頼度",
+      "lowConfidence": "低信頼度",
+      "tags": "タグ",
+      "customer": "顧客",
+      "practitioner": "施術者",
+      "date": "日付",
+      "categories": {
+        "SYMPTOM": "症状",
+        "TREATMENT": "施術",
+        "BODY_AREA": "部位",
+        "PREFERENCE": "好み",
+        "LIFESTYLE": "生活習慣",
+        "NEXT_VISIT": "次回予約",
+        "OTHER": "その他"
+      },
+      "exportPDF": "PDF出力",
+      "exportText": "テキスト出力"
+    },
+    "customerInfo": {
+      "viewFullProfile": "詳細を見る",
+      "visitCount": "来院回数",
+      "lastVisit": "最終来院日"
+    },
     "customerDetail": {
       "title": "顧客詳細",
       "backToList": "顧客一覧に戻る",
@@ -239,12 +330,36 @@
       "price": "料金",
       "medicalRecords": "カルテ",
       "comingSoon": "準備中",
+      "askAi": "AIに質問",
       "notFound": "顧客が見つかりません",
+      "karuteTab": "カルテ",
+      "detailsTab": "詳細",
+      "karuteLoadError": "データの読み込みに失敗しました",
+      "noKaruteRecords": "カルテ記録がありません",
+      "entries": "エントリ",
+      "viewKarute": "カルテを表示",
       "intake": {
         "dropzone": "ファイルをドロップまたはクリックしてアップロード（PDF, JPG, PNG, WEBP, 最大10MB）",
         "uploading": "アップロード中...",
         "noFiles": "問診票がまだアップロードされていません"
       }
+    },
+    "chat": {
+      "title": "AIチャット",
+      "placeholder": "質問を入力...",
+      "send": "送信",
+      "emptyCustomer": "このお客様について質問してください",
+      "emptyGlobal": "質問を入力してください",
+      "newChat": "新しいチャット",
+      "summarizeLastVisit": "前回の施術まとめ",
+      "showTreatmentHistory": "施術履歴を表示",
+      "anyAllergies": "アレルギー情報",
+      "nextAppointment": "次回の予約",
+      "recentTrends": "最近の施術傾向",
+      "todaysAppointments": "本日の予約一覧",
+      "error": "エラーが発生しました",
+      "close": "閉じる",
+      "customerContextActive": "お客様コンテキスト有効"
     }
   },
   "auth": {
@@ -253,7 +368,10 @@
     "signOut": "サインアウト",
     "register": "登録",
     "email": "メールアドレス",
-    "password": "パスワード"
+    "password": "パスワード",
+    "username": "ユーザー名",
+    "loggingIn": "ログイン中...",
+    "adminLogin": "管理者ログイン"
   },
   "welcome": {
     "title": "SYNQへようこそ",

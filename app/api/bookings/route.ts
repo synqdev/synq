@@ -4,7 +4,7 @@
  * POST: Creates a new booking
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createBooking } from '@/lib/services/booking.service'
 import { formatInTimeZone } from '@/lib/utils/time'
 import { sendBookingConfirmation } from '@/lib/email/send'
@@ -89,32 +89,37 @@ export async function POST(request: NextRequest) {
     // Get locale from request (default to 'ja')
     const locale = request.headers.get('Accept-Language')?.startsWith('en') ? 'en' : 'ja'
 
-    // Format date for email
-    const bookingDate = new Date(startParts.date)
+    // Format date for email — use the original startsAt timestamp with business timezone
+    // to avoid day-shift on non-UTC runtimes when parsing a bare YYYY-MM-DD string
     const formattedDate = new Intl.DateTimeFormat(getLocaleDateTag(locale), {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    }).format(bookingDate)
+      timeZone: 'Asia/Tokyo',
+    }).format(new Date(startsAt))
 
-    // Fire-and-forget: send confirmation email without blocking the response
-    sendBookingConfirmation({
-      to: booking.customer.email,
-      customerName: booking.customer.name,
-      serviceName: booking.service.name,
-      workerName: booking.worker.name,
-      date: formattedDate,
-      time: startParts.time,
-      locale: locale as 'ja' | 'en',
-    }).then((emailResult) => {
-      if (emailResult) {
-        console.log('[Booking API] Email sent successfully:', emailResult.id)
+    // Schedule email after response is sent (Next.js 15 `after()`)
+    // This ensures the email side-effect survives serverless function shutdown
+    after(async () => {
+      try {
+        const emailResult = await sendBookingConfirmation({
+          to: booking.customer.email,
+          customerName: booking.customer.name,
+          serviceName: booking.service.name,
+          workerName: booking.worker.name,
+          date: formattedDate,
+          time: startParts.time,
+          locale: locale as 'ja' | 'en',
+        })
+        if (emailResult) {
+          console.log('[Booking API] Email sent successfully:', emailResult.id)
+        }
+      } catch (err) {
+        console.error('[Booking API] Failed to send booking confirmation email:', err)
       }
-    }).catch((err) => {
-      console.error('[Booking API] Failed to send booking confirmation email:', err)
     })
 
-    return NextResponse.json({ booking: result.booking }, { status: 201 })
+    return NextResponse.json({ booking: { id: booking.id } }, { status: 201 })
   } catch (error) {
     console.error('Booking creation error:', error)
     return NextResponse.json(

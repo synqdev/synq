@@ -22,6 +22,7 @@ const ALLOWED_TYPES = [
   'audio/ogg',
 ]
 const MAX_SIZE = 25 * 1024 * 1024 // 25MB — OpenAI Whisper transcription limit
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(request: NextRequest) {
   const isAdmin = await getAdminSession()
@@ -39,6 +40,10 @@ export async function POST(request: NextRequest) {
 
   if (typeof recordingSessionId !== 'string' || !recordingSessionId) {
     return NextResponse.json({ error: 'recordingSessionId is required' }, { status: 400 })
+  }
+
+  if (!UUID_REGEX.test(recordingSessionId)) {
+    return NextResponse.json({ error: 'recordingSessionId must be a valid UUID' }, { status: 400 })
   }
 
   // Accept both exact match and base MIME type (strip codec params for comparison)
@@ -75,7 +80,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, path: uploadResult.path })
   } catch (error) {
-    console.error('[recordings/upload] Upload failed', { error, recordingSessionId })
+    console.error('[recordings/upload] Upload failed', {
+      error,
+      recordingSessionId,
+      fileSize: file instanceof File ? file.size : undefined,
+      fileType: file instanceof File ? file.type : undefined,
+    })
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }

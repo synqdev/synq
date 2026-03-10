@@ -16,13 +16,20 @@ export async function GET(
 
   const { id } = await params
   const safeId = id.replace(/[^A-Za-z0-9_-]/g, '') || 'record'
-  const format = request.nextUrl.searchParams.get('format') || 'pdf'
+  const rawFormat = request.nextUrl.searchParams.get('format') || 'pdf'
+  const ALLOWED_FORMATS = ['pdf', 'text'] as const
+  type ExportFormat = typeof ALLOWED_FORMATS[number]
+  if (!ALLOWED_FORMATS.includes(rawFormat as ExportFormat)) {
+    return NextResponse.json({ error: 'Invalid format. Use "pdf" or "text".' }, { status: 400 })
+  }
+  const format = rawFormat as ExportFormat
 
   try {
     if (format === 'text') {
       const result = await generateKaruteText(id)
       if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: 404 })
+        const status = result.error === 'Karute record not found' ? 404 : 500
+        return NextResponse.json({ error: result.error }, { status })
       }
 
       return new Response(result.text, {
@@ -37,7 +44,8 @@ export async function GET(
     // Default: PDF
     const result = await generateKarutePDF(id)
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 404 })
+      const status = result.error === 'Karute record not found' ? 404 : 500
+      return NextResponse.json({ error: result.error }, { status })
     }
 
     return new Response(new Uint8Array(result.buffer), {

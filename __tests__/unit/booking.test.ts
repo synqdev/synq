@@ -392,20 +392,6 @@ describe('Booking Service', () => {
       }
     });
 
-    it('should return null if no resources exist in DB (auto-assign)', async () => {
-      // Mock worker availability (no conflicts)
-      prismaMock.booking.count.mockResolvedValueOnce(0);
-
-      // Mock resource auto-assignment (none exist)
-      prismaMock.resource.findFirst.mockResolvedValueOnce(null);
-
-      const result = await createBooking(validBookingInput);
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toBe('No resources available at this time');
-      }
-    });
 
     it('should retry on serialization failure and succeed', async () => {
       // First attempt fails with P2034

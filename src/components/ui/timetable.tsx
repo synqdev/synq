@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { EmployeeTimelineBar, type EmployeeTimelineBarData } from './employee-timeline-bar'
 
 export interface TimetableTab {
@@ -41,6 +41,8 @@ export interface TimetableProps {
     previousRowId: string
     previousStartMinute: number
   }) => void
+  onBarClick?: (bar: EmployeeTimelineBarData) => void
+  renderBarPopover?: (bar: EmployeeTimelineBarData) => ReactNode
   startHour?: number
   endHour?: number
   currentTimeLabel?: string
@@ -55,6 +57,7 @@ export interface TimetableProps {
 
 const DEFAULT_ROW_HEIGHT = 84
 const AVATAR_WIDTH = 78
+const DRAG_THRESHOLD = 6
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 const minutesToPercent = (value: number, startMinute: number, totalMinutes: number) =>
@@ -84,6 +87,21 @@ export function TimePassedOverlay({
   )
 }
 
+// ============================================================================
+// DRAG STATE
+// ============================================================================
+
+interface DragState {
+  bar: EmployeeTimelineBarData
+  originX: number
+  originY: number
+  activated: boolean
+  /** Snapped target position while dragging */
+  targetRowId: string | null
+  targetStartMinute: number | null
+  valid: boolean
+}
+
 export function Timetable({
   tabs,
   activeTabId,
@@ -92,6 +110,8 @@ export function Timetable({
   onEmployeesChange,
   onTimeSlotClick,
   onBarDragEnd,
+  onBarClick,
+  renderBarPopover,
   startHour = 10,
   endHour = 18,
   currentTimeLabel = '12:24',
@@ -104,94 +124,150 @@ export function Timetable({
   className = '',
 }: TimetableProps) {
   const [localEmployees, setLocalEmployees] = useState<TimetableEmployee[]>(employees)
-  const [selectedMoveBarId, setSelectedMoveBarId] = useState<string | null>(null)
-  const [moveHover, setMoveHover] = useState<{ rowId: string; startMinute: number; valid: boolean } | null>(null)
+  const [popoverBarId, setPopoverBarId] = useState<string | null>(null)
 
   const effectiveEmployees = onEmployeesChange ? employees : localEmployees
-  const startMinute = startHour * 60
-  const endMinute = endHour * 60
-  const totalMinutes = endMinute - startMinute
+  const startMinuteVal = startHour * 60
+  const endMinuteVal = endHour * 60
+  const totalMinutes = endMinuteVal - startMinuteVal
   const timelineContentHeight = effectiveEmployees.length * rowHeight
-  const currentTimeLeft = clamp(minutesToPercent(currentMinute, startMinute, totalMinutes), 0, 100)
+  const currentTimeLeft = clamp(minutesToPercent(currentMinute, startMinuteVal, totalMinutes), 0, 100)
+
+  // Ref for the timeline rows container to calculate mouse → grid mapping
+  const gridRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<DragState | null>(null)
+  const [dragState, setDragState] = useState<DragState | null>(null)
 
   const hourMarkers = useMemo(() => {
     const list: number[] = []
-    for (let h = startHour; h <= endHour; h += 1) {
-      list.push(h)
-    }
+    for (let h = startHour; h <= endHour; h += 1) list.push(h)
     return list
   }, [startHour, endHour])
 
   const slotStarts = useMemo(() => {
     const slots: number[] = []
-    for (let minute = startMinute; minute < endMinute; minute += snapMinutes) {
-      slots.push(minute)
-    }
+    for (let minute = startMinuteVal; minute < endMinuteVal; minute += snapMinutes) slots.push(minute)
     return slots
-  }, [startMinute, endMinute, snapMinutes])
+  }, [startMinuteVal, endMinuteVal, snapMinutes])
 
-  const selectedMoveBar = selectedMoveBarId
-    ? effectiveEmployees.flatMap((employee) => employee.segments).find((segment) => segment.id === selectedMoveBarId) ?? null
-    : null
-
-  const canPlaceBar = (bar: EmployeeTimelineBarData, rowId: string, candidateStartMinute: number) => {
-    const candidateEndMinute = candidateStartMinute + bar.durationMinute
-    if (candidateStartMinute < startMinute || candidateEndMinute > endMinute) return false
+  const canPlaceBar = useCallback((bar: EmployeeTimelineBarData, rowId: string, candidateStart: number) => {
+    const candidateEnd = candidateStart + bar.durationMinute
+    if (candidateStart < startMinuteVal || candidateEnd > endMinuteVal) return false
     if (allowOverlap) return true
-    const row = effectiveEmployees.find((employee) => employee.id === rowId)
+    const row = effectiveEmployees.find((e) => e.id === rowId)
     if (!row) return false
     return !row.segments.some((item) => {
       if (item.id === bar.id) return false
-      const itemEndMinute = item.startMinute + item.durationMinute
-      return intervalsOverlap(candidateStartMinute, candidateEndMinute, item.startMinute, itemEndMinute)
+      return intervalsOverlap(candidateStart, candidateEnd, item.startMinute, item.startMinute + item.durationMinute)
     })
-  }
+  }, [effectiveEmployees, startMinuteVal, endMinuteVal, allowOverlap])
 
-  const handleSlotClick = (rowId: string, slotStart: number, segments: EmployeeTimelineBarData[]) => {
-    if (selectedMoveBar) {
-      const valid = canPlaceBar(selectedMoveBar, rowId, slotStart)
-      if (!valid) return
-      if (selectedMoveBar.rowId === rowId && selectedMoveBar.startMinute === slotStart) {
-        setSelectedMoveBarId(null)
-        setMoveHover(null)
-        return
+  // Convert mouse position to snapped grid coordinates
+  const mouseToGrid = useCallback((clientX: number, clientY: number): { rowId: string; startMinute: number } | null => {
+    if (!gridRef.current) return null
+    const rect = gridRef.current.getBoundingClientRect()
+    const relY = clientY - rect.top
+    const rowIndex = Math.floor(relY / rowHeight)
+    if (rowIndex < 0 || rowIndex >= effectiveEmployees.length) return null
+    const rowId = effectiveEmployees[rowIndex].id
+
+    // The timeline area inside each row: from 0 to rect.width (the grid ref already excludes avatar)
+    const relX = clientX - rect.left
+    const fraction = relX / rect.width
+    const rawMinute = startMinuteVal + fraction * totalMinutes
+    // Snap to nearest slot
+    const snapped = Math.round((rawMinute - startMinuteVal) / snapMinutes) * snapMinutes + startMinuteVal
+    const clampedMinute = clamp(snapped, startMinuteVal, endMinuteVal - snapMinutes)
+
+    return { rowId, startMinute: clampedMinute }
+  }, [effectiveEmployees, rowHeight, startMinuteVal, totalMinutes, snapMinutes, endMinuteVal])
+
+  // Document-level mousemove/mouseup for drag
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
+
+      if (!drag.activated) {
+        const dx = e.clientX - drag.originX
+        const dy = e.clientY - drag.originY
+        if (Math.abs(dx) + Math.abs(dy) <= DRAG_THRESHOLD) return
+        drag.activated = true
+        setPopoverBarId(null)
       }
-      onBarDragEnd?.({
-        bar: { ...selectedMoveBar, rowId, startMinute: slotStart },
-        previousRowId: selectedMoveBar.rowId,
-        previousStartMinute: selectedMoveBar.startMinute,
-      })
-      setSelectedMoveBarId(null)
-      setMoveHover(null)
-      return
+
+      const target = mouseToGrid(e.clientX, e.clientY)
+      if (target) {
+        drag.targetRowId = target.rowId
+        drag.targetStartMinute = target.startMinute
+        drag.valid = canPlaceBar(drag.bar, target.rowId, target.startMinute)
+      }
+      setDragState({ ...drag })
     }
 
-    if (!onTimeSlotClick) return
+    const handleMouseUp = (e: MouseEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
 
+      if (drag.activated && drag.targetRowId && drag.targetStartMinute !== null) {
+        // Only fire if actually moved to a different position and valid
+        const moved = drag.targetRowId !== drag.bar.rowId || drag.targetStartMinute !== drag.bar.startMinute
+        if (moved && drag.valid) {
+          onBarDragEnd?.({
+            bar: { ...drag.bar, rowId: drag.targetRowId, startMinute: drag.targetStartMinute },
+            previousRowId: drag.bar.rowId,
+            previousStartMinute: drag.bar.startMinute,
+          })
+        }
+      } else if (!drag.activated) {
+        // It was a click, not a drag → show popover
+        if (drag.bar.type === 'booking' && renderBarPopover) {
+          setPopoverBarId((current) => (current === drag.bar.id ? null : drag.bar.id))
+        }
+      }
+
+      dragRef.current = null
+      setDragState(null)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [mouseToGrid, canPlaceBar, onBarDragEnd, renderBarPopover])
+
+  const handleBarMouseDown = useCallback((e: React.MouseEvent, bar: EmployeeTimelineBarData) => {
+    if (bar.type !== 'booking') return
+    e.preventDefault() // Prevent text selection during drag
+    dragRef.current = {
+      bar,
+      originX: e.clientX,
+      originY: e.clientY,
+      activated: false,
+      targetRowId: null,
+      targetStartMinute: null,
+      valid: false,
+    }
+  }, [])
+
+  const handleSlotClick = (rowId: string, slotStart: number, segments: EmployeeTimelineBarData[]) => {
+    setPopoverBarId(null)
+
+    if (!onTimeSlotClick) return
     const slotEnd = slotStart + snapMinutes
     const isOccupied = segments.some((segment) => {
       const segmentEnd = segment.startMinute + segment.durationMinute
       return intervalsOverlap(slotStart, slotEnd, segment.startMinute, segmentEnd)
     })
     if (isOccupied) return
-
     onTimeSlotClick({ rowId, startMinute: slotStart })
   }
 
-  const handleSlotHover = (rowId: string, slotStart: number) => {
-    if (!selectedMoveBar) return
-    setMoveHover({
-      rowId,
-      startMinute: slotStart,
-      valid: canPlaceBar(selectedMoveBar, rowId, slotStart),
-    })
-  }
-
-  const handleBarClick = (bar: EmployeeTimelineBarData) => {
-    if (!onBarDragEnd || bar.type !== 'booking') return
-    setSelectedMoveBarId((current) => (current === bar.id ? null : bar.id))
-    setMoveHover(null)
-  }
+  // Is this bar currently being dragged?
+  const isDragging = dragState?.activated === true
+  const dragBarId = isDragging ? dragState.bar.id : null
 
   return (
     <section
@@ -238,9 +314,9 @@ export function Timetable({
               <div className="relative z-10 h-full min-h-0 overflow-y-auto overflow-x-hidden p-4">{customBody}</div>
             ) : (
               <>
-            <div className="absolute top-0 bottom-0 right-4 z-0" style={{ left: `${AVATAR_WIDTH}px` }}>
+            <div className="pointer-events-none absolute top-0 bottom-0 right-4 z-10" style={{ left: `${AVATAR_WIDTH}px` }}>
               {hourMarkers.map((hour) => {
-                const left = minutesToPercent(hour * 60, startMinute, totalMinutes)
+                const left = minutesToPercent(hour * 60, startMinuteVal, totalMinutes)
                 return (
                   <div
                     key={hour}
@@ -251,11 +327,102 @@ export function Timetable({
               })}
             </div>
 
-            <div className="relative z-10">
+            <div className="relative z-10" ref={gridRef} style={{ marginLeft: `${AVATAR_WIDTH}px`, marginRight: '16px' }}>
               {effectiveEmployees.map((member) => (
                 <div key={member.id} className="relative border-b border-white/30 last:border-b-0" style={{ height: `${rowHeight}px` }}>
-                  <div className="absolute inset-y-0 right-4 rounded-[24px] bg-[#c3c9cd]" style={{ left: `${AVATAR_WIDTH}px` }} />
-                  <div className="absolute left-3 top-1/2 z-30 -translate-y-1/2">
+                  <div className="absolute inset-y-0 left-0 right-0 rounded-[24px] bg-[#c3c9cd]" />
+
+                  {/* Slot click targets */}
+                  {slotStarts.map((slotStart) => {
+                    const slotLeft = minutesToPercent(slotStart, startMinuteVal, totalMinutes)
+                    const slotWidth = (snapMinutes / totalMinutes) * 100
+
+                    return (
+                      <button
+                        key={`${member.id}-${slotStart}`}
+                        type="button"
+                        aria-label={`Create at ${String(Math.floor(slotStart / 60)).padStart(2, '0')}:${String(slotStart % 60).padStart(2, '0')} for ${member.name}`}
+                        className="absolute inset-y-0 z-20 rounded-[20px] border border-transparent bg-transparent transition hover:border-white/20"
+                        style={{ left: `${slotLeft}%`, width: `${slotWidth}%` }}
+                        onClick={() => handleSlotClick(member.id, slotStart, member.segments)}
+                      />
+                    )
+                  })}
+
+                  {/* Booking bars */}
+                  {member.segments.map((item) => {
+                    const left = minutesToPercent(item.startMinute, startMinuteVal, totalMinutes)
+                    const width = (item.durationMinute / totalMinutes) * 100
+                    const isBeingDragged = dragBarId === item.id
+                    const isPopoverOpen = popoverBarId === item.id && !isDragging
+
+                    return (
+                      <div
+                        key={item.id}
+                        data-booking-segment="true"
+                        className={`absolute inset-y-0 ${isPopoverOpen ? 'z-50' : 'z-30'} ${
+                          isBeingDragged ? 'opacity-30' : ''
+                        }`}
+                        style={{
+                          left: `${left}%`,
+                          width: `${width}%`,
+                        }}
+                        onMouseDown={(e) => handleBarMouseDown(e, item)}
+                      >
+                        <EmployeeTimelineBar
+                          item={item}
+                          className="cursor-pointer"
+                        />
+                        {renderBarPopover && item.type === 'booking' && isPopoverOpen ? (
+                          <div
+                            className="absolute left-1/2 top-full z-[60] mt-2 w-64 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {renderBarPopover(item)}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+
+                  {/* Drag ghost preview on this row */}
+                  {isDragging && dragState.targetRowId === member.id && dragState.targetStartMinute !== null ? (() => {
+                    const tStart = dragState.targetStartMinute
+                    const tEnd = tStart + dragState.bar.durationMinute
+                    const timeLabel = `${String(Math.floor(tStart / 60)).padStart(2, '0')}:${String(tStart % 60).padStart(2, '0')} - ${String(Math.floor(tEnd / 60)).padStart(2, '0')}:${String(tEnd % 60).padStart(2, '0')}`
+                    return (
+                      <div
+                        className={`pointer-events-none absolute inset-y-0 z-40 transition-[left] duration-100 ${
+                          dragState.valid ? '' : 'opacity-40'
+                        }`}
+                        style={{
+                          left: `${minutesToPercent(tStart, startMinuteVal, totalMinutes)}%`,
+                          width: `${(dragState.bar.durationMinute / totalMinutes) * 100}%`,
+                        }}
+                      >
+                        {/* Time label above the card */}
+                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/75 px-2 py-0.5 text-xs font-semibold text-white shadow-lg">
+                          {timeLabel}
+                        </div>
+                        <EmployeeTimelineBar
+                          item={{ ...dragState.bar, rowId: member.id, startMinute: tStart }}
+                          className={`shadow-xl ring-2 ${dragState.valid ? 'ring-white/70' : 'ring-red-400/70'}`}
+                        />
+                        {!dragState.valid ? (
+                          <div className="pointer-events-none absolute inset-0 rounded-[24px] border-2 border-red-400/60 bg-red-500/10" />
+                        ) : null}
+                      </div>
+                    )
+                  })() : null}
+                </div>
+              ))}
+            </div>
+
+            {/* Avatar column (rendered on top of grid, positioned absolutely) */}
+            <div className="pointer-events-none absolute top-0 left-0 z-30" style={{ width: `${AVATAR_WIDTH}px` }}>
+              {effectiveEmployees.map((member) => (
+                <div key={member.id} className="relative" style={{ height: `${rowHeight}px` }}>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
                     <div className="h-[78px] w-[78px] overflow-hidden rounded-[24px] border border-white/70 bg-[#f5f6f8] text-[#4f5962]">
                       <div className="h-[56px] bg-gradient-to-br from-[#f7f7f7] to-[#dadde3]">
                         {member.avatarSrc ? (
@@ -267,77 +434,13 @@ export function Timetable({
                       <div className="bg-white/78 px-1 text-center text-[14px] font-semibold leading-5 text-[#5b6268]">{member.name}</div>
                     </div>
                   </div>
-
-                  <div
-                    className="absolute inset-y-0 right-4"
-                    style={{ left: `${AVATAR_WIDTH}px` }}
-                    onMouseLeave={() => setMoveHover(null)}
-                  >
-                    {slotStarts.map((slotStart) => {
-                      const slotLeft = minutesToPercent(slotStart, startMinute, totalMinutes)
-                      const slotWidth = (snapMinutes / totalMinutes) * 100
-
-                      return (
-                        <button
-                          key={`${member.id}-${slotStart}`}
-                          type="button"
-                          aria-label={`Create at ${String(Math.floor(slotStart / 60)).padStart(2, '0')}:${String(
-                            slotStart % 60
-                          ).padStart(2, '0')} for ${member.name}`}
-                          className="absolute inset-y-0 z-20 rounded-[20px] border border-transparent bg-transparent transition hover:border-white/20"
-                          style={{ left: `${slotLeft}%`, width: `${slotWidth}%` }}
-                          onClick={() => handleSlotClick(member.id, slotStart, member.segments)}
-                          onMouseEnter={() => handleSlotHover(member.id, slotStart)}
-                          onFocus={() => handleSlotHover(member.id, slotStart)}
-                        />
-                      )
-                    })}
-
-                    {selectedMoveBar && moveHover && moveHover.rowId === member.id ? (
-                      <div
-                        className={`pointer-events-none absolute inset-y-0 z-40 rounded-[24px] border ${
-                          moveHover.valid ? 'border-white/70 bg-white/22' : 'border-[#ffb4b4]/80 bg-[#d88989]/35'
-                        }`}
-                        style={{
-                          left: `${minutesToPercent(moveHover.startMinute, startMinute, totalMinutes)}%`,
-                          width: `${(selectedMoveBar.durationMinute / totalMinutes) * 100}%`,
-                        }}
-                      />
-                    ) : null}
-
-                    {member.segments.map((item) => {
-                      const left = minutesToPercent(item.startMinute, startMinute, totalMinutes)
-                      const width = (item.durationMinute / totalMinutes) * 100
-
-                      return (
-                        <div
-                          key={item.id}
-                          data-booking-segment="true"
-                          className={`absolute inset-y-0 ${selectedMoveBarId === item.id ? 'z-50' : 'z-30'}`}
-                          style={{
-                            left: `${left}%`,
-                            width: `${width}%`,
-                          }}
-                          onClick={() => handleBarClick(item)}
-                        >
-                          <EmployeeTimelineBar
-                            item={item}
-                            className={selectedMoveBarId === item.id ? 'cursor-pointer shadow-xl ring-2 ring-white/70' : 'cursor-pointer'}
-                          />
-                          {selectedMoveBarId === item.id ? (
-                            <div className="pointer-events-none absolute inset-0 rounded-[24px] border border-white/70 bg-white/18 animate-pulse" />
-                          ) : null}
-                        </div>
-                      )
-                    })}
-                  </div>
                 </div>
               ))}
             </div>
 
             <TimePassedOverlay
-              startMinute={startMinute}
-              endMinute={endMinute}
+              startMinute={startMinuteVal}
+              endMinute={endMinuteVal}
               currentMinute={currentMinute}
               leftOffsetPx={AVATAR_WIDTH}
               rightOffsetPx={16}

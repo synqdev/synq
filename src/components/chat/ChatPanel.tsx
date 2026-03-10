@@ -52,7 +52,7 @@ export function ChatPanel() {
     [setMessages, setConversationId, refreshHistory]
   )
 
-  const { sendMessage, isStreaming, streamingContent, error } = useChatStream({
+  const { sendMessage, isStreaming, streamingContent, activeToolCall, toolResults, error } = useChatStream({
     onComplete: handleComplete,
   })
 
@@ -173,6 +173,8 @@ export function ChatPanel() {
           messages={messages}
           streamingContent={streamingContent}
           customerId={customerId}
+          activeToolCall={activeToolCall}
+          toolResults={toolResults}
         />
 
         {/* Footer: Quick actions + Input */}

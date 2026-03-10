@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useState, useTransition, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,7 @@ interface DaySchedule {
 
 interface WorkerTableProps {
   workers: Worker[]
+  locale: string
 }
 
 const DEFAULT_SCHEDULES: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
@@ -34,7 +36,7 @@ const DEFAULT_SCHEDULES: DaySchedule[] = Array.from({ length: 7 }, (_, i) => ({
   isAvailable: false,
 }))
 
-export function WorkerTable({ workers }: WorkerTableProps) {
+export function WorkerTable({ workers, locale }: WorkerTableProps) {
   const router = useRouter()
   const tCommon = useTranslations('common')
   const tWorkers = useTranslations('admin.workersPage')
@@ -46,32 +48,18 @@ export function WorkerTable({ workers }: WorkerTableProps) {
 
   useEffect(() => {
     if (!scheduleId) return
-    const controller = new AbortController()
     setScheduleLoading(true)
-    fetch(`/api/admin/workers/${scheduleId}/schedule`, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load schedule: ${res.status}`)
-        return res.json()
-      })
+    fetch(`/api/admin/workers/${scheduleId}/schedule`)
+      .then((res) => res.json())
       .then((data) => {
-        if (controller.signal.aborted) return
         if (data.schedules) {
           setScheduleData(data.schedules)
         } else {
           setScheduleData(DEFAULT_SCHEDULES)
         }
       })
-      .catch((err: unknown) => {
-        if (controller.signal.aborted) return
-        console.error('[worker-table] Failed to load schedule', err)
-        setScheduleData(DEFAULT_SCHEDULES)
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setScheduleLoading(false)
-      })
-    return () => {
-      controller.abort()
-    }
+      .catch(() => setScheduleData(DEFAULT_SCHEDULES))
+      .finally(() => setScheduleLoading(false))
   }, [scheduleId])
 
   const handleDelete = (id: string, name: string) => {
@@ -131,8 +119,13 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                   </td>
                 ) : (
                   <>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {worker.name}
+                    <td className="px-4 py-3 font-medium">
+                      <Link
+                        href={`/${locale}/admin/workers/${worker.id}`}
+                        className="text-primary-600 hover:underline"
+                      >
+                        {worker.name}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {worker.nameEn || '-'}

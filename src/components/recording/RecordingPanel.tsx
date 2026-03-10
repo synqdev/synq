@@ -12,7 +12,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAudioRecorder, type RecordingErrorCode } from '@/hooks/useAudioRecorder';
-import { createRecordingSessionAction } from '@/app/actions/karute';
+import { createRecordingSessionAction, createKaruteRecordAction, updateRecordingSessionAction } from '@/app/actions/karute';
 import { Spinner } from '@/components/ui';
 import { WaveformVisualizer } from './WaveformVisualizer';
 import { RecordingTimer } from './RecordingTimer';
@@ -32,6 +32,7 @@ interface RecordingPanelProps {
   workerId: string;
   karuteRecordId?: string;
   bookingId?: string;
+  onKaruteCreated?: (karuteRecordId: string) => void;
 }
 
 export function RecordingPanel({
@@ -39,6 +40,7 @@ export function RecordingPanel({
   workerId,
   karuteRecordId,
   bookingId,
+  onKaruteCreated,
 }: RecordingPanelProps) {
   const t = useTranslations('admin.recording');
   const recorder = useAudioRecorder();
@@ -161,6 +163,26 @@ export function RecordingPanel({
       setTranscriptionSegments(segmentsData.segments || []);
       setIsTranscribing(false);
       setIsTranscriptionComplete(true);
+
+      // Auto-create karute record after successful transcription
+      if (!karuteRecordId && customerId && workerId) {
+        try {
+          const karuteResult = await createKaruteRecordAction({
+            customerId,
+            workerId,
+            bookingId,
+          });
+          // Link the recording session to the new karute record
+          await updateRecordingSessionAction({
+            id: sessionId,
+            karuteRecordId: karuteResult.id,
+          });
+          onKaruteCreated?.(karuteResult.id);
+        } catch {
+          // Non-fatal: recording + transcription succeeded, karute can be created manually
+          console.warn('[RecordingPanel] Auto-create karute record failed');
+        }
+      }
     } catch (err) {
       setIsUploading(false);
       setIsTranscribing(false);
@@ -168,7 +190,7 @@ export function RecordingPanel({
         err instanceof Error ? err.message : 'Pipeline error occurred'
       );
     }
-  }, [sessionId, recorder, t]);
+  }, [sessionId, recorder, t, karuteRecordId, customerId, workerId, bookingId, onKaruteCreated]);
 
   const handleNewRecording = useCallback(() => {
     recorder.resetRecorder();
@@ -241,7 +263,9 @@ export function RecordingPanel({
           <h3 className="mb-3 text-sm font-medium text-slate-300">
             {t('transcriptionComplete')}
           </h3>
-          <TranscriptionDisplay segments={transcriptionSegments} />
+          <div className="max-h-60 overflow-y-auto">
+            <TranscriptionDisplay segments={transcriptionSegments} />
+          </div>
         </div>
       )}
     </div>

@@ -4,12 +4,14 @@
  * POST /api/admin/chat
  *
  * Accepts a chat message, builds customer context, streams OpenAI response
- * as SSE events. Persists both user and assistant messages.
+ * as SSE events. Supports tool/function calling for schedule management
+ * and other admin actions. Persists both user and assistant messages.
  *
  * Requires admin authentication.
  */
 
 import { NextResponse } from 'next/server'
+import type OpenAI from 'openai'
 import { getAdminSession } from '@/lib/auth/admin'
 import { prisma } from '@/lib/db/client'
 import { sendMessageSchema } from '@/lib/validations/chat'
@@ -20,6 +22,10 @@ import {
   saveMessage,
   getOpenAI,
 } from '@/lib/services/chat.service'
+import { chatTools, executeTool } from '@/lib/ai/chat-tools'
+
+/** Maximum number of tool call rounds to prevent infinite loops. */
+const MAX_TOOL_ROUNDS = 5
 
 export async function POST(request: Request) {
   const isAdmin = await getAdminSession()
@@ -94,24 +100,16 @@ export async function POST(request: Request) {
     const systemPrompt = contextResult.data
     const history = historyResult.data
 
-    // Create OpenAI streaming completion
+    // Build messages array for OpenAI
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: buildSystemPromptWithTools(systemPrompt, locale) },
+      ...history,
+      { role: 'user', content: message },
+    ]
+
     const openai = getOpenAI()
     const abortController = new AbortController()
     request.signal.addEventListener('abort', () => abortController.abort())
-
-    const stream = await openai.chat.completions.create(
-      {
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system' as const, content: systemPrompt },
-          ...history,
-          { role: 'user' as const, content: message },
-        ],
-        stream: true,
-        stream_options: { include_usage: true },
-      },
-      { signal: abortController.signal }
-    )
 
     // Convert to ReadableStream for SSE
     const encoder = new TextEncoder()
@@ -128,41 +126,153 @@ export async function POST(request: Request) {
             )
           )
 
-          for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content
-            if (content) {
-              fullContent += content
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({ content })}\n\n`
+          // Tool call loop: the model may call tools multiple times
+          let round = 0
+          while (round < MAX_TOOL_ROUNDS) {
+            round++
+
+            const stream = await openai.chat.completions.create(
+              {
+                model: 'gpt-4o',
+                messages,
+                tools: chatTools,
+                stream: true,
+                stream_options: { include_usage: true },
+              },
+              { signal: abortController.signal }
+            )
+
+            // Accumulate streamed response (content + tool calls)
+            let roundContent = ''
+            const toolCalls: Map<
+              number,
+              { id: string; name: string; arguments: string }
+            > = new Map()
+
+            for await (const chunk of stream) {
+              const delta = chunk.choices[0]?.delta
+
+              // Stream text content to client immediately
+              if (delta?.content) {
+                roundContent += delta.content
+                fullContent += delta.content
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ content: delta.content })}\n\n`
+                  )
                 )
-              )
+              }
+
+              // Accumulate tool call deltas
+              if (delta?.tool_calls) {
+                for (const tc of delta.tool_calls) {
+                  const existing = toolCalls.get(tc.index)
+                  if (existing) {
+                    existing.arguments += tc.function?.arguments ?? ''
+                  } else {
+                    toolCalls.set(tc.index, {
+                      id: tc.id ?? '',
+                      name: tc.function?.name ?? '',
+                      arguments: tc.function?.arguments ?? '',
+                    })
+                  }
+                }
+              }
+
+              // Usage stats from final chunk
+              if (chunk.usage) {
+                totalTokens = chunk.usage.total_tokens
+              }
             }
 
-            // Final chunk with usage stats
-            if (chunk.usage) {
-              totalTokens = chunk.usage.total_tokens
+            // If no tool calls, we're done
+            if (toolCalls.size === 0) {
+              break
+            }
+
+            // Execute tool calls and add results to messages
+            // Add the assistant's tool call message
+            const toolCallsArray = Array.from(toolCalls.values())
+            messages.push({
+              role: 'assistant',
+              content: roundContent || null,
+              tool_calls: toolCallsArray.map((tc) => ({
+                id: tc.id,
+                type: 'function' as const,
+                function: { name: tc.name, arguments: tc.arguments },
+              })),
+            })
+
+            // Execute each tool and add results
+            for (const tc of toolCallsArray) {
+              let args: Record<string, unknown>
+              try {
+                args = JSON.parse(tc.arguments)
+              } catch {
+                args = {}
+              }
+
+              // Notify client that a tool is being executed
               controller.enqueue(
                 encoder.encode(
-                  `data: ${JSON.stringify({ usage: chunk.usage })}\n\n`
+                  `data: ${JSON.stringify({
+                    toolCall: { name: tc.name, args },
+                  })}\n\n`
                 )
               )
+
+              const result = await executeTool(tc.name, args)
+
+              // Send tool result to client for transparency
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({
+                    toolResult: {
+                      name: tc.name,
+                      success: result.success,
+                      result: result.result,
+                    },
+                  })}\n\n`
+                )
+              )
+
+              // Add tool result to messages for next OpenAI round
+              messages.push({
+                role: 'tool',
+                tool_call_id: tc.id,
+                content: result.result,
+              })
             }
+
+            // Loop continues — OpenAI will generate a final text response
+            // using the tool results
           }
 
           // Save assistant response after streaming completes
-          // Parse citations from the response
           const citations = parseCitations(fullContent)
-          const saveResult = await saveMessage(
+          const assistantSaveResult = await saveMessage(
             conversationId!,
             'assistant',
             fullContent,
             citations.length > 0 ? citations : undefined,
             totalTokens
           )
-          if (!saveResult.success) {
-            console.error('[chat/route] Failed to save assistant message', { conversationId, error: saveResult.error })
+          if (!assistantSaveResult.success) {
+            console.error('[chat/route] Failed to save assistant message', {
+              conversationId,
+              error: assistantSaveResult.error,
+            })
           }
+
+          // Send usage if we have it
+          if (totalTokens) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ usage: { total_tokens: totalTokens } })}\n\n`
+              )
+            )
+          }
+
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
           controller.close()
         } catch (error) {
@@ -189,6 +299,26 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * Enhances the system prompt with tool usage instructions.
+ */
+function buildSystemPromptWithTools(basePrompt: string, locale: string): string {
+  const toolInstructions =
+    locale === 'en'
+      ? `You also have access to tools for managing worker schedules. When the user asks you to update schedules, use the appropriate tool. Always confirm what you did after executing a tool.
+
+If the user mentions a worker by name, use the lookup_workers tool first if you're unsure which worker they mean. Then use update_worker_schedule to set their schedule.
+
+Day mapping: Sunday=0, Monday=1, Tuesday=2, Wednesday=3, Thursday=4, Friday=5, Saturday=6.`
+      : `あなたはスタッフのスケジュール管理ツールも使用できます。ユーザーがスケジュールの更新を依頼した場合は、適切なツールを使用してください。ツール実行後は必ず結果を確認してください。
+
+ユーザーがスタッフ名を指定した場合、不明な場合はまず lookup_workers ツールで確認してください。その後 update_worker_schedule でスケジュールを設定します。
+
+曜日の対応: 日曜=0, 月曜=1, 火曜=2, 水曜=3, 木曜=4, 金曜=5, 土曜=6。`
+
+  return `${basePrompt}\n\n--- ツール使用ガイド ---\n${toolInstructions}`
 }
 
 /**

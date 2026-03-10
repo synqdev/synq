@@ -26,11 +26,7 @@
     "minutes": "min",
     "localeJa": "日本語",
     "localeEn": "English",
-    "schedule": "Schedule",
-    "on": "On",
-    "off": "Off",
-    "locale": "Locale",
-    "notes": "Notes"
+    "schedule": "Schedule"
   },
   "booking": {
     "title": "Booking",
@@ -56,7 +52,6 @@
     "confirmBooking": "Confirm Booking",
     "bookingInProgress": "Booking...",
     "selectWorker": "Select worker",
-    "bookNow": "Book Now",
     "confirm": "Book Now",
     "confirmed": "Confirmed",
     "cancelled": "Cancelled",
@@ -83,6 +78,40 @@
       "workers": "Workers",
       "services": "Services",
       "resources": "Resources"
+    },
+    "sidebar": {
+      "backToDashboard": "Back to Dashboard",
+      "aiChat": "AI Chat",
+      "prevAppointment": "Prev",
+      "nextAppointment": "Next"
+    },
+    "appointment": {
+      "recording": "Recording",
+      "karute": "Karute",
+      "customer": "Customer",
+      "settings": "Settings",
+      "noKarute": "No karute record yet",
+      "viewSettings": "View Settings",
+      "summaryBar": {
+        "customer": "Customer",
+        "service": "Service",
+        "worker": "Worker",
+        "time": "Time"
+      }
+    },
+    "settingsPage": {
+      "title": "Settings",
+      "loadError": "Failed to load settings",
+      "aiProvider": "AI Provider",
+      "businessType": "Business Type",
+      "recordingLang": "Recording Language",
+      "audioQuality": "Audio Quality",
+      "autoTranscribe": "Auto Transcribe",
+      "general": "General",
+      "salon": "Salon",
+      "clinic": "Clinic",
+      "standard": "Standard",
+      "high": "High"
     },
     "dashboardPage": {
       "title": "Dashboard",
@@ -126,18 +155,40 @@
       "add": "Add Worker",
       "notFound": "No workers found",
       "confirmDelete": "Are you sure you want to delete this worker?",
-      "schedule": "Schedule",
-      "createdSuccess": "Worker created successfully",
-      "createFailed": "Failed to create worker",
-      "updateFailed": "Failed to update worker",
-      "namePlaceholder": "e.g., Tanaka",
-      "nameJaPlaceholder": "e.g., \u7530\u4e2d"
+      "schedule": "Schedule"
     },
-    "scheduleEditor": {
-      "title": "Schedule: {name}",
-      "saveSchedule": "Save Schedule",
+    "workerDetail": {
+      "title": "Worker Detail",
+      "backToList": "Back to Workers",
+      "schedule": "Schedule",
+      "performance": "Performance",
+      "totalRevenue": "Total Revenue (30d)",
+      "bookingCount": "Bookings (30d)",
+      "avgPerBooking": "Avg per Booking",
+      "noBookings": "No bookings in period",
+      "notFound": "Worker not found",
+      "nameEn": "English Name",
+      "createdAt": "Created",
+      "totalBookings": "Total Bookings",
+      "assignedCustomers": "Assigned Customers"
+    },
+    "schedule": {
+      "title": "Staff Schedule",
+      "weekOf": "Week of {date}",
+      "prev": "Previous Week",
+      "next": "Next Week",
+      "today": "Today",
+      "totalHours": "{hours}h scheduled",
+      "bookings": "{count} bookings",
+      "off": "OFF",
+      "available": "Available",
+      "unavailable": "Day Off",
+      "editShift": "Edit Shift",
+      "save": "Save",
       "saved": "Saved",
-      "saveFailed": "Save failed"
+      "saveError": "Failed to save",
+      "monthly": "Monthly",
+      "weekly": "Weekly"
     },
     "schedulePage": {
       "title": "Schedule Management",
@@ -170,23 +221,14 @@
       "duration": "Duration",
       "price": "Price",
       "notFound": "No services found",
-      "confirmDelete": "Are you sure you want to delete this service?",
-      "createdSuccess": "Service created successfully",
-      "createFailed": "Failed to create service",
-      "updateFailed": "Failed to update service",
-      "namePlaceholder": "e.g., Shiatsu",
-      "nameJaPlaceholder": "e.g., \u6307\u5727"
+      "confirmDelete": "Are you sure you want to delete this service?"
     },
     "resourcesPage": {
       "title": "Resource Management",
       "subtitle": "Treatment Beds/Rooms",
       "add": "Add Resource",
       "notFound": "No resources found",
-      "confirmDelete": "Are you sure you want to delete this resource?",
-      "createdSuccess": "Resource created successfully",
-      "createFailed": "Failed to create resource",
-      "updateFailed": "Failed to update resource",
-      "namePlaceholder": "e.g., Bed 1"
+      "confirmDelete": "Are you sure you want to delete this resource?"
     },
     "customersPage": {
       "title": "Customer Management",
@@ -301,11 +343,6 @@
       "exportPDF": "Export PDF",
       "exportText": "Export Text"
     },
-    "customerInfo": {
-      "viewFullProfile": "View full profile",
-      "visitCount": "Visit count",
-      "lastVisit": "Last visit"
-    },
     "customerDetail": {
       "title": "Customer Detail",
       "backToList": "Back to Customer List",
@@ -328,7 +365,6 @@
       "price": "Price",
       "medicalRecords": "Medical Records",
       "comingSoon": "Coming soon",
-      "askAi": "Ask AI",
       "notFound": "Customer not found",
       "karuteTab": "Karute",
       "detailsTab": "Details",
@@ -341,23 +377,6 @@
         "uploading": "Uploading...",
         "noFiles": "No intake forms uploaded yet"
       }
-    },
-    "chat": {
-      "title": "AI Chat",
-      "placeholder": "Type a question...",
-      "send": "Send",
-      "emptyCustomer": "Ask a question about this customer",
-      "emptyGlobal": "Ask a question",
-      "newChat": "New Chat",
-      "summarizeLastVisit": "Summarize last visit",
-      "showTreatmentHistory": "Show treatment history",
-      "anyAllergies": "Any allergies?",
-      "nextAppointment": "Next appointment",
-      "recentTrends": "Recent treatment trends",
-      "todaysAppointments": "Today's appointments",
-      "error": "An error occurred",
-      "close": "Close",
-      "customerContextActive": "Customer context active"
     }
   },
   "auth": {
@@ -366,10 +385,7 @@
     "signOut": "Sign Out",
     "register": "Register",
     "email": "Email",
-    "password": "Password",
-    "username": "Username",
-    "loggingIn": "Logging in...",
-    "adminLogin": "Admin Login"
+    "password": "Password"
   },
   "welcome": {
     "title": "Welcome to SYNQ",

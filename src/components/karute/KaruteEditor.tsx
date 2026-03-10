@@ -205,7 +205,7 @@ export function KaruteEditor({ recordId, locale }: KaruteEditorProps) {
           <h3 className="mb-2 text-sm font-semibold text-secondary-700">
             {t('transcript')}
           </h3>
-          <div className="max-h-[600px]">
+          <div className="max-h-[600px] overflow-hidden">
             <TranscriptPanel
               segments={allSegments}
               highlightedIndices={activeSegmentIndices}

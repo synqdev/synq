@@ -50,7 +50,7 @@ export default async function WorkersPage({ params }: PageProps) {
       </Card>
 
       <Card title={t('title')}>
-        <WorkerTable workers={workers} />
+        <WorkerTable workers={workers} locale={locale} />
       </Card>
     </div>
   )

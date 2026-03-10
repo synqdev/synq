@@ -67,13 +67,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         `}
         {...props}
       >
-        {loading && (
+        {loading ? (
           <Spinner
             size={size === 'lg' ? 'md' : 'sm'}
             className={variant === 'primary' || variant === 'secondary' ? 'text-white' : ''}
           />
-        )}
-        {children}
+        ) : null}
+        <span>{children}</span>
       </button>
     )
   }

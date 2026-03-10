@@ -19,6 +19,7 @@ import {
   type TimelineStaff,
   type TopTabItem,
 } from '@/components/calendar/prototype-calendar-view'
+import { WeeklyScheduleGrid } from '@/components/schedule/WeeklyScheduleGrid'
 
 interface PrototypeBooking {
   id: string
@@ -83,7 +84,7 @@ interface AdminDashboardPrototypeClientProps {
 
 const tabs: TopTabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { id: 'schedule', label: 'Schedule', icon: 'calendar' },
   { id: 'workers', label: 'Workers', icon: 'user' },
   { id: 'services', label: 'Services', icon: 'services' },
   { id: 'resources', label: 'Resources', icon: 'settings' },
@@ -92,10 +93,10 @@ const tabs: TopTabItem[] = [
 
 const tabRouteById: Record<string, string> = {
   dashboard: '/admin/dashboard',
-  calendar: '/admin/dashboard/new',
+  schedule: '/admin/dashboard/new',
 }
 
-const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources'])
+const embeddedPanelTabs = new Set(['schedule', 'workers', 'services', 'resources'])
 
 const sideActions: SideActionItem[] = [
   { id: 'refresh', icon: 'refresh' },
@@ -396,14 +397,18 @@ export function AdminDashboardPrototypeClient({
     router.replace(`/${locale}/admin/dashboard/new?${next.toString()}`)
   }
 
-  const panelContent = activeTabId === 'workers' ? (
+  const panelContent = activeTabId === 'schedule' ? (
+    <div className="h-full overflow-auto p-4">
+      <WeeklyScheduleGrid locale={locale} />
+    </div>
+  ) : activeTabId === 'workers' ? (
     <div className="h-full overflow-auto p-4">
       <div className="space-y-4">
         <CrudPanelSection title="Add Worker">
           <WorkerForm mode="create" />
         </CrudPanelSection>
         <CrudPanelSection title="Workers">
-          <WorkerTable workers={initialWorkerCrud} />
+          <WorkerTable workers={initialWorkerCrud} locale={locale} />
         </CrudPanelSection>
       </div>
     </div>

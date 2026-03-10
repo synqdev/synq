@@ -8,6 +8,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { createBooking } from '@/lib/services/booking.service'
 import { formatInTimeZone } from '@/lib/utils/time'
 import { sendBookingConfirmation } from '@/lib/email/send'
+import { prisma } from '@/lib/db/client'
 import { z } from 'zod'
 import { getLocaleDateTag } from '@/lib/i18n/locale'
 
@@ -71,7 +72,19 @@ export async function POST(request: NextRequest) {
 
     console.log('[Booking API] Booking created successfully:', result.booking.id)
 
-    const booking = result.booking
+    // Re-fetch with relations for email and response
+    const booking = await prisma.booking.findUnique({
+      where: { id: result.booking.id },
+      include: {
+        customer: true,
+        worker: true,
+        service: true,
+      },
+    })
+
+    if (!booking) {
+      return NextResponse.json({ booking: result.booking }, { status: 201 })
+    }
 
     // Get locale from request (default to 'ja')
     const locale = request.headers.get('Accept-Language')?.startsWith('en') ? 'en' : 'ja'

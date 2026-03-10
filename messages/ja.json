@@ -26,11 +26,7 @@
     "minutes": "分",
     "localeJa": "日本語",
     "localeEn": "English",
-    "schedule": "スケジュール",
-    "on": "オン",
-    "off": "オフ",
-    "locale": "言語",
-    "notes": "メモ"
+    "schedule": "スケジュール"
   },
   "booking": {
     "title": "予約",
@@ -56,7 +52,6 @@
     "confirmBooking": "予約を確定",
     "bookingInProgress": "予約中...",
     "selectWorker": "スタッフを選択",
-    "bookNow": "予約する",
     "confirm": "予約する",
     "confirmed": "予約確定",
     "cancelled": "キャンセル済み",
@@ -83,6 +78,40 @@
       "workers": "スタッフ",
       "services": "サービス",
       "resources": "ベッド"
+    },
+    "sidebar": {
+      "backToDashboard": "ダッシュボードに戻る",
+      "aiChat": "AIチャット",
+      "prevAppointment": "前へ",
+      "nextAppointment": "次へ"
+    },
+    "appointment": {
+      "recording": "録音",
+      "karute": "カルテ",
+      "customer": "顧客",
+      "settings": "設定",
+      "noKarute": "カルテ記録がありません",
+      "viewSettings": "設定を表示",
+      "summaryBar": {
+        "customer": "お客様",
+        "service": "サービス",
+        "worker": "担当",
+        "time": "時間"
+      }
+    },
+    "settingsPage": {
+      "title": "設定",
+      "loadError": "設定の読み込みに失敗しました",
+      "aiProvider": "AIプロバイダー",
+      "businessType": "業種",
+      "recordingLang": "録音言語",
+      "audioQuality": "音質",
+      "autoTranscribe": "自動文字起こし",
+      "general": "一般",
+      "salon": "サロン",
+      "clinic": "クリニック",
+      "standard": "標準",
+      "high": "高音質"
     },
     "dashboardPage": {
       "title": "ダッシュボード",
@@ -135,11 +164,38 @@
       "namePlaceholder": "例: Tanaka",
       "nameJaPlaceholder": "例: 田中"
     },
-    "scheduleEditor": {
-      "title": "シフト: {name}",
-      "saveSchedule": "シフト保存",
+    "workerDetail": {
+      "title": "スタッフ詳細",
+      "backToList": "スタッフ一覧に戻る",
+      "schedule": "スケジュール",
+      "performance": "実績",
+      "totalRevenue": "売上 (30日)",
+      "bookingCount": "予約数 (30日)",
+      "avgPerBooking": "予約単価",
+      "noBookings": "期間中の予約なし",
+      "notFound": "スタッフが見つかりません",
+      "nameEn": "英語名",
+      "createdAt": "登録日",
+      "totalBookings": "予約総数",
+      "assignedCustomers": "担当顧客数"
+    },
+    "schedule": {
+      "title": "スタッフスケジュール",
+      "weekOf": "{date}の週",
+      "prev": "前の週",
+      "next": "次の週",
+      "today": "今日",
+      "totalHours": "{hours}時間",
+      "bookings": "{count}件の予約",
+      "off": "休み",
+      "available": "出勤",
+      "unavailable": "休み",
+      "editShift": "シフト編集",
+      "save": "保存",
       "saved": "保存しました",
-      "saveFailed": "保存に失敗しました"
+      "saveError": "保存に失敗しました",
+      "monthly": "月表示",
+      "weekly": "週表示"
     },
     "schedulePage": {
       "title": "シフト管理",
@@ -172,23 +228,14 @@
       "duration": "時間",
       "price": "料金",
       "notFound": "サービスがありません",
-      "confirmDelete": "このサービスを削除しますか？",
-      "createdSuccess": "サービスを作成しました",
-      "createFailed": "サービスの作成に失敗しました",
-      "updateFailed": "サービスの更新に失敗しました",
-      "namePlaceholder": "例: Shiatsu",
-      "nameJaPlaceholder": "例: 指圧"
+      "confirmDelete": "このサービスを削除しますか？"
     },
     "resourcesPage": {
       "title": "ベッド管理",
       "subtitle": "施術ベッド・部屋",
       "add": "新規ベッド追加",
       "notFound": "ベッドがありません",
-      "confirmDelete": "このベッドを削除しますか？",
-      "createdSuccess": "ベッドを作成しました",
-      "createFailed": "ベッドの作成に失敗しました",
-      "updateFailed": "ベッドの更新に失敗しました",
-      "namePlaceholder": "例: ベッド1"
+      "confirmDelete": "このベッドを削除しますか？"
     },
     "customersPage": {
       "title": "顧客管理",
@@ -303,11 +350,6 @@
       "exportPDF": "PDF出力",
       "exportText": "テキスト出力"
     },
-    "customerInfo": {
-      "viewFullProfile": "詳細を見る",
-      "visitCount": "来院回数",
-      "lastVisit": "最終来院日"
-    },
     "customerDetail": {
       "title": "顧客詳細",
       "backToList": "顧客一覧に戻る",
@@ -330,7 +372,6 @@
       "price": "料金",
       "medicalRecords": "カルテ",
       "comingSoon": "準備中",
-      "askAi": "AIに質問",
       "notFound": "顧客が見つかりません",
       "karuteTab": "カルテ",
       "detailsTab": "詳細",
@@ -343,23 +384,6 @@
         "uploading": "アップロード中...",
         "noFiles": "問診票がまだアップロードされていません"
       }
-    },
-    "chat": {
-      "title": "AIチャット",
-      "placeholder": "質問を入力...",
-      "send": "送信",
-      "emptyCustomer": "このお客様について質問してください",
-      "emptyGlobal": "質問を入力してください",
-      "newChat": "新しいチャット",
-      "summarizeLastVisit": "前回の施術まとめ",
-      "showTreatmentHistory": "施術履歴を表示",
-      "anyAllergies": "アレルギー情報",
-      "nextAppointment": "次回の予約",
-      "recentTrends": "最近の施術傾向",
-      "todaysAppointments": "本日の予約一覧",
-      "error": "エラーが発生しました",
-      "close": "閉じる",
-      "customerContextActive": "お客様コンテキスト有効"
     }
   },
   "auth": {
@@ -368,10 +392,7 @@
     "signOut": "サインアウト",
     "register": "登録",
     "email": "メールアドレス",
-    "password": "パスワード",
-    "username": "ユーザー名",
-    "loggingIn": "ログイン中...",
-    "adminLogin": "管理者ログイン"
+    "password": "パスワード"
   },
   "welcome": {
     "title": "SYNQへようこそ",

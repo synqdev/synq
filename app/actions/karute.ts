@@ -51,6 +51,7 @@ export async function createKaruteRecordAction(input: CreateKaruteRecordInput) {
   if (!result.success) throw new Error(result.error)
 
   revalidatePath('/[locale]/admin/dashboard', 'page')
+  revalidatePath('/[locale]/(admin)/admin/customers/[id]', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -69,6 +70,7 @@ export async function updateKaruteRecordAction(input: UpdateKaruteRecordInput) {
   if (!result.success) throw new Error(result.error)
 
   revalidatePath('/[locale]/admin/dashboard', 'page')
+  revalidatePath('/[locale]/(admin)/admin/customers/[id]', 'page')
   return { success: true, id: result.data.id }
 }
 
@@ -87,6 +89,7 @@ export async function deleteKaruteRecordAction(id: string) {
   if (!result.success) throw new Error(result.error)
 
   revalidatePath('/[locale]/admin/dashboard', 'page')
+  revalidatePath('/[locale]/(admin)/admin/customers/[id]', 'page')
   return { success: true }
 }
 

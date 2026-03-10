@@ -221,17 +221,19 @@ async function buildCustomerContext(
   locale: string
 ): Promise<ChatResult<string>> {
   try {
-    const [customer, karuteRecords, bookings] = await Promise.all([
+    const [customer, confirmedBookingCount, karuteRecords, bookings] = await Promise.all([
       prisma.customer.findUnique({
         where: { id: customerId },
         select: {
           name: true,
           notes: true,
-          visitCount: true,
           lastVisitDate: true,
           email: true,
           phone: true,
         },
+      }),
+      prisma.booking.count({
+        where: { customerId, status: 'CONFIRMED' },
       }),
       prisma.karuteRecord.findMany({
         where: { customerId },
@@ -264,7 +266,7 @@ async function buildCustomerContext(
     let currentTokens = 0
 
     // Always include customer profile (~200 tokens)
-    const profileSection = formatCustomerProfile(customer)
+    const profileSection = formatCustomerProfile({ ...customer, visitCount: confirmedBookingCount })
     contextParts.push(profileSection)
     currentTokens += estimateTokens(profileSection)
 

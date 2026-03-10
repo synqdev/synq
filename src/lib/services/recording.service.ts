@@ -8,7 +8,6 @@
  * Handles audio storage cleanup on deletion (best-effort).
  */
 
-import { prisma } from '@/lib/db/client';
 import { withRLSContext } from '@/lib/db/rls-context';
 import { Prisma } from '@prisma/client';
 import * as Sentry from '@sentry/nextjs';
@@ -92,8 +91,8 @@ export async function createRecordingSession(
   const validated = parseResult.data;
 
   try {
-    const session = await withRLSContext({ role: 'admin' }, () =>
-      prisma.recordingSession.create({
+    const session = await withRLSContext({ role: 'admin' }, (tx) =>
+      tx.recordingSession.create({
         data: {
           customerId: validated.customerId,
           workerId: validated.workerId,
@@ -118,8 +117,8 @@ export async function getRecordingSession(
   id: string
 ): Promise<RecordingResult<RecordingSessionWithSegments>> {
   try {
-    const session = await withRLSContext({ role: 'admin' }, () =>
-      prisma.recordingSession.findUnique({
+    const session = await withRLSContext({ role: 'admin' }, (tx) =>
+      tx.recordingSession.findUnique({
         where: { id },
         include: sessionWithSegmentsInclude,
       })
@@ -150,8 +149,8 @@ export async function updateRecordingSession(
   const { id, ...data } = parseResult.data;
 
   try {
-    const session = await withRLSContext({ role: 'admin' }, () =>
-      prisma.recordingSession.update({
+    const session = await withRLSContext({ role: 'admin' }, (tx) =>
+      tx.recordingSession.update({
         where: { id },
         data,
         include: sessionDetailInclude,
@@ -176,8 +175,8 @@ export async function deleteRecordingSession(
 ): Promise<RecordingResult<{ id: string }>> {
   try {
     // Find session to get audio path before deletion
-    const session = await withRLSContext({ role: 'admin' }, () =>
-      prisma.recordingSession.findUnique({
+    const session = await withRLSContext({ role: 'admin' }, (tx) =>
+      tx.recordingSession.findUnique({
         where: { id },
         select: { id: true, audioStoragePath: true },
       })
@@ -191,8 +190,8 @@ export async function deleteRecordingSession(
 
     // Delete DB record first (cascades to segments via Prisma schema).
     // Storage cleanup happens after to ensure DB delete is not rolled back.
-    await withRLSContext({ role: 'admin' }, () =>
-      prisma.recordingSession.delete({ where: { id } })
+    await withRLSContext({ role: 'admin' }, (tx) =>
+      tx.recordingSession.delete({ where: { id } })
     );
 
     // Best-effort cleanup of audio file from storage (after successful DB delete)

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { adminLogout } from '@/app/actions/admin'
 import { useCalendarPolling } from '@/hooks/useCalendarPolling'
@@ -14,6 +15,7 @@ import { ResourceForm } from '../resources/resource-form'
 import { ResourceTable } from '../resources/resource-table'
 import { CustomerList } from '../customers/customer-list'
 import { RevenueDashboard } from '../reports/revenue-dashboard'
+import { WeeklyScheduleGrid } from '@/components/schedule/WeeklyScheduleGrid'
 import {
   TimetableWithTabs,
   type TimelineBarItem,
@@ -85,7 +87,7 @@ interface AdminDashboardPrototypeClientProps {
 
 const tabs: TopTabItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+  { id: 'schedule', label: 'Schedule', icon: 'calendar' },
   { id: 'customers', label: 'Customers', icon: 'client' },
   { id: 'workers', label: 'Workers', icon: 'user' },
   { id: 'services', label: 'Services', icon: 'services' },
@@ -96,10 +98,10 @@ const tabs: TopTabItem[] = [
 
 const tabRouteById: Record<string, string> = {
   dashboard: '/admin/dashboard',
-  calendar: '/admin/dashboard',
+  schedule: '/admin/dashboard',
 }
 
-const embeddedPanelTabs = new Set(['calendar', 'workers', 'services', 'resources', 'customers', 'reports'])
+const embeddedPanelTabs = new Set(['schedule', 'workers', 'services', 'resources', 'customers', 'reports'])
 
 function timeToMinute(time: string): number {
   const [hours, minutes] = time.split(':').map(Number)
@@ -393,13 +395,36 @@ export function AdminDashboardPrototypeClient({
     router.replace(`/${locale}/admin/dashboard?${next.toString()}`)
   }
 
-  const panelContent = activeTabId === 'workers' ? (
+  const renderBarPopover = useCallback((bar: TimelineBarItem) => {
+    const [customerName, serviceName] = (bar.subtitle ?? '').split('\n')
+    const workerName = effectiveStaff.find((s) => s.id === bar.rowId)?.name ?? ''
+    return (
+      <div className="space-y-2">
+        <div className="text-sm font-semibold text-gray-900">{bar.title}</div>
+        {customerName ? <div className="text-xs text-gray-600"><span className="font-medium">Customer:</span> {customerName}</div> : null}
+        {serviceName ? <div className="text-xs text-gray-600"><span className="font-medium">Service:</span> {serviceName}</div> : null}
+        {workerName ? <div className="text-xs text-gray-600"><span className="font-medium">Staff:</span> {workerName}</div> : null}
+        <Link
+          href={`/${locale}/appointment/${bar.id}`}
+          className="mt-1 block w-full rounded-lg bg-[#7d9ea7] px-3 py-1.5 text-center text-xs font-medium text-white hover:bg-[#6b8d96] transition"
+        >
+          Open Karute
+        </Link>
+      </div>
+    )
+  }, [effectiveStaff, locale])
+
+  const panelContent = activeTabId === 'schedule' ? (
+    <div className="h-full overflow-auto p-4">
+      <WeeklyScheduleGrid locale={locale} />
+    </div>
+  ) : activeTabId === 'workers' ? (
     <div className="space-y-4">
       <CrudPanelSection title="Add Worker">
         <WorkerForm mode="create" />
       </CrudPanelSection>
       <CrudPanelSection title="Workers">
-        <WorkerTable workers={initialWorkerCrud} />
+        <WorkerTable workers={initialWorkerCrud} locale={locale} />
       </CrudPanelSection>
     </div>
   ) : activeTabId === 'services' ? (
@@ -460,6 +485,7 @@ export function AdminDashboardPrototypeClient({
         onBarsChange={setBars}
         onTimeSlotClick={handleCreateSlot}
         onBarDragEnd={openMoveModal}
+        renderBarPopover={renderBarPopover}
         panelContent={panelContent}
         startHour={10}
         endHour={19}

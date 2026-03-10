@@ -8,8 +8,7 @@ interface PublicLayoutProps {
 export default async function PublicLayout({ children, params }: PublicLayoutProps) {
   const { locale } = await params
   return (
-    <div className="min-h-screen bg-gray-50">
-      <PublicHeader locale={locale} />
+    <div className="min-h-screen">
       <main>
         {children}
       </main>

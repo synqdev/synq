@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import useSWR from 'swr'
 import { RecordingPanel } from '@/components/recording/RecordingPanel'
@@ -87,12 +87,20 @@ export function AppointmentWorkstation({
   const [activeTab, setActiveTab] = useState<Tab>('recording')
   const t = useTranslations('admin.appointment')
   const tSettings = useTranslations('admin.settingsPage')
+  const router = useRouter()
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as Tab)
   }
 
-  const karuteRecord = booking.karuteRecords[0] ?? null
+  const serverKaruteRecord = booking.karuteRecords[0] ?? null
+  const [clientKaruteId, setClientKaruteId] = useState<string | null>(null)
+  const karuteRecord = serverKaruteRecord ?? (clientKaruteId ? { id: clientKaruteId, status: 'DRAFT', createdAt: new Date().toISOString() } : null)
+
+  const handleKaruteCreated = useCallback((karuteRecordId: string) => {
+    setClientKaruteId(karuteRecordId)
+    router.refresh()
+  }, [router])
 
   return (
     <div className="flex h-full w-full">
@@ -126,6 +134,7 @@ export function AppointmentWorkstation({
               workerId={booking.workerId}
               bookingId={booking.id}
               karuteRecordId={karuteRecord?.id}
+              onKaruteCreated={handleKaruteCreated}
             />
           )}
 
@@ -145,7 +154,7 @@ export function AppointmentWorkstation({
           )}
 
           {activeTab === 'settings' && (
-            <SettingsTabContent locale={locale} tSettings={tSettings} viewSettingsLabel={t('viewSettings')} />
+            <SettingsTabContent locale={locale} tSettings={tSettings} />
           )}
         </div>
       </div>
@@ -187,17 +196,44 @@ function KaruteTabContent({
 function SettingsTabContent({
   locale,
   tSettings,
-  viewSettingsLabel,
 }: {
   locale: string
   tSettings: ReturnType<typeof useTranslations>
-  viewSettingsLabel: string
+  viewSettingsLabel?: string
 }) {
-  const { data, isLoading, error } = useSWR<AdminSettingsData>(
+  const { data, isLoading, error, mutate } = useSWR<AdminSettingsData>(
     '/api/admin/settings',
     settingsFetcher,
     { revalidateOnFocus: false }
   )
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+
+  const handleChange = async (field: string, value: string | boolean) => {
+    if (!data) return
+    const updated = { ...data, [field]: value }
+    // Optimistic update
+    mutate(updated, false)
+    setIsSaving(true)
+    setSaveStatus('idle')
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      const saved = await res.json()
+      mutate(saved, false)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 1500)
+    } catch {
+      mutate()
+      setSaveStatus('error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -215,43 +251,77 @@ function SettingsTabContent({
     )
   }
 
+  const selectClass = 'mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900">{tSettings('title')}</h3>
+      <div className="mb-5 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">{tSettings('title')}</h3>
+        {isSaving && <span className="text-xs text-gray-400">Saving...</span>}
+        {saveStatus === 'saved' && <span className="text-xs text-green-600">Saved</span>}
+        {saveStatus === 'error' && <span className="text-xs text-red-500">Save failed</span>}
+      </div>
       {data && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <span className="text-xs text-gray-500">{tSettings('aiProvider')}</span>
-            <p className="text-sm font-medium text-gray-900">{data.aiProvider}</p>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500">{tSettings('businessType')}</span>
-            <p className="text-sm font-medium text-gray-900">{tSettings(data.businessType as 'general' | 'salon' | 'clinic')}</p>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500">{tSettings('recordingLang')}</span>
-            <p className="text-sm font-medium text-gray-900">{data.recordingLang}</p>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500">{tSettings('audioQuality')}</span>
-            <p className="text-sm font-medium text-gray-900">{tSettings(data.audioQuality as 'standard' | 'high')}</p>
-          </div>
-          <div>
-            <span className="text-xs text-gray-500">{tSettings('autoTranscribe')}</span>
-            <p className="text-sm font-medium text-gray-900">
-              {data.autoTranscribe ? (locale === 'ja' ? 'ON' : 'On') : (locale === 'ja' ? 'OFF' : 'Off')}
-            </p>
-          </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-xs font-medium text-gray-500">{tSettings('aiProvider')}</span>
+            <select
+              className={selectClass}
+              value={data.aiProvider}
+              onChange={(e) => handleChange('aiProvider', e.target.value)}
+            >
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-gray-500">{tSettings('businessType')}</span>
+            <select
+              className={selectClass}
+              value={data.businessType}
+              onChange={(e) => handleChange('businessType', e.target.value)}
+            >
+              <option value="general">{tSettings('general')}</option>
+              <option value="salon">{tSettings('salon')}</option>
+              <option value="clinic">{tSettings('clinic')}</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-gray-500">{tSettings('recordingLang')}</span>
+            <select
+              className={selectClass}
+              value={data.recordingLang}
+              onChange={(e) => handleChange('recordingLang', e.target.value)}
+            >
+              <option value="ja">{locale === 'ja' ? '日本語' : 'Japanese'}</option>
+              <option value="en">{locale === 'ja' ? '英語' : 'English'}</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-gray-500">{tSettings('audioQuality')}</span>
+            <select
+              className={selectClass}
+              value={data.audioQuality}
+              onChange={(e) => handleChange('audioQuality', e.target.value)}
+            >
+              <option value="standard">{tSettings('standard')}</option>
+              <option value="high">{tSettings('high')}</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-3">
+            <span className="text-xs font-medium text-gray-500">{tSettings('autoTranscribe')}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={data.autoTranscribe}
+              onClick={() => handleChange('autoTranscribe', !data.autoTranscribe)}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${data.autoTranscribe ? 'bg-blue-600' : 'bg-gray-200'}`}
+            >
+              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${data.autoTranscribe ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </label>
         </div>
       )}
-      <div className="mt-6">
-        <Link
-          href={`/${locale}/admin/settings`}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-        >
-          {viewSettingsLabel}
-        </Link>
-      </div>
     </div>
   )
 }

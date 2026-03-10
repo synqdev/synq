@@ -85,6 +85,8 @@ export interface TimetableWithTabsProps {
     previousRowId: string
     previousStartMinute: number
   }) => void
+  onBarClick?: (bar: TimelineBarItem) => void
+  renderBarPopover?: (bar: TimelineBarItem) => ReactNode
   panelContent?: ReactNode
   startHour?: number
   endHour?: number
@@ -160,6 +162,8 @@ export function TimetableWithTabs({
   onBarsChange,
   onTimeSlotClick,
   onBarDragEnd,
+  onBarClick,
+  renderBarPopover,
   panelContent,
   startHour = 10,
   endHour = 18,
@@ -209,6 +213,8 @@ export function TimetableWithTabs({
         onEmployeesChange={onBarsChange ? handleEmployeesChange : undefined}
         onTimeSlotClick={onTimeSlotClick}
         onBarDragEnd={onBarDragEnd}
+        onBarClick={onBarClick}
+        renderBarPopover={renderBarPopover}
         customBody={panelContent}
         startHour={startHour}
         endHour={endHour}

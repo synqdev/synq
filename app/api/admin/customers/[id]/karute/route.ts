@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/auth/admin'
 import { getKaruteRecordsByCustomer } from '@/lib/services/karute.service'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,9 +28,15 @@ export async function GET(
         id: record.id,
         createdAt: record.createdAt,
         status: record.status,
+        aiSummary: record.aiSummary ?? null,
         workerName: record.worker.name,
         entryCount: record.entries.length,
+        bookingId: record.booking?.id ?? null,
         bookingDate: record.booking?.startsAt ?? null,
+        entries: record.entries.map((e) => ({
+          category: e.category,
+          content: e.content,
+        })),
       }))
       .sort(
         (a, b) =>

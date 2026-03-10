@@ -2,6 +2,17 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+export interface ToolCallEvent {
+  name: string
+  args: Record<string, unknown>
+}
+
+export interface ToolResultEvent {
+  name: string
+  success: boolean
+  result: string
+}
+
 interface UseChatStreamOptions {
   onComplete: (content: string, conversationId: string) => void
 }
@@ -15,6 +26,8 @@ interface UseChatStreamReturn {
   ) => void
   isStreaming: boolean
   streamingContent: string | null
+  activeToolCall: ToolCallEvent | null
+  toolResults: ToolResultEvent[]
   error: string | null
 }
 
@@ -23,7 +36,7 @@ interface UseChatStreamReturn {
  *
  * Uses fetch + ReadableStream.getReader() (NOT EventSource which is GET-only).
  * Implements AbortController for cleanup on unmount.
- * Parses SSE events: { content }, { usage }, { conversationId }, [DONE].
+ * Parses SSE events: { content }, { usage }, { conversationId }, { toolCall }, { toolResult }, [DONE].
  * Disables sending while already streaming (prevents race conditions).
  */
 export function useChatStream({
@@ -31,6 +44,8 @@ export function useChatStream({
 }: UseChatStreamOptions): UseChatStreamReturn {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState<string | null>(null)
+  const [activeToolCall, setActiveToolCall] = useState<ToolCallEvent | null>(null)
+  const [toolResults, setToolResults] = useState<ToolResultEvent[]>([])
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const isStreamingRef = useRef(false)
@@ -55,6 +70,8 @@ export function useChatStream({
       isStreamingRef.current = true
       setIsStreaming(true)
       setStreamingContent('')
+      setActiveToolCall(null)
+      setToolResults([])
       setError(null)
 
       const controller = new AbortController()
@@ -101,6 +118,8 @@ export function useChatStream({
                 content?: string
                 conversationId?: string
                 usage?: unknown
+                toolCall?: ToolCallEvent
+                toolResult?: ToolResultEvent
               }
 
               if (parsed.conversationId) {
@@ -111,6 +130,16 @@ export function useChatStream({
                 accumulated += parsed.content
                 setStreamingContent(accumulated)
               }
+
+              if (parsed.toolCall) {
+                setActiveToolCall(parsed.toolCall)
+              }
+
+              if (parsed.toolResult) {
+                setActiveToolCall(null)
+                setToolResults((prev) => [...prev, parsed.toolResult!])
+              }
+
               // usage event is informational, no UI action needed
             } catch {
               // Skip unparseable lines
@@ -148,11 +177,13 @@ export function useChatStream({
         isStreamingRef.current = false
         setIsStreaming(false)
         setStreamingContent(null)
+        setActiveToolCall(null)
+        setToolResults([])
         abortRef.current = null
       }
     },
     [onComplete]
   )
 
-  return { sendMessage, isStreaming, streamingContent, error }
+  return { sendMessage, isStreaming, streamingContent, activeToolCall, toolResults, error }
 }

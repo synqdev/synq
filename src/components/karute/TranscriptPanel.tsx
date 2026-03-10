@@ -32,8 +32,15 @@ export function TranscriptPanel({ segments, highlightedIndices }: TranscriptPane
 
     const firstIndex = highlightedIndices[0]
     const element = containerRef.current.querySelector(`#segment-${firstIndex}`)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (element instanceof HTMLElement) {
+      // Scroll within the container only, not the whole page
+      const container = containerRef.current
+      const elementTop = element.offsetTop - container.offsetTop
+      const containerHeight = container.clientHeight
+      container.scrollTo({
+        top: elementTop - containerHeight / 2 + element.clientHeight / 2,
+        behavior: 'smooth',
+      })
     }
   }, [highlightedIndices])
 

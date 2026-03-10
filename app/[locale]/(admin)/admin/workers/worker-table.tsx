@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useState, useTransition, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -19,9 +20,10 @@ interface Worker {
 
 interface WorkerTableProps {
   workers: Worker[]
+  locale: string
 }
 
-export function WorkerTable({ workers }: WorkerTableProps) {
+export function WorkerTable({ workers, locale }: WorkerTableProps) {
   const router = useRouter()
   const tCommon = useTranslations('common')
   const tWorkers = useTranslations('admin.workersPage')
@@ -34,16 +36,15 @@ export function WorkerTable({ workers }: WorkerTableProps) {
 
   useEffect(() => {
     if (!scheduleId) return
-    const controller = new AbortController()
     setScheduleLoading(true)
     setScheduleError(null)
+    const controller = new AbortController()
     fetch(`/api/admin/workers/${scheduleId}/schedule`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load schedule: ${res.status}`)
         return res.json()
       })
       .then((data) => {
-        if (controller.signal.aborted) return
         if (data.schedules) {
           setScheduleData(data.schedules)
         } else {
@@ -120,8 +121,13 @@ export function WorkerTable({ workers }: WorkerTableProps) {
                   </td>
                 ) : (
                   <>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {worker.name}
+                    <td className="px-4 py-3 font-medium">
+                      <Link
+                        href={`/${locale}/admin/workers/${worker.id}`}
+                        className="text-primary-600 hover:underline"
+                      >
+                        {worker.name}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {worker.nameEn || '-'}

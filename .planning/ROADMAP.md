@@ -213,8 +213,13 @@ Plans:
   4. Full i18n (en/ja) for all new pages
   5. Settings page for AI provider config and business type templates
 
+**Plans:** 4 plans in 2 waves
+
 Plans:
-- [ ] TBD (to be planned)
+- [x] 07-01-PLAN.md — Data layer: AdminSettings model, API endpoints, i18n keys (Wave 1)
+- [x] 07-02-PLAN.md — Appointment workstation page with sidebar and tabs (Wave 2)
+- [ ] 07-03-PLAN.md — Dashboard "Today's Appointments" tab with card list (Wave 2)
+- [ ] 07-04-PLAN.md — Admin settings page UI with form (Wave 2)
 
 ### Phase 8: Payments & Membership
 **Goal**: Prepaid session packs with Stripe one-time checkout, QR code redemption for in-location scanning, user-facing payment pages, admin payment management, backend schema and webhook integration
@@ -272,6 +277,6 @@ Plans:
 | 4. Recording & Transcription | 0/3 | Not started | - |
 | 5. AI Classification & Karute UI | 0/? | Not started | - |
 | 6. Ask AI Chat | 0/3 | Not started | - |
-| 7. Appointment View & Dashboard | 0/? | Not started | - |
+| 7. Appointment View & Dashboard | 2/4 | In progress | - |
 | 8. Payments & Membership | 0/? | Deferred | - |
 | 9. Differentiation | 0/? | Deferred | - |

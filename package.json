@@ -71,6 +71,7 @@
     "@react-pdf/renderer": "^4.3.2",
     "@sentry/nextjs": "^10.38.0",
     "@supabase/supabase-js": "^2.97.0",
+    "@synqed/client": "file:../synqed-core/packages/client",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
     "jose": "^6.1.3",
